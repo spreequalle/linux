@@ -39,6 +39,14 @@ struct compat_ion_handle_data {
 	compat_int_t handle;
 };
 
+struct compat_ion_berlin_data {
+	compat_uint_t cmd;
+	compat_int_t share_fd;
+	compat_uint_t gid;
+	compat_ulong_t addr;
+	compat_size_t len;
+};
+
 #define COMPAT_ION_IOC_ALLOC	_IOWR(ION_IOC_MAGIC, 0, \
 				      struct compat_ion_allocation_data)
 #define COMPAT_ION_IOC_FREE	_IOWR(ION_IOC_MAGIC, 1, \
@@ -121,6 +129,52 @@ static int compat_get_ion_custom_data(
 	return err;
 };
 
+static int compat_get_ion_berlin_data(
+			struct compat_ion_berlin_data __user *data32,
+			struct ion_berlin_data __user *data)
+{
+	compat_size_t s;
+	compat_uint_t u;
+	compat_int_t i;
+	compat_ulong_t ul;
+	int err;
+
+	err = get_user(u, &data32->cmd);
+	err |= put_user(u, &data->cmd);
+	err |= get_user(i, &data32->share_fd);
+	err |= put_user(i, &data->share_fd);
+	err |= get_user(u, &data32->gid);
+	err |= put_user(u, &data->gid);
+	err |= get_user(ul, &data32->addr);
+	err |= put_user(ul, &data->addr);
+	err |= get_user(s, &data32->len);
+	err |= put_user(s, &data->len);
+	return err;
+}
+
+static int compat_put_ion_berlin_data(
+			struct compat_ion_berlin_data __user *data32,
+			struct ion_berlin_data __user *data)
+{
+	compat_size_t s;
+	compat_uint_t u;
+	compat_int_t i;
+	compat_ulong_t ul;
+	int err;
+
+	err = get_user(u, &data->cmd);
+	err |= put_user(u, &data32->cmd);
+	err |= get_user(i, &data->share_fd);
+	err |= put_user(i, &data32->share_fd);
+	err |= get_user(u, &data->gid);
+	err |= put_user(u, &data32->gid);
+	err |= get_user(ul, &data->addr);
+	err |= put_user(ul, &data32->addr);
+	err |= get_user(s, &data->len);
+	err |= put_user(s, &data32->len);
+	return err;
+}
+
 long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	long ret;
@@ -169,19 +223,40 @@ long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case COMPAT_ION_IOC_CUSTOM: {
 		struct compat_ion_custom_data __user *data32;
 		struct ion_custom_data __user *data;
+		struct compat_ion_berlin_data __user *data32_berlin;
+		struct ion_berlin_data __user *data_berlin;
 		int err;
+		int cmd;
 
 		data32 = compat_ptr(arg);
-		data = compat_alloc_user_space(sizeof(*data));
+		data = compat_alloc_user_space(sizeof(*data) + sizeof(*data_berlin));
 		if (data == NULL)
 			return -EFAULT;
+		data_berlin = (struct ion_berlin_data *)(
+			(unsigned long)data + sizeof(*data));
 
 		err = compat_get_ion_custom_data(data32, data);
 		if (err)
 			return err;
 
-		return filp->f_op->unlocked_ioctl(filp, ION_IOC_CUSTOM,
+		cmd = data->cmd;
+		if (cmd < ION_BERLIN_GETHM) {
+			compat_ulong_t berlin_arg;
+
+			data32_berlin = compat_ptr(data->arg);
+			err = compat_get_ion_berlin_data(data32_berlin, data_berlin);
+			if (err)
+				return err;
+			berlin_arg = (compat_ulong_t)((unsigned long)data_berlin);
+			put_user(berlin_arg, &data->arg);
+		}
+
+		ret = filp->f_op->unlocked_ioctl(filp, ION_IOC_CUSTOM,
 							(unsigned long)data);
+
+		if (cmd < ION_BERLIN_GETHM)
+			err = compat_put_ion_berlin_data(data32_berlin, data_berlin);
+		return ret ? ret : err;
 	}
 	case ION_IOC_SHARE:
 	case ION_IOC_MAP:

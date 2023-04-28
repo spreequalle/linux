@@ -307,6 +307,7 @@ if [ ! -z ${output_file} ]; then
 			fi
 		fi
 		cpio_tfile="$(mktemp ${TMPDIR:-/tmp}/cpiofile.XXXXXX)"
+		timestamp="-t 0"
 		usr/gen_init_cpio $timestamp ${cpio_list} > ${cpio_tfile}
 	else
 		cpio_tfile=${cpio_file}

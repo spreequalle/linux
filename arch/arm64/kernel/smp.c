@@ -560,6 +560,25 @@ static void ipi_cpu_stop(unsigned int cpu)
 		cpu_relax();
 }
 
+#define IPI_USER (0xF)
+
+static void (*_user_ipi_handler)(void *data);
+static void *_user_ipi_data;
+
+void register_user_ipi(void (*handler)(void *), void *data)
+{
+	_user_ipi_handler = handler;
+	_user_ipi_data = data;
+}
+EXPORT_SYMBOL(register_user_ipi);
+
+void release_user_ipi(void)
+{
+	_user_ipi_handler = NULL;
+	_user_ipi_data = NULL;
+}
+EXPORT_SYMBOL(release_user_ipi);
+
 /*
  * Main handler for inter-processor interrupts
  */
@@ -568,7 +587,7 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 	unsigned int cpu = smp_processor_id();
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
-	if ((unsigned)ipinr < NR_IPI) {
+	if ((unsigned)ipinr < NR_IPI || ipinr == IPI_USER) {
 		trace_ipi_entry_rcuidle(ipi_types[ipinr]);
 		__inc_irq_stat(cpu, ipi_irqs[ipinr]);
 	}
@@ -598,6 +617,14 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		break;
 #endif
 
+	case IPI_USER:
+		if (_user_ipi_handler != NULL) {
+			irq_enter();
+			_user_ipi_handler(_user_ipi_data);
+			irq_exit();
+		}
+		break;
+
 #ifdef CONFIG_IRQ_WORK
 	case IPI_IRQ_WORK:
 		irq_enter();
@@ -611,7 +638,7 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		break;
 	}
 
-	if ((unsigned)ipinr < NR_IPI)
+	if ((unsigned)ipinr < NR_IPI || ipinr == IPI_USER)
 		trace_ipi_exit_rcuidle(ipi_types[ipinr]);
 	set_irq_regs(old_regs);
 }

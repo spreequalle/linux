@@ -33,3 +33,8 @@ config ION_TEGRA
 	help
 	  Choose this option if you wish to use ion on an nVidia Tegra.
 
+config ION_BERLIN
+	tristate "Ion for berlin"
+	depends on ION
+	help
+	  Choose this option if you wish to use ion on an Marvell Berlin.

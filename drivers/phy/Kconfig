@@ -29,6 +29,22 @@ config PHY_BERLIN_SATA
 	help
 	  Enable this to support the SATA PHY on Marvell Berlin SoCs.
 
+config PHY_BERLIN4_USB2
+	tristate "Marvell Berlin4 USB2.0 PHY Driver"
+	depends on ARCH_BERLIN && RESET_CONTROLLER && HAS_IOMEM && OF
+	select GENERIC_PHY
+	help
+	  Enable this to support the USB2.0 PHY on Marvell Berlin4 series
+	  SoCs, such as BG4CT etc.
+
+config PHY_BERLIN4_USB3
+	tristate "Marvell Berlin4 USB3.0 PHY Driver"
+	depends on ARCH_BERLIN && RESET_CONTROLLER && HAS_IOMEM && OF
+	select GENERIC_PHY
+	help
+	  Enable this to support the USB3.0 PHY on Marvell Berlin4 series
+	  SoCs, such as BG4CT etc.
+
 config ARMADA375_USBCLUSTER_PHY
 	def_bool y
 	depends on MACH_ARMADA_375 || COMPILE_TEST

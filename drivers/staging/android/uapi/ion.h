@@ -40,6 +40,7 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_CARVEOUT,
 	ION_HEAP_TYPE_CHUNK,
 	ION_HEAP_TYPE_DMA,
+	ION_HEAP_TYPE_BERLIN,
 	ION_HEAP_TYPE_CUSTOM, /* must be last so device specific heaps always
 				 are at the end of this enum */
 	ION_NUM_HEAPS = 16,
@@ -63,6 +64,17 @@ enum ion_heap_type {
 #define ION_FLAG_CACHED_NEEDS_SYNC 2	/* mappings of this buffer will created
 					   at mmap time, if this is set
 					   caches must be managed manually */
+#define ION_NONCACHED		0
+#define ION_CACHED		(ION_FLAG_CACHED|ION_FLAG_CACHED_NEEDS_SYNC)
+
+struct ion_heap_info {
+	enum ion_heap_type type;
+	char name[16];
+	unsigned int id;
+	unsigned int base;
+	unsigned int size;
+	unsigned int attribute;
+};
 
 /**
  * DOC: Ion Userspace API
@@ -126,6 +138,41 @@ struct ion_custom_data {
 	unsigned int cmd;
 	unsigned long arg;
 };
+
+struct ion_berlin_data {
+	unsigned int cmd;
+	int share_fd;
+	unsigned int gid;
+	unsigned long addr;
+	size_t len;
+};
+
+struct berlin_cc_info {
+	unsigned int  m_ServiceID;
+	unsigned char m_SrvLevel;
+	unsigned char m_SrvType;
+	unsigned char m_Pad1;
+	unsigned char m_Pad2;
+	unsigned char m_Data[24];
+};
+
+struct berlin_cc_data {
+	struct berlin_cc_info cc;
+	unsigned int cmd;
+};
+
+
+#ifndef __CC_TYPE_H__
+typedef struct {
+	/*Message ID*/
+	unsigned int m_MsgID;
+	/*Message 1st Parameter*/
+	unsigned int m_Param1;
+	/*Message 2nd Parameter*/
+	unsigned int m_Param2;
+} MV_CC_MSG_t, *pMV_CC_MSG_t;
+#endif
+
 
 #define ION_IOC_MAGIC		'I'
 
@@ -192,5 +239,38 @@ struct ion_custom_data {
  * passes appropriate userdata for that ioctl
  */
 #define ION_IOC_CUSTOM		_IOWR(ION_IOC_MAGIC, 6, struct ion_custom_data)
+
+
+enum ion_custom_command {
+	ION_BERLIN_PHYS,
+	ION_BERLIN_SYNC,
+	ION_BERLIN_GETGID,
+	ION_BERLIN_GETSFD,
+	ION_BERLIN_GETHM,
+	ION_BERLIN_GETHI,
+	ION_BERLIN_CC,
+};
+
+
+#define ION_INVALIDATE_CACHE	1
+#define ION_CLEAN_CACHE	2
+#define ION_FLUSH_CACHE	3
+
+#define ION_CC_REG		1
+#define ION_CC_FREE		2
+#define ION_CC_INQUIRY		3
+#define ION_CC_UPDATE		4
+
+/* The ion memory pool attribute flag bits */
+#define ION_A_FS	0x0001  /* For secure memory */
+#define ION_A_NS	0x0002  /* For non-secure memory */
+#define ION_A_FC	0x0004  /* For cacheable memory */
+#define ION_A_NC	0x0008  /* For non-cacheable memory */
+#define ION_A_FD	0x0010  /* For dynamic memory */
+#define ION_A_ND	0x0020  /* For static memory */
+#define ION_A_CC	0x0100  /* For control (class) memory */
+#define ION_A_CV	0x0200  /* For video (class) memory */
+#define ION_A_CG	0x0400  /* For graphics (class) memory */
+#define ION_A_CO	0x0800  /* For other (class) memory */
 
 #endif /* _UAPI_LINUX_ION_H */

@@ -469,6 +469,8 @@ int hw_device_reset(struct ci_hdrc *ci)
 		return -ENODEV;
 	}
 
+	hw_write(ci, OP_USBCMD, 0xff0000, ci->platdata->itc_setting << 16);
+
 	return 0;
 }
 
@@ -590,6 +592,10 @@ static int ci_get_platdata(struct device *dev,
 
 	if (of_usb_get_maximum_speed(dev->of_node) == USB_SPEED_FULL)
 		platdata->flags |= CI_HDRC_FORCE_FULLSPEED;
+
+	platdata->itc_setting = 1;
+	of_property_read_u32(dev->of_node, "itc-setting",
+			&platdata->itc_setting);
 
 	return 0;
 }

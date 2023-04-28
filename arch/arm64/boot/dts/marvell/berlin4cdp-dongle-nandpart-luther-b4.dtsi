@@ -1,0 +1,103 @@
+/* luther-b4 (PVT/MP) Partition Table
+ * go/cast-partition-map
+ *
+ * |---------------------------------------------------------------------------------------------------------|
+ * | part | description             | start | start      | blocks | bytes                 | KiB    | MiB     |
+ * | #    |                         | block | hex offset |        | (hex)                 |        |         |
+ * |--------------------------------|------------------------------------------------------------------------|
+ * |    0 | block0                  |     0 |    0x00000 |      1 |    131072 (  0x20000) |    128 |   0.125 |
+ * |    1 | prebootloader           |     1 |    0x20000 |      8 |   1048576 ( 0x100000) |   1024 |       1 |
+ * |    2 | TZ image                |     9 |   0x120000 |     24 |   3145728 ( 0x300000) |   3072 |       3 |
+ * |    3 | TZ image (backup)       |    33 |   0x420000 |     24 |   3145728 ( 0x300000) |   3072 |       3 |
+ * |    4 | postbootloader          |    57 |   0x720000 |      4 |    524288 (  0x80000) |    512 |     0.5 |
+ * |    5 | postbootloader (backup) |    61 |   0x7a0000 |      4 |    524288 (  0x80000) |    512 |     0.5 |
+ * |    6 | kernel (boot.img)       |    65 |   0x820000 |     48 |   6291456 ( 0x600000) |   6144 |       6 |
+ * |    7 | rootfs                  |   113 |   0xe20000 |    752 |  98566144 (0x5e00000) |  96256 |      94 |
+ * |    8 | cache                   |   865 |  0x6c20000 |   1095 | 143523840 (0x88e0000) | 140160 | 136.875 |
+ * |    9 | recovery                |  1960 |  0xf500000 |     74 |   9699328 ( 0x940000) |   9472 |    9.25 |
+ * |   10 | factory                 |  2034 |  0xfe40000 |      8 |   1048576 ( 0x100000) |   1024 |       1 |
+ * |   11 | fts                     |  2042 |  0xff40000 |      3 |    393216 (  0x60000) |    384 |   0.375 |
+ * |   12 | bbt                     |  2045 |  0xffa0000 |      3 |    393216 (  0x60000) |    384 |   0.375 |
+ * |---------------------------------------------------------------------------------------------------------|
+ */
+&nfc {
+	status = "okay";
+
+	partition_block0 {
+		label = "block0";
+		reg = <0x00000 0x20000>;  /* 128 KiB */
+		read-only;
+	};
+
+	partition_prebootloader {
+		label = "prebootloader";
+		reg = <0x20000 0x100000>;  /* 8 copies * 128 KiB = 1 MiB */
+		read-only;
+	};
+
+	partition_tz {
+		label = "TZ";
+		reg = <0x120000 0x300000>;  /* 3 MiB */
+		read-only;
+	};
+
+	partition_tz_b {
+		label = "TZ-B";
+		reg = <0x420000 0x300000>;  /* 3 MiB */
+		read-only;
+	};
+
+	partition_postbootloader {
+		label = "postbootloader";
+		reg = <0x720000 0x80000>;  /* 512 KiB */
+		read-only;
+	};
+
+	partition_postbootloader_b {
+		label = "postbootloader-B";
+		reg = <0x7a0000 0x80000>;  /* 512 KiB */
+		read-only;
+	};
+
+	partition_kernel {
+		label = "kernel";
+		reg = <0x820000 0x600000>;  /* 6 MiB */
+		read-only;
+	};
+
+	partition_rootfs {
+		label = "rootfs";
+		reg = <0xe20000 0x5e00000>;  /* 94 MiB */
+		read-only;
+	};
+
+	partition_cache {
+		label = "cache";
+		reg = <0x6c20000 0x88e0000>;  /* 140160 KiB */
+		read-only;
+	};
+
+	partition_recovery {
+		label = "recovery";
+		reg = <0xf500000 0x940000>;  /* 9472 KiB */
+		read-only;
+	};
+
+	partition_factory_store {
+		label = "factory_store";
+		reg = <0xfe40000 0x100000>;  /* 1 MiB */
+		read-only;
+	};
+
+	partition_fts {
+		label = "fts";
+		reg = <0xff40000 0x60000>;  /* 384 KiB */
+		read-only;
+	};
+
+	partition_bbt {
+		label = "bbt";
+		reg = <0xffa0000 0x60000>;  /* 384 KiB */
+		read-only;
+	};
+};

@@ -28,6 +28,8 @@
 
 #include <asm/cacheflush.h>
 
+int swiotlb __read_mostly;
+
 struct dma_map_ops *dma_ops;
 EXPORT_SYMBOL(dma_ops);
 
@@ -100,7 +102,7 @@ static void *__dma_alloc_coherent(struct device *dev, size_t size,
 	if (IS_ENABLED(CONFIG_ZONE_DMA) &&
 	    dev->coherent_dma_mask <= DMA_BIT_MASK(32))
 		flags |= GFP_DMA;
-	if (IS_ENABLED(CONFIG_DMA_CMA) && (flags & __GFP_WAIT)) {
+	if (dev_get_cma_area(dev) && (flags & __GFP_WAIT)) {
 		struct page *page;
 		void *addr;
 
@@ -337,6 +339,13 @@ static int __swiotlb_mmap(struct device *dev,
 	return __dma_common_mmap(dev, vma, cpu_addr, dma_addr, size);
 }
 
+static int __swiotlb_dma_supported(struct device *hwdev, u64 mask)
+{
+	if (swiotlb)
+		return swiotlb_dma_supported(hwdev, mask);
+	return 1;
+}
+
 static struct dma_map_ops swiotlb_dma_ops = {
 	.alloc = __dma_alloc,
 	.free = __dma_free,
@@ -349,7 +358,7 @@ static struct dma_map_ops swiotlb_dma_ops = {
 	.sync_single_for_device = __swiotlb_sync_single_for_device,
 	.sync_sg_for_cpu = __swiotlb_sync_sg_for_cpu,
 	.sync_sg_for_device = __swiotlb_sync_sg_for_device,
-	.dma_supported = swiotlb_dma_supported,
+	.dma_supported = __swiotlb_dma_supported,
 	.mapping_error = swiotlb_dma_mapping_error,
 };
 

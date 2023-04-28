@@ -43,7 +43,15 @@ struct mtdblk_dev {
 	unsigned long cache_offset;
 	unsigned int cache_size;
 	enum { STATE_EMPTY, STATE_CLEAN, STATE_DIRTY } cache_state;
+
+	/* block map for RO */
+	int	*block_map;
 };
+
+static char ro_fspart_name[80];
+module_param_string(ro_fspart, ro_fspart_name, 80, 0400);
+MODULE_PARM_DESC(ro_fspart,
+		"name of the partition using read bad block skip mode");
 
 /*
  * Cache stuff...
@@ -208,6 +216,28 @@ static int do_cached_write (struct mtdblk_dev *mtdblk, unsigned long pos,
 	return 0;
 }
 
+static unsigned long map_block(struct mtdblk_dev *mtdblk, unsigned long pos)
+{
+	struct mtd_info *mtd = mtdblk->mbd.mtd;
+	int block;
+	int block_cnt;
+
+	if (mtdblk->block_map == NULL)
+	  return pos;
+
+	block = (int)(pos >> mtd->erasesize_shift);
+	block_cnt = (int)(mtd->size >> mtd->erasesize_shift);
+	if ((unsigned int)block >= (unsigned int)block_cnt) {
+		printk (KERN_WARNING "mtd: block_map(): requested block too large!\n");
+		return (unsigned long)-1;
+	}
+
+	/* get the mapped block */
+	block = mtdblk->block_map[block];
+
+	/* form actual position */
+	return ((unsigned long)block * mtd->erasesize) | (pos & (mtd->erasesize - 1));
+}
 
 static int do_cached_read (struct mtdblk_dev *mtdblk, unsigned long pos,
 			   int len, char *buf)
@@ -240,11 +270,16 @@ static int do_cached_read (struct mtdblk_dev *mtdblk, unsigned long pos,
 		    mtdblk->cache_offset == sect_start) {
 			memcpy (buf, mtdblk->cache_data + offset, size);
 		} else {
-			ret = mtd_read(mtd, pos, size, &retlen, buf);
-			if (ret)
-				return ret;
-			if (retlen != size)
+			pos = map_block(mtdblk, pos);
+			if (pos == (unsigned long)-1) {
 				return -EIO;
+			} else {
+				ret = mtd_read(mtd, pos, size, &retlen, buf);
+				if (ret)
+					return ret;
+				if (retlen != size)
+					return -EIO;
+			}
 		}
 
 		buf += size;
@@ -298,6 +333,39 @@ static int mtdblock_open(struct mtd_blktrans_dev *mbd)
 		mtdblk->cache_data = NULL;
 	}
 
+	/* Initialize block map to support read skip on errors for
+	 * read only file systems like squashfs.
+	 */
+	mtdblk->block_map = NULL;
+	if (mbd->mtd->_block_isbad &&
+		!(mbd->mtd->flags & MTD_WRITEABLE) &&
+		mbd->mtd->oobsize &&
+		mbd->mtd->erasesize &&
+		strcmp(mbd->mtd->name, ro_fspart_name) == 0) {
+		int block_cnt = mbd->mtd->size >> mbd->mtd->erasesize_shift;
+
+		printk(KERN_INFO "initializing block_map for %s\n", mbd->mtd->name);
+		mtdblk->block_map = kmalloc(sizeof(*mtdblk->block_map) * block_cnt,
+									GFP_KERNEL);
+		if (mtdblk->block_map) {
+			int i,j = 0;
+			/* Inititalize a map of block number to good block num */
+			for (i = 0; i < block_cnt; i++) {
+				 mtdblk->block_map[i] = -1;
+				 while (j < block_cnt) {
+					if ((*mbd->mtd->_block_isbad)
+						(mbd->mtd, j * mbd->mtd->erasesize) == 0) {
+						mtdblk->block_map[i] = j++;
+						break;
+					}
+					j++;
+				}
+			}
+		} else {
+			printk (KERN_WARNING "mtd: block_map(): unable to allocate block map\n");
+		}
+	}
+
 	pr_debug("ok\n");
 
 	return 0;
@@ -321,6 +389,9 @@ static void mtdblock_release(struct mtd_blktrans_dev *mbd)
 		if (mbd->file_mode & FMODE_WRITE)
 			mtd_sync(mbd->mtd);
 		vfree(mtdblk->cache_data);
+		if (mtdblk->block_map) {
+			kfree(mtdblk->block_map);
+		}
 	}
 
 	pr_debug("ok\n");

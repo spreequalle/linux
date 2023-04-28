@@ -56,6 +56,10 @@ struct ion_platform_heap {
 	size_t size;
 	ion_phys_addr_t align;
 	void *priv;
+	unsigned int attribute;
+	size_t used_size;
+	bool is_best_fit;
+	bool is_defer_free;
 };
 
 /**
@@ -199,5 +203,160 @@ int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle);
  * another exporter is passed in this function will return ERR_PTR(-EINVAL)
  */
 struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd);
+
+/**  ion get ion device handle
+ *
+ * This function will get ion device handle for use
+ * ion_client_create function.
+ *
+ * @retval  NULL            get ion device handle fail
+ * @retval  !NULL           get ion device handle success
+ *
+ */
+struct ion_device *ion_get_dev(void);
+
+
+/**  ion get physical information of a ion buffer
+ *
+ * This function will get a ion buffer's physical address and size
+ *
+ * @param share_fd      a dma-buf share file descriptor.
+ *
+ * @param addr          return the ion buffer's physical address
+ *
+ * @param len           return the ion buffer's memory size.
+ *
+ * @retval -1           get physical information fail
+ * @retval  0           get physical information success
+ *
+ */
+int ion_getphys(int share_fd, size_t *addr, size_t *len);
+
+
+/**  ion clean cache operate
+ *
+ * This function will clean cache
+ *
+ * @param handle        a memory buffer's handle
+ *
+ * @param virtaddr      need clean cache memory's virtual address
+ *
+ * @param size          need clean cache memory's size.
+ *
+ * @retval -1           clean cache operate fail
+ * @retval  0           clean cache operate success
+ *
+ */
+int ion_cleancache(struct ion_handle *handle, void *virtaddr, size_t size);
+
+
+/**  ion clean and invalidatecache operate
+ *
+ * This function will clean cache
+ *
+ * @param handle        a memory buffer's handle
+ *
+ * @param virtaddr      need clean and invalidatecache cache memory's virtual address
+ *
+ * @param size          need clean and invalidatecache cache memory's size.
+ *
+ * @retval -1           clean and invalidatecache cache operate fail
+ * @retval  0           clean and invalidatecache cache operate success
+ *
+ */
+int ion_flushcache(struct ion_handle *handle, void *virtaddr, size_t size);
+
+
+/**  ion invalidate cache operate
+ *
+ * This function will invalidate cache
+ *
+ * @param handle        a memory buffer's handle
+ *
+ * @param virtaddr      need invalidate cache memory's virtual address
+ *
+ * @param size          need invalidate cache memory's size.
+ *
+ * @retval -1           invalidate cache operate fail
+ * @retval  0           invalidate cache operate success
+ *
+ */
+int ion_invalidatecache(struct ion_handle *handle, void *virtaddr, size_t size);
+
+
+/**  ion get gid
+ *
+ * This function will get a global id in the linux kernel,this id will be transport
+ * to another process and use it to get a current process's share fd for mmap or do
+ * all other things.
+ *
+ * @param handle        a memory buffer's handle.
+ *
+ * @param *gid          save the return a global id.
+ *
+ * @retval -1           get a global id fail
+ * @retval  0           get a global id success
+ *
+ */
+int ion_getgid(struct ion_handle *handle, unsigned int *gid);
+
+
+/**  ion getsfd
+ *
+ * This function will get a current process's share fd by the global id
+ *
+ * @param share_fd      save the return a dma-buf share file descriptor.
+ *
+ * @param gid           a global id.
+ *
+ * @retval -1           get a current process's share fd fail
+ * @retval  0           get a current process's share fd success
+ *
+ */
+int ion_getsfd(unsigned int gid, int *share_fd);
+
+
+/**  ion gethandle
+ *
+ * This function will get a buffer's handle by the global id
+ *
+ * @param client       a client by ion_client_create function got.
+ *
+ * @param gid          a global id.
+ *
+ * @retval NULL        get a buffer's handle fail
+ * @retval !NULL       get a buffer's handle success
+ *
+ */
+
+struct ion_handle *ion_gethandle(struct ion_client *client, unsigned int gid);
+
+
+/**  ion get heap number
+ *
+ * This function will get heap number
+ *
+ * @param *heap_num    save heap number
+ *
+ * @retval 0           get fail
+ * @retval !0          get success
+ *
+ */
+int ion_get_heap_num(int *heap_num);
+
+
+/**  ion get heaps information
+ *
+ * This function will get all heaps information
+ *
+ * @param *info     got heaps information
+ *
+ * @retval 0        get info fail
+ * @retval !0       get info success
+ *
+ */
+int ion_get_heap_info(struct ion_heap_info *info);
+
+int ion_buffer_get(struct ion_buffer *buffer);
 
 #endif /* _LINUX_ION_H */

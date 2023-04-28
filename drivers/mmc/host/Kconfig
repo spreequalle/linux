@@ -48,6 +48,46 @@ config MMC_SDHCI
 
 	  If unsure, say N.
 
+config MMC_XENON_SDHCI
+	bool "Marvell XENON SD Host Controller"
+	depends on MMC_SDHCI
+	default y
+	help
+	  This selects the Marvell Xenon Host Controller.
+
+config XENON_DEBUG
+	bool "Print Xenon SDHC debug message"
+	depends on MMC_XENON_SDHCI
+	default n
+
+config MMC_XENON_SDHCI_EMMC_PHY
+	bool "Marvell XENON SDHCI eMMC PHY"
+	depends on MMC_XENON_SDHCI
+	default y
+	help
+	  If Xenon SDHC uses eMMC PHY, select y.
+
+config MMC_XENON_SDHCI_EMMC_PHY_OLD_VER
+	bool "Marvell XENON SDHCI eMMC old PHY"
+	depends on MMC_XENON_SDHCI_EMMC_PHY
+	default y
+	help
+	  If Xenon SDHC uses eMMC 5.0 PHY, select y.
+	  If Xenon SDHC uses eMMC 5.1 PHY, select n.
+
+config MMC_XENON_SDHCI_PLTFM
+	tristate "Marvell XENON SDHCI Platform"
+	depends on MMC_SDHCI_PLTFM
+	depends on MMC_XENON_SDHCI
+	depends on MMC_XENON_SDHCI_EMMC_PHY
+	help
+          This selects the common helper functions support for Host Controller
+	  Interface based platform driver. Please select this option if the IP
+	  is present as a platform device. This is the common interface for the
+	  Marvell XENON IP.
+
+	  If unsure, say N.
+
 config MMC_SDHCI_IO_ACCESSORS
 	bool
 	depends on MMC_SDHCI

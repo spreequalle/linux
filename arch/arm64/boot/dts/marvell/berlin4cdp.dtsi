@@ -1,0 +1,757 @@
+/*
+ * MARVELL BERLIN4CDP SoC device tree source
+ *
+ * Author:	Jisheng Zhang <jszhang@marvell.com>
+ * Copyright (c) 2015 Marvell Technology Group Ltd.
+ *		http://www.marvell.com
+ *
+ * MARVELL BERLIN4CDP SoC device nodes are listed in this file.
+ * BERLIN4CDP based board files can include this file and provide
+ * values for board specfic bindings.
+ *
+ * Note: This file does not include device nodes for all the controllers in
+ * BERLIN4CDP SoC. As device tree coverage for BERLIN4CDP increases,
+ * additional nodes can be added to this file.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+/ {
+	compatible = "marvell,berlin";
+	interrupt-parent = <&gic>;
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		linux,dvfs;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0x0>;
+			enable-method = "psci";
+			operating-points-v2 = <&cpu_opp_table>;
+			clocks = <&cpupll>;
+			cpu-idle-states = <&CPU_SLEEP_0>;
+		};
+
+		cpu1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0x1>;
+			enable-method = "psci";
+			operating-points-v2 = <&cpu_opp_table>;
+			cpu-idle-states = <&CPU_SLEEP_0>;
+		};
+
+		idle-states {
+			entry-method = "psci";
+			CPU_SLEEP_0: cpu-sleep-0 {
+				compatible = "arm,idle-state";
+				local-timer-stop;
+				arm,psci-suspend-param = <0x0010000>;
+				entry-latency-us = <75>;
+				exit-latency-us = <155>;
+				min-residency-us = <1000>;
+			};
+		};
+
+		cpu_opp_table: opp_table0 {
+			compatible = "operating-points-v2";
+			opp-shared;
+
+			opp@400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <975000 975000 1050000>;
+				clock-latency-ns = <100000>;
+				opp-suspend;
+			};
+
+			opp@600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <975000 975000 1050000>;
+				clock-latency-ns = <100000>;
+			};
+
+			opp@800000000 {
+				opp-hz = /bits/ 64 <800000000>;
+				opp-microvolt = <975000 975000 1050000>;
+				clock-latency-ns = <100000>;
+			};
+
+			opp@1000000000 {
+				opp-hz = /bits/ 64 <1000000000>;
+				opp-microvolt = <975000 975000 1050000>;
+				clock-latency-ns = <100000>;
+			};
+
+			opp@1250000000 {
+				opp-hz = /bits/ 64 <1250000000>;
+				opp-microvolt = <1050000 1050000 1050000>;
+				clock-latency-ns = <100000>;
+			};
+		};
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200";
+	};
+
+	osc: osc {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+	};
+
+	pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-affinity = <&cpu0>,
+				     <&cpu1>;
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>;
+	};
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0 0xf7000000 0x1000000
+			  0xe0000000 0 0xe0000000 0x10000000>;
+
+		avpll_a: avpll_a {
+			compatible = "marvell,berlin4cdp-avpll";
+			reg = <0x4a0000 0x100>;
+			#clock-cells = <1>;
+			clocks = <&osc>;
+			clock-output-names = "channel-1", "channel-2", "channel-3", "channel-4",
+					     "channel-5", "channel-6", "channel-7", "channel-8";
+			get-rate-nocache;
+		};
+
+		gic: interrupt-controller@901000 {
+			compatible = "arm,gic-400";
+			#interrupt-cells = <3>;
+			interrupt-controller;
+			reg = <0x901000 0x1000>,
+			      <0x902000 0x2000>,
+			      <0x904000 0x2000>,
+			      <0x906000 0x2000>;
+			interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+		};
+
+		cpupll: cpupll {
+			compatible = "marvell,berlin4cdp-pll";
+			reg = <0x9200d4 0x1c>, <0xea0614 4>;
+			#clock-cells = <0>;
+			clocks = <&osc>;
+			bypass-shift = /bits/ 8 <2>;
+		};
+
+		mempll: mempll {
+			compatible = "marvell,berlin4cdp-pll";
+			reg = <0x940038 0x1c>, <0xea0614 4>;
+			#clock-cells = <0>;
+			clocks = <&osc>;
+			bypass-shift = /bits/ 8 <1>;
+		};
+
+		sdhci2: sdhci@aa0000 {
+			compatible = "marvell,xenon-sdhci";
+			reg = <0xaa0000 0x1000>;
+			interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&emmcclk>, <&gateclk 7>;
+			clock-names = "core", "axi";
+			bus-width = <8>;
+			non-removable;
+			mmc-ddr-1_8v;
+			mmc-hs200-1_8v;
+			mmc-hs400-1_8v;
+			xenon,emmc;
+			xenon,slotno = <0>;
+			status = "disabled";
+		};
+
+		sdhci0: sdhci@ab0000 {
+			compatible = "mrvl,pxav3-mmc";
+			reg = <0xab0000 0x200>;
+			interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&sd0clk>, <&gateclk 2>;
+			clock-names = "io", "core";
+			bus-width = <4>;
+			status = "disabled";
+		};
+
+		usb_phy0: phy@b74000 {
+			compatible = "marvell,berlin4ct-usb2-phy";
+			reg = <0xb74000 0x3c>;
+			#phy-cells = <0>;
+			resets = <&chip 0x600 6 0>;
+			phy-mode = <2>;
+			status = "disabled";
+		};
+
+		gpu: gpu@bc0000 {
+			compatible = "vivante,galcore";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			marvell,nonsecure-mem-base = <0 0x3D000000>;
+			marvell,nonsecure-mem-size = <0 0x02000000>;
+			marvell,phy-mem-size = <0 0x40000000>;
+			ranges;
+
+			core3d {
+				compatible = "vivante,core3d";
+				reg = <0xbc0000 0x800>;
+				interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&gfx3dcoreclk>, <&gfx3dsysclk>;
+				clock-names = "core", "system";
+			};
+		};
+
+		mc6: mc6@cb0000 {
+			compatible = "marvell,berlin-mc6";
+			reg = <0xcb0000 0xd00>;
+			clocks = <&mempll>;
+			status = "disabled";
+		};
+
+		pcie: pcie@e40000 {
+			compatible = "marvell,berlin4cdp-pcie";
+			reg = <0xe40000 0x10000>, <0xea09e4 4>, <0xe0000000 0x07fe0000>;
+			reg-names = "dbi", "pad", "config";
+			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&gateclk 5>;
+			resets = <&chip 0x604 0 1>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0>;
+			interrupt-map = <0 0 0 0 &gic GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+			num-lanes = <1>;
+			device_type = "pci";
+			ranges = <0x81000000 0 0          0xe7fe0000 0 0x00011000
+				  0x82000000 0 0xe8000000 0xe8000000 0 0x08000000>;
+			status = "disabled";
+		};
+
+		apb@e80000 {
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0xe80000 0x10000>;
+
+			gpio0: gpio@0400 {
+				compatible = "snps,dw-apb-gpio";
+				dev_name = "gpio_soc_0";
+				reg = <0x0400 0x400>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				porta: gpio-port@0 {
+					compatible = "snps,dw-apb-gpio-port";
+					gpio-controller;
+					#gpio-cells = <2>;
+					snps,nr-gpios = <32>;
+					reg = <0>;
+					interrupt-controller;
+					#interrupt-cells = <2>;
+					interrupts = <GIC_SPI 46 IRQ_TYPE_LEVEL_HIGH>;
+				};
+			};
+
+			gpio1: gpio@0800 {
+				compatible = "snps,dw-apb-gpio";
+				dev_name = "gpio_soc_1";
+				reg = <0x0800 0x400>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				portb: gpio-port@1 {
+					compatible = "snps,dw-apb-gpio-port";
+					gpio-controller;
+					#gpio-cells = <2>;
+					snps,nr-gpios = <32>;
+					reg = <0>;
+					interrupt-controller;
+					#interrupt-cells = <2>;
+					interrupts = <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>;
+				};
+			};
+
+			i2c0: i2c@1400 {
+				compatible = "snps,designware-i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x1400 0x100>;
+				clocks = <&apbcoreclk>;
+				i2c-sda-hold-time-ns = <35>;
+				i2c-sda-falling-time-ns = <425>;
+				i2c-scl-falling-time-ns = <205>;
+				interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+				status = "disabled";
+			};
+
+			i2c1: i2c@1800 {
+				compatible = "snps,designware-i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x1800 0x100>;
+				clocks = <&apbcoreclk>;
+				i2c-sda-hold-time-ns = <35>;
+				i2c-sda-falling-time-ns = <425>;
+				i2c-scl-falling-time-ns = <205>;
+				interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+				status = "disabled";
+			};
+
+			timer0: timer@2c00 {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c00 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			timer1: timer@2c14 {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c14 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				status = "disabled";
+			};
+
+			timer2: timer@2c28 {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c28 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				status = "disabled";
+			};
+
+			timer3: timer@2c3c {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c3c 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				status = "disabled";
+			};
+
+			timer4: timer@2c50 {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c50 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				status = "disabled";
+			};
+
+			timer5: timer@2c64 {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c64 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				status = "disabled";
+			};
+
+			timer6: timer@2c78 {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c78 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				status = "disabled";
+			};
+
+			timer7: timer@2c8c {
+				compatible = "snps,dw-apb-timer";
+				reg = <0x2c8c 0x14>;
+				clocks = <&apbcoreclk>;
+				clock-names = "timer";
+				status = "disabled";
+			};
+
+			i2c2: i2c@3400 {
+				compatible = "snps,designware-i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x3400 0x100>;
+				clocks = <&apbcoreclk>;
+				i2c-sda-hold-time-ns = <35>;
+				i2c-sda-falling-time-ns = <425>;
+				i2c-scl-falling-time-ns = <205>;
+				interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
+				status = "disabled";
+			};
+		};
+
+		chipid@ea0000 {
+			compatible = "marvell,berlin-chipid";
+			reg = <0xea0000 12>;
+		};
+
+		chip: chip-control@ea0000 {
+			compatible = "marvell,berlin4cdp-chip-ctrl";
+			reg = <0xea0000 0x10000>;
+			#reset-cells = <3>;
+		};
+
+		syspll: syspll {
+			compatible = "marvell,berlin4cdp-pll";
+			reg = <0xea0200 0x1c>, <0xea0614 4>;
+			#clock-cells = <0>;
+			clocks = <&osc>;
+			bypass-shift = /bits/ 8 <0>;
+		};
+
+		gateclk: gateclk {
+			compatible = "marvell,berlin4cdp-gateclk";
+			reg = <0xea0610 4>;
+			#clock-cells = <1>;
+			clock-output-names = "ahbapbcoreclk", "usb0coreclk", "sdiocoreclk", "tssssysclk", "nfcsysclk", "pcieclk", "ihb0sysclk", "emmcsysclk", "zspsysclk";
+		};
+
+		cpufastrefclk: cpufastrefclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0618 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		memfastrefclk: memfastrefclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea061c 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+		};
+
+		cfgclk: cfgclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0620 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		sysclk: sysclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0624 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		gfx3dcoreclk: gfx3dcoreclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea062c 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>, <&avpll_a 1>, <&avpll_a 4>, <&avpll_a 5>, <&avpll_a 6>;
+			get-rate-nocache;
+			ignore-unused;
+		};
+
+		gfx3dsysclk: gfx3dsysclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0630 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		perifclk: perifclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0644 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		atbclk: atbclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0650 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		bcmclk: bcmclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0654 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		emmcclk: emmcclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0658 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+		};
+
+		nfceccclk: nfceccclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea065c 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+		};
+
+		sd0clk: sd0clk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0660 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+		};
+
+		usb2testclk: usb2testclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0664 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+		};
+
+		sdio3dllmstrefclk: sdio3dllmstrefclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0668 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+			ignore-unused;
+		};
+
+		apbcoreclk: apbcoreclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea067c 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+		};
+
+		pcietestclk: pcietestclk {
+			compatible = "marvell,berlin-clk";
+			reg = <0xea0684 4>;
+			#clock-cells = <0>;
+			clocks = <&syspll>;
+		};
+
+		pinctrl: pinctrl@ea8000 {
+			compatible = "marvell,berlin4cdp-soc-pinctrl";
+			reg = <0xea8000 0x14>;
+		};
+
+		avio_pinctrl: pinctrl@ea8014 {
+			compatible = "marvell,berlin4cdp-avio-pinctrl";
+			reg = <0xea8014 4>;
+		};
+
+		usb0: usb@ed0000 {
+			compatible = "chipidea,usb2";
+			reg = <0xed0000 0x10000>;
+			interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&gateclk 1>;
+			dr_mode = "otg";
+			phys = <&usb_phy0>;
+			phy-names = "usb-phy";
+			itc-setting = <0x0>; /* 0 micro-frames */
+			status = "disabled";
+		};
+
+		nfc: nfc@f00000 {
+			compatible = "marvell,berlin-nfc";
+			reg = <0xf00000 0x10000>, <0xd70000 0x10000>;
+			interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&nfceccclk>, <&gateclk 4>;
+			clock-names = "ecc", "bus";
+			marvell,nfc-dma;
+			marvell,nfc-naked-cmd;
+			marvell,nfc-arbi;
+			status = "disabled";
+		};
+
+		pwm: pwm@f20000 {
+			compatible = "marvell,berlin-pwm";
+			reg = <0xf20000 0x40>;
+			status = "disabled";
+		};
+
+		apb@fc0000 {
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0xfc0000 0x221F0>;
+			interrupt-parent = <&sic>;
+
+			watchdog0: watchdog@1000 {
+				compatible = "snps,dw-wdt";
+				reg = <0x1000 0x100>;
+				clocks = <&osc>;
+				status = "disabled";
+			};
+
+			watchdog1: watchdog@2000 {
+				compatible = "snps,dw-wdt";
+				reg = <0x2000 0x100>;
+				clocks = <&osc>;
+				status = "disabled";
+			};
+
+			watchdog2: watchdog@3000 {
+				compatible = "snps,dw-wdt";
+				reg = <0x3000 0x100>;
+				clocks = <&osc>;
+				status = "disabled";
+			};
+
+			uart0: uart@9000 {
+				compatible = "snps,dw-apb-uart";
+				reg = <0x9000 0x100>;
+				interrupts = <8>;
+				clocks = <&osc>;
+				reg-shift = <2>;
+				status = "disabled";
+			};
+
+			tsen@d000 {
+				compatible = "marvell,berlin2cdp-tsen-adc33";
+				reg = <0xd014 4>,
+				      <0xd01C 4>,
+				      <0xd070 4>,
+				      <0xd024 4>,
+				      <0xd028 4>;
+				pwr-gpio = <&porta 2 0>;
+			};
+
+			sic: interrupt-controller@e000 {
+				compatible = "snps,dw-apb-ictl";
+				reg = <0xe000 0x30>;
+				interrupt-controller;
+				#interrupt-cells = <1>;
+				interrupt-parent = <&gic>;
+				interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			adc: adc@22000 {
+				compatible = "marvell,berlin4cdp-adc";
+				reg = <0x22000 0x100>;
+				clocks = <&osc>;
+				interrupts = <12 14>;	/* adc, tsen interrupt */
+				interrupt-names = "adc", "tsen";
+				interrupt-cells = <1>;
+			};
+		};
+
+		sm_pinctrl: pinctrl@fe2200 {
+			compatible = "marvell,berlin4cdp-system-pinctrl";
+			reg = <0xfe2200 0x4>;
+		};
+
+
+		amp {
+			compatible = "marvell,berlin-amp";
+			v4g {
+				interrupts = <GIC_SPI 0x01 IRQ_TYPE_LEVEL_HIGH>;
+			};
+			figo {
+				interrupts = <GIC_SPI 0x02 IRQ_TYPE_LEVEL_HIGH>;
+			};
+			h1 {
+				interrupts = <GIC_SPI 0x1D IRQ_TYPE_LEVEL_HIGH>;
+			};
+			dHubIntrAvio0 {
+				interrupts = <GIC_SPI 0x21 IRQ_TYPE_LEVEL_HIGH>;
+			};
+			dHubIntrAvio1 {
+				interrupts = <GIC_SPI 0x22 IRQ_TYPE_LEVEL_HIGH>;
+			};
+			dHubIntrAvio2 {
+				interrupts = <GIC_SPI 0x40 IRQ_TYPE_LEVEL_HIGH>;
+			};
+			zsp {
+				interrupts = <GIC_SPI 0x23 IRQ_TYPE_LEVEL_HIGH>;
+			};
+			cec {
+				compatible = "marvell,berlin-cec";
+				interrupt-parent = <&sic>;
+				interrupts = <16>;
+			};
+
+			chip_version {
+				compatible = "marvell,berlin-chip-ext";
+				revision = <0x0>;
+			};
+
+			avio_channel {
+				compatible = "marvell,berlin-avio";
+				num = <0x4>;
+			};
+
+			tee: tee {
+				compatible = "marvell,berlin-tee";
+				status = "disabled";
+			};
+
+			vip: vip {
+				compatible = "marvell,berlin-vip";
+				status = "disabled";
+			};
+		};
+
+		gfx3dcore_devfreq: gfx3dcore_devfreq {
+			compatible = "marvell,berlin-devfreq";
+			operating-points-v2 = <&gfx3dcore_opp_table>;
+			clocks = <&gfx3dcoreclk>;
+			status = "disabled";
+
+			gfx3dcore_opp_table: gfx3dcore_opp_table {
+				compatible = "operating-points-v2";
+				opp-shared;
+
+				opp@66666666 {
+					opp-hz = /bits/ 64 <66666666>;
+					opp-microvolt = <975000 975000 1050000>;
+					clock-latency-ns = <100000>;
+					opp-suspend;
+				};
+
+				opp@100000000 {
+					opp-hz = /bits/ 64 <100000000>;
+					opp-microvolt = <975000 975000 1050000>;
+					clock-latency-ns = <100000>;
+				};
+
+				opp@200000000 {
+					opp-hz = /bits/ 64 <200000000>;
+					opp-microvolt = <975000 975000 1050000>;
+					clock-latency-ns = <100000>;
+				};
+
+				opp@400000000 {
+					opp-hz = /bits/ 64 <400000000>;
+					opp-microvolt = <975000 975000 1050000>;
+					clock-latency-ns = <100000>;
+				};
+
+				opp@500000000 {
+					opp-hz = /bits/ 64 <500000000>;
+					opp-microvolt = <1050000 1050000 1050000>;
+					clock-latency-ns = <100000>;
+				};
+			};
+		};
+	};
+};

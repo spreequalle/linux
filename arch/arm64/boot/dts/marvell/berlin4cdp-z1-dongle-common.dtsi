@@ -1,0 +1,74 @@
+/*
+ * MARVELL BERLIN4CDP Dongle board device tree source
+ *
+ * Author:	Hongjun Yuan <hyuan@marvell.com>
+ * Copyright (c) 2015 Marvell Technology Group Ltd.
+ *		http://www.marvell.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+#include "berlin4cdp-z1.dtsi"
+
+/ {
+	model = "MARVELL BG4CDP DONGLE BOARD";
+	compatible = "marvell,berlin4cdp-dongle", "marvell,berlin4cdp", "marvell,berlin";
+
+	psci {
+		compatible = "arm,psci";
+		method = "smc";
+		cpu_off = <0x84000002>;
+		cpu_on = <0xc4000003>;
+	};
+
+	memory {
+		name = "memory";
+		device_type = "memory";
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 console=ttyUSB0,115200 root=/dev/mtdblock7 rootfstype=squashfs root_part_name=rootfs";
+	};
+};
+
+#include "berlin4cdp-z1-dongle-nandpart.dtsi"
+
+&sdhci0 {
+	status = "okay";
+	broken-cd;
+	non-removable;
+	mrvl,no-runtime-pm;
+	keep-power-in-suspend;
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&timer7 {
+	status = "okay";
+};
+
+&watchdog1 {
+	status = "okay";
+};
+
+&i2c0 {
+	clock-frequency = <100000>;
+	status = "okay";
+};
+
+&usb_phy0 {
+	status = "okay";
+};
+
+&usb0 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+&pwm {
+	status = "okay";
+};

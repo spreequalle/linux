@@ -140,6 +140,10 @@
 #define  SDHCI_INT_ACMD12ERR	0x01000000
 #define  SDHCI_INT_ADMA_ERROR	0x02000000
 
+#ifdef CONFIG_MMC_XENON_SDHCI
+#define  SDHCI_RETUNE_EVT_INTSIG	0x00001000
+#endif
+
 #define  SDHCI_INT_NORMAL_MASK	0x00007FFF
 #define  SDHCI_INT_ERROR_MASK	0xFFFF8000
 
@@ -161,7 +165,12 @@
 #define   SDHCI_CTRL_UHS_SDR50		0x0002
 #define   SDHCI_CTRL_UHS_SDR104		0x0003
 #define   SDHCI_CTRL_UHS_DDR50		0x0004
+#ifdef CONFIG_MMC_XENON_SDHCI
+#define   SDHCI_CTRL_HS200			0x0005
+#define	  SDHCI_CTRL_HS400			0x0006
+#else
 #define   SDHCI_CTRL_HS400		0x0005 /* Non-standard */
+#endif
 #define  SDHCI_CTRL_VDD_180		0x0008
 #define  SDHCI_CTRL_DRV_TYPE_MASK	0x0030
 #define   SDHCI_CTRL_DRV_TYPE_B		0x0000
@@ -255,6 +264,7 @@
 #define   SDHCI_SPEC_100	0
 #define   SDHCI_SPEC_200	1
 #define   SDHCI_SPEC_300	2
+#define   SDHCI_SPEC_400	3
 
 /*
  * End of controller registers.
@@ -410,6 +420,14 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_SUPPORT_SINGLE			(1<<13)
 /* Controller broken with using ACMD23 */
 #define SDHCI_QUIRK2_ACMD23_BROKEN			(1<<14)
+/* Xenon eMMC slot require special operations
+ * And during these operations, card init might not
+ * complete yet. Thus mmc_card_mmc(host->card)
+ * is not available yet.
+ */
+#define SDHCI_QUIRK2_XENON_EMMC_SLOT			(1<<30)
+/* Xenon Specific operations */
+#define	SDHCI_QUIRK2_XENON_HACK					(1<<31)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */
@@ -541,6 +559,9 @@ struct sdhci_ops {
 	void	(*platform_init)(struct sdhci_host *host);
 	void    (*card_event)(struct sdhci_host *host);
 	void	(*voltage_switch)(struct sdhci_host *host);
+#ifdef CONFIG_MMC_XENON_SDHCI
+	int	(*delay_adj)(struct sdhci_host *host, struct mmc_ios *ios);
+#endif
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

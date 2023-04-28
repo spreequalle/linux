@@ -79,6 +79,12 @@ struct mtd_part_parser {
 extern void register_mtd_parser(struct mtd_part_parser *parser);
 extern void deregister_mtd_parser(struct mtd_part_parser *parser);
 
+#ifdef CONFIG_MTD_CMDLINE_PARTS
+static inline int mtd_has_cmdlinepart(void) { return 1; }
+#else
+static inline int mtd_has_cmdlinepart(void) { return 0; }
+#endif
+
 int mtd_is_partition(const struct mtd_info *mtd);
 int mtd_add_partition(struct mtd_info *master, const char *name,
 		      long long offset, long long length);

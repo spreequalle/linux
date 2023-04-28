@@ -1,0 +1,109 @@
+* Marvell's Xenon SDHCI Controller device tree bindings
+
+Marvell Xenon SDHCI Controller is a SD/SDIO/MMC/eMMC host controller,
+which can simultaneously support multiple SD/SDIO/MMC/eMMC cards.
+
+This file documents differences between the core mmc properties
+described by mmc.txt and the properties used by the Xenon implementation.
+
+Required Properties:
+- compatible: should be "marvell,xenon-sdhci"
+
+- eMMC Speed Mode:
+  If the SDHC slot in use is implemented to connect an eMMC card, three
+  speed modes in below should be explicitly set.
+  - mmc-ddr-1_8v
+  - mmc-hs200-1_8v
+  - mmc-hs400-1_8v
+  Besides, since Xenon cannot support 1.2v, three speed modes in below
+  should not be set.
+  - mmc-ddr-1_2v
+  - mmc-hs200-1_2v
+  - mmc-hs400-1_2v
+  If the SDHC slot is for SD/SDIO, eMMC speed mode should not be set.
+
+- Slot Index
+  Xenon can supports multiple slots in a single IP.
+  Each SDHC slot has its own setting bits.
+  The specific slot index in Xenon IP should be provided.
+  - xenon,slotno = <slot_index>;
+
+- Input Clock Name
+  Some SOCs require additional clock for AXI bus.
+  The input clock for Xenon IP core should be named as "core".
+  The optional AXI clock should be named as "axi".
+  - clocks = <&core_clk>, <&axi_clock>;
+  - clock-names = "core", "axi";
+
+- Register Set Size
+  Different Xenon SDHC release has different register set size.
+  The specific size should refer to the SOC implementation.
+
+Optional Properties:
+- eMMC Type Property
+  Xenon SDHC eMMC slot requires some special initialization steps.
+  In theory, driver can determine whether current Xenon slot is
+  for eMMC by checking a register.
+  However, SOC usually doesn't set that register in actual
+  implementation. In this case, eMMC Type Property should be set.
+  - xenon,emmc;
+
+- Re-tuning Counter
+  Xenon SDHC SOC usually doesn't provide re-tuning counter in
+  Capabilities Register 3 Bit[11:8].
+  This property provide the re-tuning counter.
+  xenon,tuning-count = <count>;
+  If this property is not set, default re-tuning counter will
+  be set as 0x9 in driver.
+
+- CMDQ Interrupt Coalescing Counter Threshold
+  Only available when CMDQ feature is supported and
+  CONFIG_MMC_XENON_SDHCI_CMDQ_WR_INT_COAL is enabled.
+  The value is to set Interrupt Coalescing Counter Threshold
+  in register Command Queuing Interrupt Coalescing Bit[12:8].
+  The value range is between [0, 31].
+  - xenon,cqe-iccth = <count>;
+
+- CMDQ Interrupt Coalescing Timeout Value
+  Only available when CMDQ feature is supported and
+  CONFIG_MMC_XENON_SDHCI_CMDQ_WR_INT_COAL is enabled.
+  The value is to set Interrupt Coalescing Timeout Value
+  in register Command Queuing Interrupt Coalescing Bit[6:0].
+  The value range is between [0x0, 0x7f].
+  - xenon,cqe-ictoval = <count>;
+
+- CMDQ SQS_TIMER
+  Only available when CMDQ feature is supported.
+  The value is to set Send Status Command Idle Timer in
+  register Command Queuing Configuration 1 Bit[15:0].
+  The value range is between [0x1, 0xFFFF].
+  - xenon,cqe-sqstimer = <count>;
+  If this property is not set, driver will use the default
+  value in register Command Queuing Configuration 1.
+
+
+Example:
+- For eMMC slot:
+
+	sdhci@aa0000 {
+		compatible = "marvell,xenon-sdhci";
+		reg = <0xaa0000 0x1000>;
+		interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>
+		clocks = <&emmcclk>;
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+		mmc-hs400-1_8v;
+		non-removable;
+		bus-width = <8>;
+		tuning-count = <11>;
+	};
+
+- For SD/SDIO slot:
+
+	sdhci@ab0000 {
+		compatible = "marvell,xenon-sdhci";
+		reg = <0xaa0000 0x1000>;
+		interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>
+		clocks = <&sdclk>;
+		bus-width = <4>;
+	}

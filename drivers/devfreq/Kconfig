@@ -98,6 +98,14 @@ config ARM_TEGRA_DEVFREQ
          It reads ACTMON counters of memory controllers and adjusts the
          operating frequencies and voltages with OPP support.
 
+config ARM_BERLIN_DEVFREQ
+	tristate "Berlin DEVFREQ Driver"
+	depends on ARCH_BERLIN
+	select DEVFREQ_GOV_USERSPACE
+	select PM_OPP
+	help
+	  This adds the DEVFREQ driver for the Berlin family of SoCs.
+
 source "drivers/devfreq/event/Kconfig"
 
 endif # PM_DEVFREQ

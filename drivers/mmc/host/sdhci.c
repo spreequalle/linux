@@ -33,6 +33,9 @@
 
 #include "sdhci.h"
 
+#ifdef CONFIG_MMC_XENON_SDHCI
+#include "sdhci-xenon-core.h"
+#endif
 #define DRIVER_NAME "sdhci"
 
 #define DBG(f, x...) \
@@ -1152,9 +1155,12 @@ static u16 sdhci_get_preset_value(struct sdhci_host *host)
 	case MMC_TIMING_MMC_DDR52:
 		preset = sdhci_readw(host, SDHCI_PRESET_FOR_DDR50);
 		break;
+#ifndef CONFIG_MMC_XENON_SDHCI
+	/* Xenon SDHCI doesn't support HS400 preset reg */
 	case MMC_TIMING_MMC_HS400:
 		preset = sdhci_readw(host, SDHCI_PRESET_FOR_HS400);
 		break;
+#endif
 	default:
 		pr_warn("%s: Invalid UHS-I mode selected\n",
 			mmc_hostname(host->mmc));
@@ -1273,19 +1279,6 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned char mode,
 	struct mmc_host *mmc = host->mmc;
 	u8 pwr = 0;
 
-	if (!IS_ERR(mmc->supply.vmmc)) {
-		spin_unlock_irq(&host->lock);
-		mmc_regulator_set_ocr(mmc, mmc->supply.vmmc, vdd);
-		spin_lock_irq(&host->lock);
-
-		if (mode != MMC_POWER_OFF)
-			sdhci_writeb(host, SDHCI_POWER_ON, SDHCI_POWER_CONTROL);
-		else
-			sdhci_writeb(host, 0, SDHCI_POWER_CONTROL);
-
-		return;
-	}
-
 	if (mode != MMC_POWER_OFF) {
 		switch (1 << vdd) {
 		case MMC_VDD_165_195:
@@ -1343,6 +1336,12 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned char mode,
 		 */
 		if (host->quirks & SDHCI_QUIRK_DELAY_AFTER_POWER)
 			mdelay(10);
+	}
+
+	if (!IS_ERR(mmc->supply.vmmc)) {
+		spin_unlock_irq(&host->lock);
+		mmc_regulator_set_ocr(mmc, mmc->supply.vmmc, vdd);
+		spin_lock_irq(&host->lock);
 	}
 }
 
@@ -1462,9 +1461,16 @@ void sdhci_set_uhs_signaling(struct sdhci_host *host, unsigned timing)
 	ctrl_2 = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 	/* Select Bus Speed Mode for host */
 	ctrl_2 &= ~SDHCI_CTRL_UHS_MASK;
+#ifdef CONFIG_MMC_XENON_SDHCI
+	if (timing == MMC_TIMING_MMC_HS200)
+		ctrl_2 |= SDHCI_CTRL_HS200;
+	else if (timing == MMC_TIMING_UHS_SDR104)
+		ctrl_2 |= SDHCI_CTRL_UHS_SDR104;
+#else
 	if ((timing == MMC_TIMING_MMC_HS200) ||
 	    (timing == MMC_TIMING_UHS_SDR104))
 		ctrl_2 |= SDHCI_CTRL_UHS_SDR104;
+#endif
 	else if (timing == MMC_TIMING_UHS_SDR12)
 		ctrl_2 |= SDHCI_CTRL_UHS_SDR12;
 	else if (timing == MMC_TIMING_UHS_SDR25)
@@ -1627,6 +1633,11 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
+
+#ifdef CONFIG_MMC_XENON_SDHCI
+	if (host->quirks2 & SDHCI_QUIRK2_XENON_HACK)
+		host->ops->delay_adj(host, ios);
+#endif
 }
 
 static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
@@ -1769,6 +1780,10 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 	struct mmc_host *mmc = host->mmc;
 	u16 ctrl;
 	int ret;
+#ifdef CONFIG_MMC_XENON_SDHCI
+	u16 reg;
+	u8 timeout;
+#endif
 
 	/*
 	 * Signal Voltage Switching is only applicable for Host Controllers
@@ -1776,6 +1791,40 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 	 */
 	if (host->version < SDHCI_SPEC_300)
 		return 0;
+
+#ifdef CONFIG_MMC_XENON_SDHCI
+	/*
+	 * Before SD/SDIO set signal voltage, SD bus clock should be
+	 * disabled. However, sdhci_set_clock will also disable the Internal
+	 * clock.
+	 * If Internal clock is disabled, the 3.3V/1.8V bit can not be updated.
+	 * Thus here manually enable internal clock.
+	 *
+	 * After switch completes, it is unnessary to disable internal clock,
+	 * since keeping internal clock active obeys SD spec.
+	 */
+	if (host->quirks2 & SDHCI_QUIRK2_XENON_HACK) {
+		reg = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
+		if (!(reg & SDHCI_CLOCK_INT_EN)) {
+			reg |= SDHCI_CLOCK_INT_EN;
+			sdhci_writew(host, reg, SDHCI_CLOCK_CONTROL);
+
+			/* Wait max 20 ms */
+			timeout = 20;
+			while (!((reg = sdhci_readw(host, SDHCI_CLOCK_CONTROL))
+					& SDHCI_CLOCK_INT_STABLE)) {
+				if (timeout == 0) {
+					pr_err("%s: Internal clock never stabilised.\n",
+						mmc_hostname(host->mmc));
+					sdhci_dumpregs(host);
+					return -EIO;
+				}
+				timeout--;
+				mdelay(1);
+			}
+		}
+	}
+#endif
 
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
@@ -1796,6 +1845,12 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 		}
 		/* Wait for 5ms */
 		usleep_range(5000, 5500);
+
+#ifdef CONFIG_MMC_XENON_SDHCI
+		/* Some controller need to do more when switching */
+		if (host->ops->voltage_switch)
+			host->ops->voltage_switch(host);
+#endif
 
 		/* 3.3V regulator output should be stable within 5 ms */
 		ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
@@ -1827,6 +1882,9 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 		/* Some controller need to do more when switching */
 		if (host->ops->voltage_switch)
 			host->ops->voltage_switch(host);
+
+		if (host->quirks2 & SDHCI_QUIRK2_XENON_EMMC_SLOT)
+			return 0;
 
 		/* 1.8V regulator output should be stable within 5 ms */
 		ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
@@ -2224,6 +2282,12 @@ static const struct mmc_host_ops sdhci_ops = {
 	.execute_tuning			= sdhci_execute_tuning,
 	.card_event			= sdhci_card_event,
 	.card_busy	= sdhci_card_busy,
+#ifdef CONFIG_MMC_XENON_SDHCI
+	.post_attach	= sdhci_xenon_post_attach,
+	.init_card	= sdhci_xenon_init_card,
+	.bus_test_pre	= sdhci_xenon_bus_test_pre,
+	.bus_test_post	= sdhci_xenon_bus_test_post,
+#endif
 };
 
 /*****************************************************************************\

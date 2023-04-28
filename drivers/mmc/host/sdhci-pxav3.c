@@ -58,6 +58,9 @@
 #define SDCE_MISC_INT		(1<<2)
 #define SDCE_MISC_INT_EN	(1<<1)
 
+#define SD_RX_CFG		0x114
+#define SD_TX_CFG		0x118
+
 struct sdhci_pxa {
 	struct clk *clk_core;
 	struct clk *clk_io;
@@ -194,6 +197,11 @@ static void pxav3_reset(struct sdhci_host *host, u8 mask)
 			writew(tmp, host->ioaddr + SD_CLOCK_BURST_SIZE_SETUP);
 		}
 	}
+
+	if (pdata && 0 != pdata->txcfg)
+		writel(pdata->txcfg, host->ioaddr + SD_TX_CFG);
+	if (pdata && 0 != pdata->rxcfg)
+		writel(pdata->rxcfg, host->ioaddr + SD_RX_CFG);
 }
 
 #define MAX_WAIT_COUNT 5
@@ -337,6 +345,8 @@ static struct sdhci_pxa_platdata *pxav3_get_mmc_pdata(struct device *dev)
 	struct sdhci_pxa_platdata *pdata;
 	struct device_node *np = dev->of_node;
 	u32 clk_delay_cycles;
+	u32 txcfg;
+	u32 rxcfg;
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
@@ -345,6 +355,13 @@ static struct sdhci_pxa_platdata *pxav3_get_mmc_pdata(struct device *dev)
 	if (!of_property_read_u32(np, "mrvl,clk-delay-cycles",
 				  &clk_delay_cycles))
 		pdata->clk_delay_cycles = clk_delay_cycles;
+
+	if (!of_property_read_u32(np, "mrvl,txcfg", &txcfg))
+		pdata->txcfg = txcfg;
+	if (!of_property_read_u32(np, "mrvl,rxcfg", &rxcfg))
+		pdata->rxcfg = rxcfg;
+
+	pdata->no_runtime_pm = of_property_read_bool(np, "mrvl,no-runtime-pm");
 
 	return pdata;
 }
@@ -447,7 +464,8 @@ static int sdhci_pxav3_probe(struct platform_device *pdev)
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_set_autosuspend_delay(&pdev->dev, PXAV3_RPM_DELAY_MS);
 	pm_runtime_use_autosuspend(&pdev->dev);
-	pm_runtime_enable(&pdev->dev);
+	if (!pdata->no_runtime_pm)
+		pm_runtime_enable(&pdev->dev);
 	pm_suspend_ignore_children(&pdev->dev, 1);
 
 	ret = sdhci_add_host(host);
@@ -458,12 +476,8 @@ static int sdhci_pxav3_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 
-	if (host->mmc->pm_caps & MMC_PM_KEEP_POWER) {
+	if (host->mmc->pm_caps & MMC_PM_WAKE_SDIO_IRQ)
 		device_init_wakeup(&pdev->dev, 1);
-		host->mmc->pm_flags |= MMC_PM_WAKE_SDIO_IRQ;
-	} else {
-		device_init_wakeup(&pdev->dev, 0);
-	}
 
 	pm_runtime_put_autosuspend(&pdev->dev);
 
@@ -579,9 +593,7 @@ static const struct dev_pm_ops sdhci_pxav3_pmops = {
 static struct platform_driver sdhci_pxav3_driver = {
 	.driver		= {
 		.name	= "sdhci-pxav3",
-#ifdef CONFIG_OF
-		.of_match_table = sdhci_pxav3_of_match,
-#endif
+		.of_match_table = of_match_ptr(sdhci_pxav3_of_match),
 		.pm	= SDHCI_PXAV3_PMOPS,
 	},
 	.probe		= sdhci_pxav3_probe,

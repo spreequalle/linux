@@ -1,0 +1,20 @@
+/ {
+	memory {
+		reg = <0 0x02000000 0 0x3b000000>;
+	};
+
+	ion {
+		compatible = "marvell,berlin-ion";
+		marvell,ion-pool-num = <3>;
+		reg = <0 0x0e800000 0 0x21800000>, <0 0x3d000000 0 0x00800000>, <0 0x3f000000 0 0x01000000>;
+		reg-names = "NW_all", "NW_noncache", "SW_other";
+		marvell,ion-attributes-num-per-pool = <2>;
+		marvell,ion-pool-attributes = <0x00000102 0x00000F36 0x00000105 0x00000F3A 0x00000105 0x00000F3D>;
+	};
+};
+
+&gpu {
+	marvell,nonsecure-mem-base = <0 0x3d800000>;
+	marvell,nonsecure-mem-size = <0 0x01800000>;
+	marvell,phy-mem-size = <0 0x40000000>;
+};

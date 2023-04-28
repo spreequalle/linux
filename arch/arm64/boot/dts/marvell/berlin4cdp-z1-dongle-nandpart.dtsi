@@ -1,0 +1,81 @@
+&nfc {
+	status = "okay";
+
+	partition_block0 {
+		label = "block0";
+		reg = <0x00000 0x20000>;	/* 128 KiB */
+		read-only;
+	};
+
+	partition_prebootloader {
+		label = "prebootloader";
+		reg = <0x020000 0x100000>;	/* 1 MiB */
+		read-only;
+	};
+
+	partition_tz {
+		label = "TZ";
+		reg = <0x120000 0x400000>;	/* 4 MiB */
+		read-only;
+	};
+
+	partition_tz_b {
+		label = "TZ-B";
+		reg = <0x520000 0x400000>;	/* 4 MiB */
+		read-only;
+	};
+
+	partition_postbootloader {
+		label = "postbootloader";
+		reg = <0x920000 0x80000>;	/* 512 KiB */
+		read-only;
+	};
+
+	partition_postbootloader_b {
+		label = "postbootloader-B";
+		reg = <0x9a0000 0x80000>;	/* 512 KiB */
+		read-only;
+	};
+
+	partition_kernel {
+		label = "kernel";
+		reg = <0xa20000 0x800000>;	/* 8 MiB */
+		read-only;
+	};
+
+	partition_rootfs {
+		label = "rootfs";
+		reg = <0x1220000 0x6900000>;	/* 105 MiB */
+		read-only;
+	};
+
+	partition_cache {
+		label = "cache";
+		reg = <0x7b20000 0x7260000>;	/* 117120 KiB */
+		read-only;
+	};
+
+	partition_recovery {
+		label = "recovery";
+		reg = <0xed80000 0xf00000>;	/* 15 MiB */
+		read-only;
+	};
+
+	partition_fts {
+		label = "fts";
+		reg = <0xfc80000 0x80000>;	/* 512 KiB */
+		read-only;
+	};
+
+	partition_factory_store {
+		label = "factory_store";
+		reg = <0xfd00000 0x200000>;	/* 2 MiB */
+		read-only;
+	};
+
+	partition_bbt {
+		label = "bbt";
+		reg = <0xff00000 0x100000>;	/* 1 MiB */
+		read-only;
+	};
+};

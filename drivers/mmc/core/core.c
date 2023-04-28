@@ -2504,8 +2504,13 @@ void mmc_rescan(struct work_struct *work)
 
 	mmc_claim_host(host);
 	for (i = 0; i < ARRAY_SIZE(freqs); i++) {
-		if (!mmc_rescan_try_freq(host, max(freqs[i], host->f_min)))
+		if (!mmc_rescan_try_freq(host, max(freqs[i], host->f_min))) {
+#ifdef CONFIG_MMC_XENON_SDHCI
+			if (host->ops->post_attach)
+				host->ops->post_attach(host);
+#endif
 			break;
+		}
 		if (freqs[i] <= host->f_min)
 			break;
 	}

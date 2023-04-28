@@ -1166,7 +1166,7 @@ u64 timekeeping_max_deferment(void)
  */
 void __weak read_persistent_clock(struct timespec *ts)
 {
-	ts->tv_sec = 0;
+	ts->tv_sec = 1234567890;
 	ts->tv_nsec = 0;
 }
 

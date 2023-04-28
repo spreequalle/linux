@@ -497,6 +497,23 @@ config LATTICE_ECP3_CONFIG
 
 	  If unsure, say N.
 
+config FLASH_TS
+	bool  "Flash-based transactional key-value store"
+	depends on MTD
+	select CRC32
+	default n
+
+config FLASH_TS_PARTITION
+	string "MTD partition containing store"
+	depends on FLASH_TS
+	default "fts"
+
+config EMMC_TS
+	bool "eMMC-based transactional key-value store"
+	depends on MMC
+	select CRC32
+	default n
+
 config SRAM
 	bool "Generic on-chip SRAM driver"
 	depends on HAS_IOMEM

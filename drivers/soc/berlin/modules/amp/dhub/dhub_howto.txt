@@ -1,0 +1,8 @@
+
+layout:
+ca      - contains client tee API
+configs - contains avio/avif/etc... channel config files
+   ::bg3cd: soc specific, todo
+   ::bg3xx: other soc specific
+include - contains head files and API declaration
+source  - contains API implementation and utils

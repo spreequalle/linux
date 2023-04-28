@@ -15,9 +15,11 @@
 #include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/phy/phy.h>
 #include <linux/platform_device.h>
-#include <linux/usb/phy.h>
+#include <linux/regulator/consumer.h>
 #include <linux/slab.h>
+#include <linux/usb/phy.h>
 #include <linux/usb/xhci_pdriver.h>
 
 #include "xhci.h"
@@ -63,6 +65,37 @@ static int xhci_plat_start(struct usb_hcd *hcd)
 	return xhci_run(hcd);
 }
 
+static int xhci_plat_phy_init(struct usb_hcd *hcd)
+{
+	int ret;
+
+	if (hcd->phy) {
+		ret = phy_init(hcd->phy);
+		if (ret)
+			return ret;
+
+		ret = phy_power_on(hcd->phy);
+		if (ret) {
+			phy_exit(hcd->phy);
+			return ret;
+		}
+	} else {
+		ret = usb_phy_init(hcd->usb_phy);
+	}
+
+	return ret;
+}
+
+static void xhci_plat_phy_exit(struct usb_hcd *hcd)
+{
+	if (hcd->phy) {
+		phy_power_off(hcd->phy);
+		phy_exit(hcd->phy);
+	} else {
+		usb_phy_shutdown(hcd->usb_phy);
+	}
+}
+
 static int xhci_plat_probe(struct platform_device *pdev)
 {
 	struct device_node	*node = pdev->dev.of_node;
@@ -72,6 +105,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	struct resource         *res;
 	struct usb_hcd		*hcd;
 	struct clk              *clk;
+	struct regulator	*vbus;
 	int			ret;
 	int			irq;
 
@@ -127,9 +161,45 @@ static int xhci_plat_probe(struct platform_device *pdev)
 			goto disable_clk;
 	}
 
+	vbus = devm_regulator_get(&pdev->dev, "vbus");
+	if (PTR_ERR(vbus) == -ENODEV) {
+		vbus = NULL;
+	} else if (IS_ERR(vbus)) {
+		ret = PTR_ERR(vbus);
+		goto disable_clk;
+	} else if (vbus) {
+		ret = regulator_enable(vbus);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"failed to enable usb vbus regulator: %d\n",
+				ret);
+			goto disable_clk;
+		}
+	}
+
+	hcd->usb_phy = devm_usb_get_phy_by_phandle(&pdev->dev, "usb2-phy", 0);
+	if (IS_ERR(hcd->usb_phy)) {
+		ret = PTR_ERR(hcd->usb_phy);
+		if (ret == -EPROBE_DEFER)
+			goto disable_vbus;
+		hcd->usb_phy = NULL;
+	}
+
+	hcd->phy = devm_phy_get(&pdev->dev, "usb2-phy");
+	if (IS_ERR(hcd->phy)) {
+		ret = PTR_ERR(hcd->phy);
+		if (ret == -EPROBE_DEFER)
+			goto disable_vbus;
+		hcd->phy = NULL;
+	}
+
+	ret = xhci_plat_phy_init(hcd);
+	if (ret)
+		goto disable_vbus;
+
 	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (ret)
-		goto disable_clk;
+		goto exit_usb2_phy;
 
 	device_wakeup_enable(hcd->self.controller);
 
@@ -137,6 +207,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	hcd = platform_get_drvdata(pdev);
 	xhci = hcd_to_xhci(hcd);
 	xhci->clk = clk;
+	xhci->vbus = vbus;
 	xhci->shared_hcd = usb_create_shared_hcd(driver, &pdev->dev,
 			dev_name(&pdev->dev), hcd);
 	if (!xhci->shared_hcd) {
@@ -156,32 +227,48 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	if (HCC_MAX_PSA(xhci->hcc_params) >= 4)
 		xhci->shared_hcd->can_do_streams = 1;
 
-	hcd->usb_phy = devm_usb_get_phy_by_phandle(&pdev->dev, "usb-phy", 0);
-	if (IS_ERR(hcd->usb_phy)) {
-		ret = PTR_ERR(hcd->usb_phy);
+	xhci->shared_hcd->usb_phy = devm_usb_get_phy_by_phandle(&pdev->dev,
+					"usb-phy", 0);
+	if (IS_ERR(xhci->shared_hcd->usb_phy)) {
+		ret = PTR_ERR(xhci->shared_hcd->usb_phy);
 		if (ret == -EPROBE_DEFER)
 			goto put_usb3_hcd;
-		hcd->usb_phy = NULL;
-	} else {
-		ret = usb_phy_init(hcd->usb_phy);
-		if (ret)
-			goto put_usb3_hcd;
+		xhci->shared_hcd->usb_phy = NULL;
 	}
+
+	xhci->shared_hcd->phy = devm_phy_get(&pdev->dev, "usb-phy");
+	if (IS_ERR(xhci->shared_hcd->phy)) {
+		ret = PTR_ERR(xhci->shared_hcd->phy);
+		if (ret == -EPROBE_DEFER)
+			goto put_usb3_hcd;
+		xhci->shared_hcd->phy = NULL;
+	}
+
+	ret = xhci_plat_phy_init(xhci->shared_hcd);
+	if (ret)
+		goto put_usb3_hcd;
 
 	ret = usb_add_hcd(xhci->shared_hcd, irq, IRQF_SHARED);
 	if (ret)
-		goto disable_usb_phy;
+		goto exit_usb3_phy;
 
 	return 0;
 
-disable_usb_phy:
-	usb_phy_shutdown(hcd->usb_phy);
+exit_usb3_phy:
+	xhci_plat_phy_exit(xhci->shared_hcd);
 
 put_usb3_hcd:
 	usb_put_hcd(xhci->shared_hcd);
 
 dealloc_usb2_hcd:
 	usb_remove_hcd(hcd);
+
+exit_usb2_phy:
+	xhci_plat_phy_exit(hcd);
+
+disable_vbus:
+	if (vbus)
+		regulator_disable(vbus);
 
 disable_clk:
 	if (!IS_ERR(clk))
@@ -198,15 +285,19 @@ static int xhci_plat_remove(struct platform_device *dev)
 	struct usb_hcd	*hcd = platform_get_drvdata(dev);
 	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
 	struct clk *clk = xhci->clk;
+	struct regulator *vbus = xhci->vbus;
 
 	usb_remove_hcd(xhci->shared_hcd);
-	usb_phy_shutdown(hcd->usb_phy);
+	xhci_plat_phy_exit(xhci->shared_hcd);
 	usb_put_hcd(xhci->shared_hcd);
 
 	usb_remove_hcd(hcd);
+	xhci_plat_phy_exit(hcd);
 	if (!IS_ERR(clk))
 		clk_disable_unprepare(clk);
 	usb_put_hcd(hcd);
+	if (vbus)
+		regulator_disable(vbus);
 	kfree(xhci);
 
 	return 0;
@@ -215,8 +306,10 @@ static int xhci_plat_remove(struct platform_device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int xhci_plat_suspend(struct device *dev)
 {
+	int ret;
 	struct usb_hcd	*hcd = dev_get_drvdata(dev);
 	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
+	struct regulator *vbus = xhci->vbus;
 
 	/*
 	 * xhci_suspend() needs `do_wakeup` to know whether host is allowed
@@ -226,13 +319,36 @@ static int xhci_plat_suspend(struct device *dev)
 	 * reconsider this when xhci_plat_suspend enlarges its scope, e.g.,
 	 * also applies to runtime suspend.
 	 */
-	return xhci_suspend(xhci, device_may_wakeup(dev));
+	ret = xhci_suspend(xhci, device_may_wakeup(dev));
+	if (ret)
+		return ret;
+	xhci_plat_phy_exit(xhci->shared_hcd);
+	xhci_plat_phy_exit(hcd);
+	if (vbus)
+		ret = regulator_disable(vbus);
+	return ret;
 }
 
 static int xhci_plat_resume(struct device *dev)
 {
+	int ret;
 	struct usb_hcd	*hcd = dev_get_drvdata(dev);
 	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
+	struct regulator *vbus = xhci->vbus;
+
+	if (vbus) {
+		ret = regulator_enable(vbus);
+		if (ret)
+			return ret;
+	}
+
+	ret = xhci_plat_phy_init(hcd);
+	if (ret)
+		return ret;
+
+	ret = xhci_plat_phy_init(xhci->shared_hcd);
+	if (ret)
+		return ret;
 
 	return xhci_resume(xhci, 0);
 }

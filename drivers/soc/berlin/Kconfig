@@ -1,0 +1,187 @@
+#
+# berlin SoC drivers
+#
+
+source "drivers/soc/berlin/Kconfig.amp"
+
+config BERLIN_CHIPID
+	bool "Support BERLIN CHIPID"
+	default y
+	select SOC_BUS
+	depends on ARCH_BERLIN || ARM64
+	help
+	  If you say Y here you get support for the BERLIN CHIP id.
+
+config BERLIN_PXA3XX_NFC
+	tristate "Support NAND Flash Controller (fork of pxa3xx_nand)"
+	default n
+	depends on ARCH_BERLIN
+	select MTD
+	select MTD_NAND
+	help
+	  A fork of mainline pxa3xx_nand.c. This NFC has no dedicated interrupt, but SoC
+	  contains a powerfull pbridge DMA engine whose interrupt can be enabled/disabled.
+	  So the driver could work in 3 modes: nonDMA, polling-DMA, interrupt-DMA.
+
+config BERLIN_NAND_RANDOMIZER
+	bool "Support software NAND randomizer"
+	default n
+	depends on BERLIN_PXA3XX_NFC
+	help
+	  To improve data stability for some large-capacity MLC(multipil-level cell) chips,
+	  data have to be randomized before storing into, or
+	  derandomized after reading out, from the physical cells.
+	  For chips that don't build in HW randomizer, SW randomizer is needed.
+	  Say Y here if you have no idea
+
+config BERLIN_NAND_READ_RETRY
+	bool "Support NAND read retry when ecc fail in read operation"
+	default n
+	depends on BERLIN_PXA3XX_NFC
+	help
+	  To improve nand read ability of error correction.When ecc fail in read operation,
+	  change the read cmd parameter of nand chip. Every kind of Nand chip's READ RETRY feature
+	  diff from each other.If nand chip do not support READ RETRY, this feature will do nothin.
+	  Now support hynix nand chip read retry.
+
+config BERLIN_GPU
+	tristate "SoC's GPU support"
+	default m
+	help
+	  2D and 3D GPU support
+
+config BERLIN_AMP
+	tristate "Support AMP"
+	default m
+	help
+	  Enable support for AMP
+
+config BERLIN_TZD
+    tristate "Support New TrustZone"
+    default m
+    help
+      Enable support for New ARM TrustZone
+
+
+config BERLIN_TZDD
+    tristate "Support TrustZone"
+    select BERLIN_TZDD_CB
+    default m
+    help
+      Enable support for Legacy ARM TrustZone
+
+config BERLIN_TZDD_CB
+    tristate "Support TrustZone Callback"
+	depends on BERLIN_TZDD
+    default m
+    help
+      Enable support for TrustZone event callback
+
+config BERLIN_PWM
+	bool "Support BERLIN PWM"
+	default n
+	help
+	  Enable support for BERLIN PWM
+
+config BERLIN_SM
+	bool "Support SM CPU"
+	default n
+	help
+	  Enable support for SM(System Manager) which is designed for front
+	  panel control and power management.
+
+config BERLIN_IR
+	bool "Support Infra-Red remote controller"
+	depends on BERLIN_SM
+	default n
+	help
+	  Enable support for Infra-Red remote controller
+
+config BERLIN_PPM
+	tristate "Support Platform Power Management"
+	default n
+	depends on ARCH_BERLIN
+	help
+	  Profile based power management for Berlin platform
+
+config BERLIN_MC6
+	tristate "MC6 DDR Controller"
+	default n
+	depends on ARCH_BERLIN && OF
+	help
+	  This driver is for Marvell MC6 DDR Controller available on Marvell
+	  Berlin SoCs.
+
+config BERLIN_SDIO_WLAN_8887
+	tristate "SDIO Wlan (IEEE802.11 A|B|G|N) driver for wlan8887 module"
+	default n
+	depends on MMC_SDHCI_PXAV3
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select WEXT_SPY
+	help
+	  This is the wifi module for Berlin. Please try build it for module only.
+
+config BERLIN_SDIO_BT_8887
+	tristate "SDIO Bluetooth/BLE support for Marvell's 8887 SoC"
+	default m
+	help
+	  This is defualt bluetooth module for Berlin based platform.
+
+config BERLIN_SDIO_BT_CHAR_8897
+	tristate "SDIO Bluetooth char device for bt8897 module"
+	default n
+	depends on MMC_SDHCI_PXAV3
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select WEXT_SPY
+	help
+	  This is the bt char module for Berlin. Please try build it for module only.
+
+config BERLIN_SDIO_WLAN_8897
+	tristate "SDIO Wlan (IEEE802.11 A|B|G|N) driver for wlan8897 module"
+	default n
+	depends on MMC_SDHCI_PXAV3
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select WEXT_SPY
+	help
+	  This is the wifi module for Berlin. Please try build it for module only.
+
+config BERLIN_SDIO_BT_8897
+	tristate "SDIO Bluetooth/BLE support for Marvell's 8897 SoC"
+	default m
+	help
+	  This is the default bluetooth module for Berlin Platform.
+
+config BERLIN_SDIO_BT_8997_CHAR_DRV
+	tristate "SDIO Bluetooth char device for bt8997 module"
+	default n
+	help
+	  This is the bt char module for Berlin. Please try build it for module only.
+
+config BERLIN_SDIO_WLAN_8997
+	tristate "SDIO Wlan (IEEE802.11 A|B|G|N) driver for wlan8997 module"
+	default n
+	depends on MMC_SDHCI_PXAV3
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select WEXT_SPY
+	help
+	  This is the wifi module for Berlin. Please try build it for module only.
+
+config BERLIN_SDIO_BT_8997
+	tristate "SDIO Bluetooth/BLE support for Marvell's 8997 SoC"
+	default n
+	help
+	  This is the default bluetooth module for Berlin Platform.
+
+config BERLIN_SDIO_WLAN_8801
+	tristate "SDIO Wlan (IEEE802.11 A|B|G|N) driver for wlan8801 module"
+	default n
+	depends on MMC_SDHCI_PXAV3
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select WEXT_SPY
+	help
+	  This is the wifi module for Berlin. Please try build it for module only.

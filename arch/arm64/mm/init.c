@@ -45,6 +45,7 @@
 
 #include "mm.h"
 
+extern int swiotlb;
 phys_addr_t memstart_addr __read_mostly = 0;
 phys_addr_t arm64_dma_phys_limit __read_mostly;
 
@@ -280,7 +281,10 @@ static void __init free_unused_memmap(void)
  */
 void __init mem_init(void)
 {
-	swiotlb_init(1);
+	if (swiotlb_force || max_pfn > (arm64_dma_phys_limit >> PAGE_SHIFT)) {
+		swiotlb = 1;
+		swiotlb_init(1);
+	}
 
 	set_max_mapnr(pfn_to_page(max_pfn) - mem_map);
 

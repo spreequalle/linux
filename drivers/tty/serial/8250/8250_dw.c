@@ -53,9 +53,11 @@
 /* Helper for fifo size calculation */
 #define DW_UART_CPR_FIFO_SIZE(a)	(((a >> 16) & 0xff) * 16)
 
+#define DW_NO_SUSPEND_RESUME		(1 << 0)
 
 struct dw8250_data {
 	u8			usr_reg;
+	u8			flag;
 	int			last_mcr;
 	int			line;
 	int			msr_mask_on;
@@ -374,6 +376,9 @@ static int dw8250_probe_of(struct uart_port *p,
 		data->msr_mask_off |= UART_MSR_TERI;
 	}
 
+	if (of_property_read_bool(np, "no-suspend-resume"))
+		data->flag |= DW_NO_SUSPEND_RESUME;
+
 	return 0;
 }
 
@@ -562,7 +567,8 @@ static int dw8250_suspend(struct device *dev)
 {
 	struct dw8250_data *data = dev_get_drvdata(dev);
 
-	serial8250_suspend_port(data->line);
+	if (!(data->flag & DW_NO_SUSPEND_RESUME))
+		serial8250_suspend_port(data->line);
 
 	return 0;
 }
@@ -571,7 +577,8 @@ static int dw8250_resume(struct device *dev)
 {
 	struct dw8250_data *data = dev_get_drvdata(dev);
 
-	serial8250_resume_port(data->line);
+	if (!(data->flag & DW_NO_SUSPEND_RESUME))
+		serial8250_resume_port(data->line);
 
 	return 0;
 }

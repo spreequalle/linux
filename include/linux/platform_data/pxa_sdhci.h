@@ -54,5 +54,8 @@ struct sdhci_pxa_platdata {
 	unsigned int	quirks;
 	unsigned int	quirks2;
 	unsigned int	pm_caps;
+	u32		txcfg;
+	u32		rxcfg;
+	bool		no_runtime_pm;
 };
 #endif /* _PXA_SDHCI_H_ */

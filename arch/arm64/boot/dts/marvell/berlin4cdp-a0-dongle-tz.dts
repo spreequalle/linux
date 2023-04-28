@@ -1,0 +1,35 @@
+/*
+ * MARVELL BERLIN4CDP Dongle board device tree source
+ *
+ * Author:	Hongjun Yuan <hyuan@marvell.com>
+ * Copyright (c) 2015 Marvell Technology Group Ltd.
+ *		http://www.marvell.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+/dts-v1/;
+
+#include "berlin4cdp-dongle-memreserve-tz.dtsi"
+#include "berlin4cdp-a0-dongle-common.dtsi"
+#include "berlin4cdp-dongle-memlayout-tz.dtsi"
+
+&tee {
+	status = "enabled";
+};
+
+&nfc {
+	partition_cache {
+		/delete-property/ read-only;
+	};
+
+	partition_recovery {
+		/delete-property/ read-only;
+	};
+
+	partition_factory_store {
+		/delete-property/ read-only;
+	};
+};

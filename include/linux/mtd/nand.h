@@ -671,6 +671,7 @@ struct nand_chip {
 	int (*onfi_get_features)(struct mtd_info *mtd, struct nand_chip *chip,
 			int feature_addr, uint8_t *subfeature_para);
 	int (*setup_read_retry)(struct mtd_info *mtd, int retry_mode);
+	int (*get_mtd_info)(struct mtd_info *mtd, loff_t off, loff_t *dst);
 
 	int chip_delay;
 	unsigned int options;

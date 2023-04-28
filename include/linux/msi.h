@@ -60,6 +60,13 @@ static inline struct pci_dev *msi_desc_to_pci_dev(struct msi_desc *desc)
 {
 	return desc->dev;
 }
+
+void *msi_desc_to_pci_sysdata(struct msi_desc *desc);
+#else /* CONFIG_PCI_MSI */
+static inline void *msi_desc_to_pci_sysdata(struct msi_desc *desc)
+{
+	return NULL;
+}
 #endif /* CONFIG_PCI_MSI */
 
 void __pci_read_msi_msg(struct msi_desc *entry, struct msi_msg *msg);
@@ -114,6 +121,8 @@ struct msi_controller {
 
 	int (*setup_irq)(struct msi_controller *chip, struct pci_dev *dev,
 			 struct msi_desc *desc);
+	int (*setup_irqs)(struct msi_controller *chip, struct pci_dev *dev,
+			  int nvec, int type);
 	void (*teardown_irq)(struct msi_controller *chip, unsigned int irq);
 };
 

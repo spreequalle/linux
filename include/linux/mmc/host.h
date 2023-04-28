@@ -141,6 +141,11 @@ struct mmc_host_ops {
 	 */
 	int	(*multi_io_quirk)(struct mmc_card *card,
 				  unsigned int direction, int blk_size);
+#ifdef CONFIG_MMC_XENON_SDHCI
+	void (*post_attach)(struct mmc_host *host);
+	void (*bus_test_pre)(struct mmc_host *host);
+	void (*bus_test_post)(struct mmc_host *host);
+#endif
 };
 
 struct mmc_card;

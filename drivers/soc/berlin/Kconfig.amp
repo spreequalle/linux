@@ -1,0 +1,22 @@
+#
+# AMP variants
+#
+
+if ARCH_BERLIN
+
+choice
+	prompt "Marvell Berlin AMP Variants"
+	default AMP_NONE
+
+config AMP_NONE
+	bool "Not select any chip variant in default"
+
+config AMP_BERLIN_BG4CD
+	bool "Marvell BG4CD"
+
+config AMP_BERLIN_BG4CDP
+	bool "Marvell BG4CDP"
+
+endchoice
+
+endif

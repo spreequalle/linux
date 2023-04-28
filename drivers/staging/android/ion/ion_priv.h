@@ -84,6 +84,10 @@ struct ion_buffer {
 	int handle_count;
 	char task_comm[TASK_COMM_LEN];
 	pid_t pid;
+	char thread_name[TASK_COMM_LEN];
+	pid_t tid;
+	unsigned int gid;
+	size_t alloc_size;
 };
 void ion_buffer_destroy(struct ion_buffer *buffer);
 
@@ -181,6 +185,32 @@ struct ion_heap {
 
 	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
 };
+
+extern int ion_kill_size;
+extern int ion_lowmem_start_oom_adj;
+extern int ion_alloc_retry_count;
+
+#define BERLIN_MAX_CLIENT	1000
+
+struct ion_process_status {
+	pid_t pid;
+	char name[TASK_COMM_LEN];
+	struct task_struct *task;
+	size_t size;
+	int oom_score_adj;
+};
+
+struct heap_status {
+	int process_num;
+	struct ion_process_status process[BERLIN_MAX_CLIENT];
+};
+
+int berlin_get_heap_status(struct ion_heap *heap,
+			struct heap_status *status);
+
+int berlin_print_heap_status(struct ion_heap *heap,
+			struct heap_status *status);
+
 
 /**
  * ion_buffer_cached - this ion buffer is cached
@@ -322,6 +352,9 @@ void ion_system_contig_heap_destroy(struct ion_heap *);
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *);
 void ion_carveout_heap_destroy(struct ion_heap *);
 
+struct ion_heap *ion_berlin_heap_create(struct ion_platform_heap *);
+void ion_berlin_heap_destroy(struct ion_heap *);
+
 struct ion_heap *ion_chunk_heap_create(struct ion_platform_heap *);
 void ion_chunk_heap_destroy(struct ion_heap *);
 struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *);
@@ -401,5 +434,17 @@ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
  */
 void ion_pages_sync_for_device(struct device *dev, struct page *page,
 		size_t size, enum dma_data_direction dir);
+
+int berlin_ion_gid_create(struct ion_buffer *buffer);
+
+int berlin_ion_gid_destroy(struct ion_buffer *buffer);
+
+size_t berlin_get_heap_size(int heap_id);
+
+size_t berlin_get_heap_addr(int heap_id);
+
+int berlin_get_heap_print_details(void);
+
+int berlin_check_secure_heap(struct ion_heap *heap);
 
 #endif /* _ION_PRIV_H */

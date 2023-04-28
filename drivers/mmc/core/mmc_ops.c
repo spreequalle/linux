@@ -726,6 +726,9 @@ mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,
 int mmc_bus_test(struct mmc_card *card, u8 bus_width)
 {
 	int err, width;
+#ifdef CONFIG_MMC_XENON_SDHCI
+	struct mmc_host *host = card->host;
+#endif
 
 	if (bus_width == MMC_BUS_WIDTH_8)
 		width = 8;
@@ -736,12 +739,22 @@ int mmc_bus_test(struct mmc_card *card, u8 bus_width)
 	else
 		return -EINVAL;
 
+#ifdef CONFIG_MMC_XENON_SDHCI
+	if (host->ops->bus_test_pre)
+		host->ops->bus_test_pre(host);
+#endif
 	/*
 	 * Ignore errors from BUS_TEST_W.  BUS_TEST_R will fail if there
 	 * is a problem.  This improves chances that the test will work.
 	 */
 	mmc_send_bus_test(card, card->host, MMC_BUS_TEST_W, width);
 	err = mmc_send_bus_test(card, card->host, MMC_BUS_TEST_R, width);
+
+#ifdef CONFIG_MMC_XENON_SDHCI
+	if (host->ops->bus_test_post)
+		host->ops->bus_test_post(host);
+#endif
+
 	return err;
 }
 

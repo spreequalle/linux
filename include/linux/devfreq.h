@@ -203,6 +203,8 @@ extern int devm_devfreq_register_opp_notifier(struct device *dev,
 					      struct devfreq *devfreq);
 extern void devm_devfreq_unregister_opp_notifier(struct device *dev,
 						struct devfreq *devfreq);
+extern struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
+						int index);
 
 #if IS_ENABLED(CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND)
 /**
@@ -288,6 +290,12 @@ static inline int devm_devfreq_register_opp_notifier(struct device *dev,
 static inline void devm_devfreq_unregister_opp_notifier(struct device *dev,
 							struct devfreq *devfreq)
 {
+}
+
+static inline struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
+							int index)
+{
+	return ERR_PTR(-ENODEV);
 }
 #endif /* CONFIG_PM_DEVFREQ */
 

@@ -117,7 +117,7 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 
 	if (ion_buffer_cached(buffer))
 		dma_sync_sg_for_device(NULL, table->sgl, table->nents,
-							DMA_BIDIRECTIONAL);
+				       DMA_BIDIRECTIONAL);
 
 	ion_carveout_free(heap, paddr, buffer->size);
 	sg_free_table(table);
@@ -163,7 +163,7 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 	if (ret)
 		return ERR_PTR(ret);
 
-	carveout_heap = kzalloc(sizeof(struct ion_carveout_heap), GFP_KERNEL);
+	carveout_heap = kzalloc(sizeof(*carveout_heap), GFP_KERNEL);
 	if (!carveout_heap)
 		return ERR_PTR(-ENOMEM);
 
@@ -172,12 +172,15 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 		kfree(carveout_heap);
 		return ERR_PTR(-ENOMEM);
 	}
+	if (heap_data->is_best_fit)
+		gen_pool_set_algo(carveout_heap->pool, gen_pool_best_fit, NULL);
 	carveout_heap->base = heap_data->base;
 	gen_pool_add(carveout_heap->pool, carveout_heap->base, heap_data->size,
 		     -1);
 	carveout_heap->heap.ops = &carveout_heap_ops;
 	carveout_heap->heap.type = ION_HEAP_TYPE_CARVEOUT;
-	carveout_heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE;
+	if (heap_data->is_defer_free)
+		carveout_heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE;
 
 	return &carveout_heap->heap;
 }

@@ -18,6 +18,13 @@ config NET_VENDOR_MARVELL
 
 if NET_VENDOR_MARVELL
 
+config BERLIN_FASTETH
+	depends on ARCH_BERLIN
+	select MII
+	tristate "Marvell Berlin Fast Ethernet support"
+	---help---
+	  This driver supports the fast Ethernet ports on Marvell Berlin SoCs
+
 config MV643XX_ETH
 	tristate "Marvell Discovery (643XX) and Orion ethernet support"
 	depends on (MV64X60 || PPC32 || PLAT_ORION) && INET

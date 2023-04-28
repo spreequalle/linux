@@ -32,7 +32,7 @@ config USB_XHCI_PCI
        default y
 
 config USB_XHCI_PLATFORM
-	tristate
+	tristate "Generic xHCI driver for a platform device"
 
 config USB_XHCI_MVEBU
 	tristate "xHCI support for Marvell Armada 375/38x"

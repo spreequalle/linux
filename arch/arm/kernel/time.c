@@ -78,7 +78,7 @@ void timer_tick(void)
 
 static void dummy_clock_access(struct timespec64 *ts)
 {
-	ts->tv_sec = 0;
+	ts->tv_sec = 1234567890;
 	ts->tv_nsec = 0;
 }
 

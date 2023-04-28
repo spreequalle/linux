@@ -1,0 +1,54 @@
+/*
+ * MARVELL BERLIN4CDP Dongle board device tree source
+ *
+ * Author:	Hongjun Yuan <hyuan@marvell.com>
+ * Copyright (c) 2015 Marvell Technology Group Ltd.
+ *		http://www.marvell.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+#include "berlin4cdp.dtsi"
+/ {
+	soc {
+		amp {
+			chip_version {
+				revision = <0xA0>;
+			};
+		};
+	};
+};
+
+&perifclk {
+	reg = <0xea0640 4>;
+};
+
+&atbclk {
+	reg = <0xea064c 4>;
+};
+
+&bcmclk {
+	reg = <0xea0650 4>;
+};
+
+&emmcclk {
+	reg = <0xea0654 4>;
+};
+
+&nfceccclk {
+	reg = <0xea0658 4>;
+};
+
+&sd0clk {
+	reg = <0xea065c 4>;
+};
+
+&apbcoreclk {
+	reg = <0xea0678 4>;
+};
+
+&pcietestclk {
+	reg = <0xea0680 4>;
+};
