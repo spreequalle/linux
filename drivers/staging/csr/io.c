@@ -869,8 +869,7 @@ uf_read_proc(char *page, char **start, off_t offset, int count,
 
     orig_p = p;
 
-    written = scnprintf(p, remain, "UniFi SDIO Driver: %s %s %s\n",
-            CSR_WIFI_VERSION, __DATE__, __TIME__);
+    written = scnprintf(p, remain, "UniFi SDIO Driver: %s\n", CSR_WIFI_VERSION);
     UNIFI_SNPRINTF_RET(p, remain, written);
 #ifdef CSR_SME_USERSPACE
     written = scnprintf(p, remain, "SME: CSR userspace ");

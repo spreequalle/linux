@@ -1338,6 +1338,11 @@ MODULE_LICENSE ("GPL");
 #define	PLATFORM_DRIVER		ehci_hcd_sead3_driver
 #endif
 
+#ifdef CONFIG_USB_EHCI_BERLIN
+#include "ehci-berlin.c"
+#define PLATFORM_DRIVER		berlin_ehci_driver
+#endif
+
 #if !IS_ENABLED(CONFIG_USB_EHCI_PCI) && \
 	!IS_ENABLED(CONFIG_USB_EHCI_HCD_PLATFORM) && \
 	!IS_ENABLED(CONFIG_USB_CHIPIDEA_HOST) && \

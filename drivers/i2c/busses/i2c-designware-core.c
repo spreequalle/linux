@@ -306,8 +306,12 @@ int i2c_dw_init(struct dw_i2c_dev *dev)
 				13,	/* tLOW = 1.3 us */
 				3,	/* tf = 0.3 us */
 				0);	/* No offset */
-	dw_writel(dev, hcnt, DW_IC_FS_SCL_HCNT);
-	dw_writel(dev, lcnt, DW_IC_FS_SCL_LCNT);
+	dw_writel(dev, 0x57, DW_IC_FS_SCL_HCNT);
+#ifdef CONFIG_I2C_MRVL_PINEAPPLE
+	dw_writel(dev, 0x28a, DW_IC_FS_SCL_LCNT);
+#else
+	dw_writel(dev, 0xe6, DW_IC_FS_SCL_LCNT);
+#endif
 	dev_dbg(dev->dev, "Fast-mode HCNT:LCNT = %d:%d\n", hcnt, lcnt);
 
 	/* Configure Tx/Rx FIFO threshold levels */

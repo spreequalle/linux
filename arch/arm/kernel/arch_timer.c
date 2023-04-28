@@ -43,6 +43,7 @@ static struct clock_event_device __percpu **arch_timer_evt;
 static struct delay_timer arch_delay_timer;
 
 static bool arch_timer_use_virtual = true;
+static bool arch_timer_c3stop;
 
 /*
  * Architected system timer support.
@@ -228,6 +229,10 @@ static int arch_timer_set_next_event_phys(unsigned long evt,
 
 static int __cpuinit arch_timer_setup(struct clock_event_device *clk)
 {
+	clk->features = CLOCK_EVT_FEAT_ONESHOT;
+	if (arch_timer_c3stop)
+		clk->features |= CLOCK_EVT_FEAT_C3STOP;
+
 	clk->features = CLOCK_EVT_FEAT_ONESHOT | CLOCK_EVT_FEAT_C3STOP;
 	clk->name = "arch_sys_timer";
 	clk->rating = 450;
@@ -501,6 +506,8 @@ int __init arch_timer_of_register(void)
 			return -EINVAL;
 		}
 	}
+
+	arch_timer_c3stop = !of_property_read_bool(np, "always-on");
 
 	return arch_timer_register();
 }

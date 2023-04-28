@@ -21,8 +21,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "asix.h"
@@ -35,6 +34,7 @@ struct ax88172a_private {
 	u16 phy_addr;
 	u16 oldmode;
 	int use_embdphy;
+	struct asix_rx_fixup_info rx_fixup_info;
 };
 
 /* MDIO read and write wrappers for phylib */
@@ -400,6 +400,14 @@ out:
 
 }
 
+static int ax88172a_rx_fixup(struct usbnet *dev, struct sk_buff *skb)
+{
+	struct ax88172a_private *dp = dev->driver_priv;
+	struct asix_rx_fixup_info *rx = &dp->rx_fixup_info;
+
+	return asix_rx_fixup_internal(dev, skb, rx);
+}
+
 const struct driver_info ax88172a_info = {
 	.description = "ASIX AX88172A USB 2.0 Ethernet",
 	.bind = ax88172a_bind,
@@ -409,6 +417,6 @@ const struct driver_info ax88172a_info = {
 	.status = ax88172a_status,
 	.flags = FLAG_ETHER | FLAG_FRAMING_AX | FLAG_LINK_INTR |
 		 FLAG_MULTI_PACKET,
-	.rx_fixup = asix_rx_fixup,
+	.rx_fixup = ax88172a_rx_fixup,
 	.tx_fixup = asix_tx_fixup,
 };

@@ -865,6 +865,13 @@ config SENSORS_MCP3021
 	  This driver can also be built as a module.  If so, the module
 	  will be called mcp3021.
 
+config SENSORS_MV88DE3100
+	tristate "Marvell 88DE3100 Hwmon Driver"
+	default n
+	help
+	  Interface of hardware peripherals monitoring in a non-SM system.
+	  Such as built in temperature sensor.
+
 config SENSORS_NTC_THERMISTOR
 	tristate "NTC thermistor support"
 	help
@@ -1197,6 +1204,13 @@ config SENSORS_TMP421
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called tmp421.
+
+config SENSORS_TSEN_ADC33
+	tristate "TSEN ADC33 sensor"
+	default n
+	depends on ARCH_BERLIN
+	help
+	  if you say yes here you get support for TSEN ADC33.
 
 config SENSORS_TWL4030_MADC
 	tristate "Texas Instruments TWL4030 MADC Hwmon"

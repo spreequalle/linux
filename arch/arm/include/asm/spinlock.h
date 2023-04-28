@@ -138,13 +138,13 @@ static inline void arch_spin_unlock(arch_spinlock_t *lock)
 	dsb_sev();
 }
 
-static inline int arch_spin_is_locked(arch_spinlock_t *lock)
+static inline int arch_spin_is_locked(const arch_spinlock_t *lock)
 {
 	struct __raw_tickets tickets = ACCESS_ONCE(lock->tickets);
 	return tickets.owner != tickets.next;
 }
 
-static inline int arch_spin_is_contended(arch_spinlock_t *lock)
+static inline int arch_spin_is_contended(const arch_spinlock_t *lock)
 {
 	struct __raw_tickets tickets = ACCESS_ONCE(lock->tickets);
 	return (tickets.next - tickets.owner) > 1;

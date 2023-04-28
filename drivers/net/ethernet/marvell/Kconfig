@@ -65,6 +65,12 @@ config PXA168_ETH
 	  To compile this driver as a module, choose M here. The module
 	  will be called pxa168_eth.
 
+config BERLIN_FASTETH
+	depends on ARCH_BERLIN
+	tristate "Marvell Berlin Fast Ethernet support"
+	---help---
+	  This driver supports the fast Ethernet ports on Marvell Berlin SoCs
+
 config SKGE
 	tristate "Marvell Yukon Gigabit Ethernet support"
 	depends on PCI

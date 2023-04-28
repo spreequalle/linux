@@ -332,7 +332,7 @@ asmlinkage void FPU_exception(int n)
 	if ((~control_word & n & CW_Exceptions) || (n == EX_INTERNAL)) {
 #ifdef PRINT_MESSAGES
 		/* My message from the sponsor */
-		printk(FPU_VERSION " " __DATE__ " (C) W. Metzenthen.\n");
+		printk(FPU_VERSION " (C) W. Metzenthen.\n");
 #endif /* PRINT_MESSAGES */
 
 		/* Get a name string for error reporting */

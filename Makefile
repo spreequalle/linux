@@ -980,6 +980,7 @@ PHONY += _modinst_post
 _modinst_post: _modinst_
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.fwinst obj=firmware __fw_modinst
 	$(call cmd,depmod)
+	$(shell cd $(INSTALL_MOD_PATH)lib/modules/; rm -f linux_ver; ln -s $(KERNELRELEASE) linux_ver)
 
 ifeq ($(CONFIG_MODULE_SIG), y)
 PHONY += modules_sign

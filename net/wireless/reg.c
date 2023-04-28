@@ -1394,6 +1394,7 @@ static int ignore_request(struct wiphy *wiphy,
 	case NL80211_REGDOM_SET_BY_CORE:
 		return 0;
 	case NL80211_REGDOM_SET_BY_COUNTRY_IE:
+		return -EOPNOTSUPP;
 
 		if (reg_request_cell_base(last_request)) {
 			/* Trust a Cell base station over the AP's country IE */
@@ -1534,6 +1535,11 @@ static int __regulatory_hint(struct wiphy *wiphy,
 		}
 		intersect = true;
 	} else if (r) {
+		/* Save alpha2 if initiated from user in case the request is dropped. */
+		if (pending_request->initiator == NL80211_REGDOM_SET_BY_USER) {
+			user_alpha2[0] = pending_request->alpha2[0];
+			user_alpha2[1] = pending_request->alpha2[1];
+		}
 		/*
 		 * If the regulatory domain being requested by the
 		 * driver has already been set just copy it to the
@@ -1802,6 +1808,8 @@ void regulatory_hint_11d(struct wiphy *wiphy,
 	char alpha2[2];
 	enum environment_cap env = ENVIRON_ANY;
 	struct regulatory_request *request;
+
+	return;
 
 	mutex_lock(&reg_mutex);
 
