@@ -2925,11 +2925,6 @@ again:
 							__func__);
 					return -ENOMEM;
 				}
-				printk(KERN_DEBUG "[%s,%d] nand page %08X "
-						"direct map buf %p error, "
-						"try bounce buffer\n",
-						__func__, __LINE__,
-						nand->page_addr, buf);
 				buf = nand->bounce_buffer;
 				need_copy_back = 1;
 				goto again;

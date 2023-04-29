@@ -428,6 +428,19 @@
 			mrvl,nfc-arbi;
 		};
 
+                gpu3d{
+                       compatible = "marvell,berlin-gpu3d";
+                       reg = <0xF7BC0000 0x800>;
+                       interrupts = <0 20 4>;
+                       marvell,nonsecure-mem-base = <0>;
+                       marvell,nonsecure-mem-size = <0x200>;
+                       marvell,phy-mem-size = <0x80000000>;
+                       marvell,core-clock-register = <0>;
+                       marvell,sys-clock-register = <0>;
+                       marvell,core-clock-bitfield = <0>;
+                       marvell,sys-clock-bitfield = <0>;
+                };
+
 		pwm@F7F20000 {
 			compatible = "mrvl,berlin-pwm";
 			reg = <0xF7F20000 0x40>;

@@ -2028,6 +2028,8 @@ wlan_misc_ioctl_tdls_get_ies(IN pmlan_adapter pmadapter,
 		if ((pmadapter->fw_bands & BAND_AAC) &&
 		    (MFALSE == wlan_is_ap_in_11ac_mode(pmpriv)))
 			SET_EXTCAP_TDLS_WIDER_BANDWIDTH(ext_cap->ext_cap);
+        	if (sta_ptr && !ISSUPP_EXTCAP_TDLS_WIDER_BANDWIDTH(sta_ptr->ExtCap.ext_cap))
+            		RESET_EXTCAP_TDLS_WIDER_BANDWIDTH(ext_cap->ext_cap);
 		DBG_HEXDUMP(MCMD_D, "TDLS extcap", tdls_ies->ext_cap,
 			    sizeof(IEEEtypes_ExtCap_t));
 	}
@@ -2040,6 +2042,9 @@ wlan_misc_ioctl_tdls_get_ies(IN pmlan_adapter pmadapter,
 		DBG_HEXDUMP(MCMD_D, "TDLS htcap", tdls_ies->ht_cap,
 			    sizeof(IEEEtypes_HTCap_t));
 	}
+	/** if peer did not support 11AC, do not add vht related ie */
+    if (sta_ptr && (sta_ptr->vht_cap.ieee_hdr.element_id != VHT_CAPABILITY)) 
+        tdls_ies->flags &= ~(TDLS_IE_FLAGS_VHTCAP | TDLS_IE_FLAGS_VHTOPRAT |TDLS_IE_FLAGS_AID);
     /** fill the vhtcap based on hwspec */
 	if (tdls_ies->flags & TDLS_IE_FLAGS_VHTCAP) {
 		vht_cap = (IEEEtypes_VHTCap_t *)tdls_ies->vht_cap;
@@ -2344,11 +2349,11 @@ wlan_process_802dot11_mgmt_pkt(IN mlan_private *priv,
 		       payload + AUTH_PACKET_LEN,
 		       payload_len - AUTH_PACKET_LEN);
 	} else {
-	pevent->event_id = MLAN_EVENT_ID_DRV_MGMT_FRAME;
-	pevent->event_len = payload_len + sizeof(pevent->event_id);
-	memcpy(pmadapter, (t_u8 *)pevent->event_buf,
-	       (t_u8 *)&pevent->event_id, sizeof(pevent->event_id));
-	memcpy(pmadapter,
+		pevent->event_id = MLAN_EVENT_ID_DRV_MGMT_FRAME;
+		pevent->event_len = payload_len + sizeof(pevent->event_id);
+		memcpy(pmadapter, (t_u8 *)pevent->event_buf,
+		       (t_u8 *)&pevent->event_id, sizeof(pevent->event_id));
+		memcpy(pmadapter,
 		       (t_u8 *)(pevent->event_buf + sizeof(pevent->event_id)),
 		       payload, payload_len);
 	}
@@ -2768,32 +2773,32 @@ wlan_radio_ioctl_ant_cfg(IN pmlan_adapter pmadapter,
 
 	radio_cfg = (mlan_ds_radio_cfg *)pioctl_req->pbuf;
 	if (IS_STREAM_2X2(pmadapter->feature_control))
-	ant_cfg = &radio_cfg->param.ant_cfg;
+		ant_cfg = &radio_cfg->param.ant_cfg;
 
 	if (pioctl_req->action == MLAN_ACT_SET) {
 		/* User input validation */
 		if (IS_STREAM_2X2(pmadapter->feature_control)) {
-		if (!ant_cfg->tx_antenna ||
-		    bitcount(ant_cfg->tx_antenna & 0xFFFF) >
-		    pmadapter->number_of_antenna) {
-			PRINTM(MERROR, "Invalid antenna setting\n");
-				pioctl_req->status_code =
-					MLAN_ERROR_INVALID_PARAMETER;
-			ret = MLAN_STATUS_FAILURE;
-			goto exit;
-		}
-		if (ant_cfg->rx_antenna) {
-			if (bitcount(ant_cfg->rx_antenna & 0xFFFF) >
+			if (!ant_cfg->tx_antenna ||
+			    bitcount(ant_cfg->tx_antenna & 0xFFFF) >
 			    pmadapter->number_of_antenna) {
-					PRINTM(MERROR,
-					       "Invalid antenna setting\n");
+				PRINTM(MERROR, "Invalid antenna setting\n");
 				pioctl_req->status_code =
 					MLAN_ERROR_INVALID_PARAMETER;
 				ret = MLAN_STATUS_FAILURE;
 				goto exit;
 			}
-		} else
-			ant_cfg->rx_antenna = ant_cfg->tx_antenna;
+			if (ant_cfg->rx_antenna) {
+				if (bitcount(ant_cfg->rx_antenna & 0xFFFF) >
+				    pmadapter->number_of_antenna) {
+					PRINTM(MERROR,
+					       "Invalid antenna setting\n");
+					pioctl_req->status_code =
+						MLAN_ERROR_INVALID_PARAMETER;
+					ret = MLAN_STATUS_FAILURE;
+					goto exit;
+				}
+			} else
+				ant_cfg->rx_antenna = ant_cfg->tx_antenna;
 		} else if (!radio_cfg->param.ant_cfg_1x1.antenna ||
 			   ((radio_cfg->param.ant_cfg_1x1.antenna !=
 			     RF_ANTENNA_AUTO) &&

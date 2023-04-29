@@ -18,6 +18,7 @@
 *
 ***************************************************************************************/
 #include <linux/module.h>
+#include <linux/atomic.h>
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/jiffies.h>
@@ -25,6 +26,7 @@
 #include <linux/time.h>
 #include <linux/wait.h>
 #include <linux/socket.h>
+#include <linux/spinlock.h>
 #include <linux/file.h>
 #include <linux/completion.h>
 #include <asm/cacheflush.h>
@@ -74,23 +76,25 @@ struct snd_berlin_chip {
 	struct snd_pcm *pcm;
 };
 
-static volatile unsigned int berlin_output_mode = SND_BERLIN_OUTPUT_ANALOG;
+static atomic_t g_output_mode = ATOMIC_INIT(SND_BERLIN_OUTPUT_ANALOG);
 
 struct snd_berlin_card_pcm {
 	unsigned int pcm_size;
 	unsigned int pcm_count;
-	unsigned int pcm_bps;          /* bytes per second */
 	unsigned int pcm_buf_pos;      /* position in buffer */
+	unsigned int dma_buf_pos;      /* real dma position */
 	unsigned int dma_size;         /* dma trunk size in byte */
+	uint64_t tv_nsec;
+	spinlock_t   lock;
 
 	/* spdif DMA buffer */
 	unsigned char *spdif_dma_area; /* dma buffer for spdif output */
-	unsigned int spdif_dma_addr;   /* physical address of spdif buffer */
+	dma_addr_t spdif_dma_addr;   /* physical address of spdif buffer */
 	unsigned int spdif_dma_bytes;  /* size of spdif dma area */
 
 	/* PCM DMA buffer */
 	unsigned char *pcm_dma_area;
-	unsigned int pcm_dma_addr;
+	dma_addr_t pcm_dma_addr;
 	unsigned int pcm_dma_bytes;
 	unsigned int pcm_virt_bytes;
 
@@ -115,8 +119,6 @@ struct snd_berlin_card_pcm {
 
 static struct snd_card *snd_berlin_card;
 
-static DEFINE_MUTEX(berlin_mutex);
-
 static void berlin_set_aio(unsigned int sample_rate, unsigned int output_mode)
 {
 	unsigned int analog_div, spdif_div;
@@ -124,15 +126,28 @@ static void berlin_set_aio(unsigned int sample_rate, unsigned int output_mode)
 	AIO_SetAudChMute(AIO_SEC, AIO_TSD0, AUDCH_CTRL_MUTE_MUTE_ON);
 	AIO_SetAudChEn(AIO_SEC, AIO_TSD0, AUDCH_CTRL_ENABLE_DISABLE);
 
-	switch(sample_rate) {
-	case 48000 :
-	case 44100 :
+	switch (sample_rate) {
+	case 8000  :
+	case 11025 :
+	case 12000 :
+		analog_div = AIO_DIV32;
+		spdif_div  = AIO_DIV16;
+		break;
+	case 16000 :
+	case 22050 :
+	case 24000 :
+		analog_div = AIO_DIV16;
+		spdif_div  = AIO_DIV8;
+		break;
 	case 32000 :
+	case 44100 :
+	case 48000 :
 		analog_div = AIO_DIV8;
 		spdif_div  = AIO_DIV4;
 		break;
-	case 96000 :
+	case 64000 :
 	case 88200 :
+	case 96000 :
 		analog_div = AIO_DIV4;
 		spdif_div  = AIO_DIV2;
 		break;
@@ -140,10 +155,10 @@ static void berlin_set_aio(unsigned int sample_rate, unsigned int output_mode)
 		break;
 	}
 
-	if(output_mode == SND_BERLIN_OUTPUT_ANALOG) {
+	if (output_mode == SND_BERLIN_OUTPUT_ANALOG) {
 		AIO_SetClkDiv(AIO_SEC, analog_div);
 		AIO_SetCtl(AIO_SEC, AIO_I2S_MODE, AIO_32CFM, AIO_24DFM);
-	} else if(output_mode == SND_BERLIN_OUTPUT_SPDIF) {
+	} else if (output_mode == SND_BERLIN_OUTPUT_SPDIF) {
 		AIO_SetClkDiv(AIO_SEC, spdif_div);
 		AIO_SetCtl(AIO_SEC, AIO_I2S_MODE, AIO_32CFM, AIO_32DFM);
 	}
@@ -157,13 +172,20 @@ static void berlin_set_pll(unsigned int sample_rate)
 	int apll;
 
 	switch (sample_rate) {
+	case 11025 :
+	case 22050 :
 	case 44100 :
 	case 88200 :
 		apll = 22579200;
 		break;
+	case 8000  :
+	case 16000 :
 	case 32000 :
+	case 64000 :
 		apll = 16384000;
 		break;
+	case 12000 :
+	case 24000 :
 	case 48000 :
 	case 96000 :
 		apll = 24576000;
@@ -182,28 +204,37 @@ static void push_dhub_cmd(struct snd_pcm_substream *substream, unsigned int upda
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
 	unsigned int chanId;
+	unsigned int mode;
+	unsigned long flags;
 
-	if(berlin_pcm->playback_state != SND_BERLIN_STATUS_PLAY)
+	spin_lock_irqsave(&berlin_pcm->lock, flags);
+	if (berlin_pcm->playback_state != SND_BERLIN_STATUS_PLAY) {
+		spin_unlock_irqrestore(&berlin_pcm->lock, flags);
 		return;
-
-	if(berlin_pcm->output_mode != berlin_output_mode) {
-		berlin_set_aio(berlin_pcm->sample_rate, berlin_output_mode);
-		berlin_pcm->output_mode = berlin_output_mode;
 	}
 
-	if(update) {
-		berlin_pcm->pcm_buf_pos += berlin_pcm->dma_size;
-		berlin_pcm->pcm_buf_pos = berlin_pcm->pcm_buf_pos%berlin_pcm->pcm_virt_bytes;
+	mode = atomic_read(&g_output_mode);
+	if (berlin_pcm->output_mode != mode) {
+		berlin_pcm->output_mode = mode;
+		berlin_set_aio(berlin_pcm->sample_rate, berlin_pcm->output_mode);
 	}
+
+	berlin_pcm->tv_nsec = cpu_clock(0);
+	if (update) {
+		berlin_pcm->pcm_buf_pos = berlin_pcm->dma_buf_pos;
+		berlin_pcm->dma_buf_pos += berlin_pcm->dma_size;
+		berlin_pcm->dma_buf_pos %= berlin_pcm->pcm_virt_bytes;
+	}
+	spin_unlock_irqrestore(&berlin_pcm->lock, flags);
 
 	chanId = avioDhubChMap_ag_SA0_R_A0;
-	if(berlin_pcm->output_mode == SND_BERLIN_OUTPUT_ANALOG) {
+	if (berlin_pcm->output_mode == SND_BERLIN_OUTPUT_ANALOG) {
 		dhub_channel_write_cmd(&AG_dhubHandle.dhub, chanId,
-			berlin_pcm->pcm_dma_addr+berlin_pcm->pcm_buf_pos*berlin_pcm->pcm_ratio,
+			berlin_pcm->pcm_dma_addr+berlin_pcm->dma_buf_pos*berlin_pcm->pcm_ratio,
 			berlin_pcm->dma_size*berlin_pcm->pcm_ratio, 0, 0, 0, 1, 0, 0);
 	} else {
 		dhub_channel_write_cmd(&AG_dhubHandle.dhub, chanId,
-			berlin_pcm->spdif_dma_addr+berlin_pcm->pcm_buf_pos*berlin_pcm->spdif_ratio,
+			berlin_pcm->spdif_dma_addr+berlin_pcm->dma_buf_pos*berlin_pcm->spdif_ratio,
 			berlin_pcm->dma_size*berlin_pcm->spdif_ratio, 0, 0, 0, 1, 0, 0);
 	}
 }
@@ -233,7 +264,7 @@ static void snd_berlin_playback_trigger_start(struct snd_pcm_substream *substrea
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
 
-	if(berlin_pcm->playback_state == SND_BERLIN_STATUS_PLAY)
+	if (berlin_pcm->playback_state == SND_BERLIN_STATUS_PLAY)
 		return;
 
 	berlin_pcm->playback_state = SND_BERLIN_STATUS_PLAY;
@@ -254,15 +285,14 @@ static void snd_berlin_playback_trigger_stop(struct snd_pcm_substream *substream
 static const struct snd_pcm_hardware snd_berlin_playback_hw = {
 	.info = (SNDRV_PCM_INFO_MMAP
 		| SNDRV_PCM_INFO_INTERLEAVED
-		| SNDRV_PCM_INFO_MMAP_VALID),
+		| SNDRV_PCM_INFO_MMAP_VALID
+		| SNDRV_PCM_INFO_PAUSE
+		| SNDRV_PCM_INFO_RESUME),
 	.formats = (SNDRV_PCM_FMTBIT_S32_LE
 		| SNDRV_PCM_FMTBIT_S16_LE),
-	.rates = (SNDRV_PCM_RATE_48000
-		| SNDRV_PCM_RATE_96000
-		| SNDRV_PCM_RATE_44100
-		| SNDRV_PCM_RATE_88200
-		| SNDRV_PCM_RATE_32000),
-	.rate_min = 32000,
+	.rates = (SNDRV_PCM_RATE_8000_96000
+		| SNDRV_PCM_RATE_KNOT),
+	.rate_min = 8000,
 	.rate_max = 96000,
 	.channels_min = 1,
 	.channels_max = 2,
@@ -277,7 +307,7 @@ static const struct snd_pcm_hardware snd_berlin_playback_hw = {
 static void snd_berlin_runtime_free(struct snd_pcm_runtime *runtime)
 {
 	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
-	if(berlin_pcm) {
+	if (berlin_pcm) {
 		dma_free_coherent(NULL, berlin_pcm->spdif_dma_bytes,
 			berlin_pcm->spdif_dma_area, berlin_pcm->spdif_dma_addr);
 		dma_free_coherent(NULL, berlin_pcm->pcm_dma_bytes,
@@ -293,15 +323,17 @@ static int snd_berlin_playback_open(struct snd_pcm_substream *substream)
 	unsigned int vec_num;
 	int err;
 
-	berlin_pcm = kzalloc(sizeof(struct snd_berlin_card_pcm), GFP_KERNEL);
+	berlin_pcm = kzalloc(sizeof(*berlin_pcm), GFP_KERNEL);
 	if (berlin_pcm == NULL)
 		return -ENOMEM;
 
 	berlin_pcm->playback_state = SND_BERLIN_STATUS_STOP;
-	berlin_pcm->output_mode = berlin_output_mode;
+	berlin_pcm->output_mode = atomic_read(&g_output_mode);
 	berlin_pcm->pcm_ratio = 1;
 	berlin_pcm->spdif_ratio = 2;
 	berlin_pcm->substream = substream;
+	spin_lock_init(&berlin_pcm->lock);
+
 	runtime->private_data = berlin_pcm;
 	runtime->private_free = snd_berlin_runtime_free;
 	runtime->hw = snd_berlin_playback_hw;
@@ -320,21 +352,20 @@ static int snd_berlin_playback_open(struct snd_pcm_substream *substream)
 
 	DhubEnableIntr(0, &AG_dhubHandle, avioDhubChMap_ag_SA0_R_A0, 1);
 
-	snd_printk("playback_open succeeds.\n");
+	snd_printk("berlin playback open succeeds.\n");
 
 	return 0;
 }
 
 static int snd_berlin_playback_close(struct snd_pcm_substream *substream)
 {
-	struct snd_pcm_runtime *runtime = substream->runtime;
 	unsigned int vec_num = IRQ_DHUBINTRAVIO1;
 
 	DhubEnableIntr(0, &AG_dhubHandle, avioDhubChMap_ag_SA0_R_A0, 0);
 
 	free_irq(vec_num, substream);
 
-	snd_printk("playback_close succeeds.\n");
+	snd_printk("berlin playback close succeeds.\n");
 
 	return 0;
 }
@@ -352,46 +383,46 @@ static int snd_berlin_playback_hw_params(struct snd_pcm_substream *substream,
 	struct spdif_channel_status *chnsts;
 	int err;
 
-	mutex_lock(&berlin_mutex);
-
 	err = snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(params));
 	if (err < 0) {
 		snd_printk("pcm_lib_malloc failed to allocated pages for buffers\n");
 		return err;
 	}
 
+	snd_printk("params: rate = %d channels = %d format = %d\n",
+		params_rate(params), params_channels(params), params_format(params));
 	berlin_pcm->sample_rate = params_rate(params);
 	berlin_pcm->sample_format = params_format(params);
 	berlin_pcm->channel_num = params_channels(params);
 
-	if(berlin_pcm->sample_format == SNDRV_PCM_FORMAT_S16_LE) {
-		berlin_pcm->pcm_ratio   *= 2;
+	if (berlin_pcm->sample_format == SNDRV_PCM_FORMAT_S16_LE) {
+		berlin_pcm->pcm_ratio *= 2;
 		berlin_pcm->spdif_ratio *= 2;
 	}
 
-	if(berlin_pcm->channel_num == 1) {
-		berlin_pcm->pcm_ratio   *= 2;
+	if (berlin_pcm->channel_num == 1) {
+		berlin_pcm->pcm_ratio *= 2;
 		berlin_pcm->spdif_ratio *= 2;
 	}
 
-	if ((berlin_pcm->pcm_dma_area =
-		dma_alloc_coherent(NULL, MAX_BUFFER_SIZE*berlin_pcm->pcm_ratio,
-			&berlin_pcm->pcm_dma_addr, GFP_KERNEL)) == NULL) {
-		return -ENOMEM;
-	}
 	berlin_pcm->pcm_virt_bytes = MAX_BUFFER_SIZE;
-	berlin_pcm->pcm_dma_bytes = MAX_BUFFER_SIZE*berlin_pcm->pcm_ratio;
-	memset(berlin_pcm->pcm_dma_area, 0, berlin_pcm->pcm_dma_bytes);
-
-	if ((berlin_pcm->spdif_dma_area =
-		dma_alloc_coherent(NULL, MAX_BUFFER_SIZE*berlin_pcm->spdif_ratio,
-			&berlin_pcm->spdif_dma_addr, GFP_KERNEL)) == NULL) {
-		dma_free_coherent(NULL, berlin_pcm->pcm_dma_bytes,
-			berlin_pcm->pcm_dma_area, berlin_pcm->pcm_dma_addr);
-		return -ENOMEM;
+	berlin_pcm->pcm_dma_bytes = MAX_BUFFER_SIZE * berlin_pcm->pcm_ratio;
+	berlin_pcm->pcm_dma_area = dma_zalloc_coherent(
+		NULL, berlin_pcm->pcm_dma_bytes,
+		&berlin_pcm->pcm_dma_addr, GFP_KERNEL);
+	if (!berlin_pcm->pcm_dma_area) {
+		snd_printk("%s: failed to allocate PCM DMA area\n", __func__);
+		goto err_pcm_dma;
 	}
-	berlin_pcm->spdif_dma_bytes = MAX_BUFFER_SIZE*berlin_pcm->spdif_ratio;
-	memset(berlin_pcm->spdif_dma_area, 0, berlin_pcm->spdif_dma_bytes);
+
+	berlin_pcm->spdif_dma_bytes = MAX_BUFFER_SIZE * berlin_pcm->spdif_ratio;
+	berlin_pcm->spdif_dma_area = dma_zalloc_coherent(
+		NULL, berlin_pcm->spdif_dma_bytes,
+		&berlin_pcm->spdif_dma_addr, GFP_KERNEL);
+	if (!berlin_pcm->spdif_dma_area) {
+		snd_printk("%s: failed to allocate SPDIF DMA area\n", __func__);
+		goto err_spdif_dma;
+	}
 
 	/* initialize spdif channel status */
 	chnsts = (struct spdif_channel_status *)&(berlin_pcm->channel_status[0]);
@@ -402,56 +433,59 @@ static int snd_berlin_playback_hw_params(struct snd_pcm_substream *substream,
 
 	/* AIO configuration */
 	berlin_set_aio(berlin_pcm->sample_rate, berlin_pcm->output_mode);
-
-	mutex_unlock(&berlin_mutex);
-
 	return 0;
+
+err_spdif_dma:
+	dma_free_coherent(NULL, berlin_pcm->pcm_dma_bytes,
+		berlin_pcm->pcm_dma_area, berlin_pcm->pcm_dma_addr);
+	berlin_pcm->pcm_dma_area = NULL;
+	berlin_pcm->pcm_dma_addr = NULL;
+err_pcm_dma:
+	snd_pcm_lib_free_pages(substream);
+	return -ENOMEM;
 }
 
 static int snd_berlin_playback_prepare(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
-	unsigned int bps;
 
-	bps = runtime->rate * runtime->channels;
-	bps *= snd_pcm_format_width(runtime->format);
-	bps /= 8;
-	if (bps <= 0)
-		return -EINVAL;
-	berlin_pcm->pcm_bps = bps;
 	berlin_pcm->pcm_size = snd_pcm_lib_buffer_bytes(substream);
 	berlin_pcm->pcm_count = snd_pcm_lib_period_bytes(substream);
 	berlin_pcm->pcm_buf_pos = 0;
+	berlin_pcm->dma_buf_pos = 0;
+	berlin_pcm->tv_nsec = cpu_clock(0);
 	berlin_pcm->dma_size = 256 * 4 * 2;
 
 	memset(&berlin_pcm->pcm_indirect, 0, sizeof(berlin_pcm->pcm_indirect));
 	berlin_pcm->pcm_indirect.hw_buffer_size = MAX_BUFFER_SIZE;
 	berlin_pcm->pcm_indirect.sw_buffer_size = snd_pcm_lib_buffer_bytes(substream);
-	snd_printk("prepare ok bps: %d size: %d count: %d\n",
-		berlin_pcm->pcm_bps, berlin_pcm->pcm_size, berlin_pcm->pcm_count);
+	snd_printk("prepare ok. size: %d count: %d\n",
+		berlin_pcm->pcm_size, berlin_pcm->pcm_count);
 
 	return 0;
 }
 
 static int snd_berlin_playback_trigger(struct snd_pcm_substream *substream, int cmd)
 {
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
-	struct snd_berlin_chip *chip = snd_pcm_substream_chip(substream);
-	unsigned int result = 0;
+	int    ret = 0;
 
-	if (cmd == SNDRV_PCM_TRIGGER_START) {
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		snd_berlin_playback_trigger_start(substream);
-		snd_printk("playback starts.\n");
-	} else if (cmd == SNDRV_PCM_TRIGGER_STOP) {
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		snd_berlin_playback_trigger_stop(substream);
-		snd_printk("playback ends.\n");
-	} else {
-		result = -EINVAL;
+		break;
+	default:
+		ret = -EINVAL;
 	}
 
-	return result;
+	return ret;
 }
 
 static snd_pcm_uframes_t
@@ -459,9 +493,22 @@ snd_berlin_playback_pointer(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
+	uint64_t curr_nsec, delta;
+	uint32_t frames, bytes, buf_pos;
+	unsigned long flags;
+
+	spin_lock_irqsave(&berlin_pcm->lock, flags);
+	curr_nsec = cpu_clock(0);
+	delta = curr_nsec - berlin_pcm->tv_nsec;
+	frames = div_u64((uint64_t)berlin_pcm->sample_rate * delta, 1000000000LLU);
+	bytes = frames_to_bytes(runtime, frames);
+	if (bytes >= berlin_pcm->dma_size)
+		bytes = berlin_pcm->dma_size - 4;
+	buf_pos = berlin_pcm->pcm_buf_pos + (bytes & ~0x3);
+	spin_unlock_irqrestore(&berlin_pcm->lock, flags);
 
 	return snd_pcm_indirect_playback_pointer(substream, &berlin_pcm->pcm_indirect,
-						berlin_pcm->pcm_buf_pos);
+						buf_pos);
 }
 
 static int snd_berlin_playback_copy(struct snd_pcm_substream *substream,
@@ -472,15 +519,20 @@ static int snd_berlin_playback_copy(struct snd_pcm_substream *substream,
 	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
 	unsigned char *pcm_buf, *spdif_buf;
 	unsigned int i, sync_word;
-	unsigned int *pcm, *spdif;
+	unsigned int *s32_pcm, *spdif;
 	unsigned short *s16_pcm;
 	unsigned char c;
-	if(berlin_pcm->sample_format == SNDRV_PCM_FORMAT_S16_LE) {
-		if(berlin_pcm->channel_num == 1) {
+
+	if (pos >= berlin_pcm->pcm_virt_bytes) {
+		return -1;
+	}
+
+	if (berlin_pcm->sample_format == SNDRV_PCM_FORMAT_S16_LE) {
+		if (berlin_pcm->channel_num == 1) {
 			pcm_buf = berlin_pcm->pcm_dma_area +
 				pos*berlin_pcm->pcm_ratio;
 			s16_pcm = (unsigned short *)buf;
-			for(i=0; i<(bytes>>1); i++)
+			for (i=0; i<(bytes>>1); i++)
 			{
 				*((unsigned int *)pcm_buf) = (*s16_pcm)<<16;
 				pcm_buf += 4;
@@ -493,7 +545,7 @@ static int snd_berlin_playback_copy(struct snd_pcm_substream *substream,
 				pos*berlin_pcm->spdif_ratio;
 			s16_pcm = (unsigned short *)buf;
 			spdif   = (unsigned int *)spdif_buf;
-			for(i=0; i<(bytes>>1); i++)
+			for (i=0; i<(bytes>>1); i++)
 			{
 				c = spdif_get_channel_status(berlin_pcm->channel_status,
 								berlin_pcm->spdif_frames);
@@ -507,13 +559,13 @@ static int snd_berlin_playback_copy(struct snd_pcm_substream *substream,
 				s16_pcm += 1;
 				spdif   += 4;
 				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
+				berlin_pcm->spdif_frames %= SPDIF_BLOCK_SIZE;
 			}
 		} else {
 			pcm_buf = berlin_pcm->pcm_dma_area +
 				pos*berlin_pcm->pcm_ratio;
 			s16_pcm = (unsigned short *)buf;
-			for(i=0; i<(bytes>>1); i++)
+			for (i=0; i<(bytes>>1); i++)
 			{
 				*((unsigned int *)pcm_buf) = (*s16_pcm)<<16;
 				pcm_buf += 4;
@@ -524,7 +576,7 @@ static int snd_berlin_playback_copy(struct snd_pcm_substream *substream,
 				pos*berlin_pcm->spdif_ratio;
 			s16_pcm = (unsigned short *)buf;
 			spdif   = (unsigned int *)spdif_buf;
-			for(i=0; i<(bytes>>2); i++)
+			for (i=0; i<(bytes>>2); i++)
 			{
 				c = spdif_get_channel_status(berlin_pcm->channel_status,
 								berlin_pcm->spdif_frames);
@@ -538,73 +590,73 @@ static int snd_berlin_playback_copy(struct snd_pcm_substream *substream,
 				s16_pcm += 2;
 				spdif   += 4;
 				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
+				berlin_pcm->spdif_frames %= SPDIF_BLOCK_SIZE;
 			}
 		}
 	} else { // SNDRV_PCM_FORMAT_S32_LE
-		if(berlin_pcm->channel_num == 1) {
+		if (berlin_pcm->channel_num == 1) {
 			pcm_buf = berlin_pcm->pcm_dma_area +
 				pos*berlin_pcm->pcm_ratio;
-			pcm = (unsigned int *)buf;
-			for(i=0; i<(bytes>>2); i++)
+			s32_pcm = (unsigned int *)buf;
+			for (i=0; i<(bytes>>2); i++)
 			{
-				*((unsigned int *)pcm_buf) = *pcm;
+				*((unsigned int *)pcm_buf) = *s32_pcm;
 				pcm_buf += 4;
-				*((unsigned int *)pcm_buf) = *pcm;
+				*((unsigned int *)pcm_buf) = *s32_pcm;
 				pcm_buf += 4;
-				pcm     += 1;
+				s32_pcm += 1;
 			}
 
 			spdif_buf = berlin_pcm->spdif_dma_area +
 				pos*berlin_pcm->spdif_ratio;
-			pcm   = (unsigned int *)buf;
-			spdif = (unsigned int *)spdif_buf;
-			for(i=0; i<(bytes>>2); i++)
+			s32_pcm   = (unsigned int *)buf;
+			spdif     = (unsigned int *)spdif_buf;
+			for (i=0; i<(bytes>>2); i++)
 			{
 				c = spdif_get_channel_status(berlin_pcm->channel_status,
 								berlin_pcm->spdif_frames);
 
 				sync_word = berlin_pcm->spdif_frames ? TYPE_M : TYPE_B;
-				spdif_enc_subframe(spdif, *pcm, sync_word, 0, 0, c);
+				spdif_enc_subframe(spdif, *s32_pcm, sync_word, 0, 0, c);
 
 				sync_word = TYPE_W;
-				spdif_enc_subframe((spdif+2), *pcm, sync_word, 0, 0, c);
+				spdif_enc_subframe((spdif+2), *s32_pcm, sync_word, 0, 0, c);
 
-				pcm   += 1;
-				spdif += 4;
+				s32_pcm += 1;
+				spdif   += 4;
 				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
+				berlin_pcm->spdif_frames %= SPDIF_BLOCK_SIZE;
 			}
 		} else {
 			pcm_buf = berlin_pcm->pcm_dma_area +
 				pos*berlin_pcm->pcm_ratio;
-			pcm = (unsigned int *)buf;
-			for(i=0; i<(bytes>>2); i++)
+			s32_pcm = (unsigned int *)buf;
+			for (i=0; i<(bytes>>2); i++)
 			{
-				*((unsigned int *)pcm_buf) = *pcm;
+				*((unsigned int *)pcm_buf) = *s32_pcm;
 				pcm_buf += 4;
-				pcm     += 1;
+				s32_pcm += 1;
 			}
 
 			spdif_buf = berlin_pcm->spdif_dma_area +
 				pos*berlin_pcm->spdif_ratio;
-			pcm   = (unsigned int *)buf;
-			spdif = (unsigned int *)spdif_buf;
-			for(i=0; i<(bytes>>3); i++)
+			s32_pcm   = (unsigned int *)buf;
+			spdif     = (unsigned int *)spdif_buf;
+			for (i=0; i<(bytes>>3); i++)
 			{
 				c = spdif_get_channel_status(berlin_pcm->channel_status,
 								berlin_pcm->spdif_frames);
 
 				sync_word = berlin_pcm->spdif_frames ? TYPE_M : TYPE_B;
-				spdif_enc_subframe(spdif, *pcm, sync_word, 0, 0, c);
+				spdif_enc_subframe(spdif, *s32_pcm, sync_word, 0, 0, c);
 
 				sync_word = TYPE_W;
-				spdif_enc_subframe((spdif+2), *(pcm+1), sync_word, 0, 0, c);
+				spdif_enc_subframe((spdif+2), *(s32_pcm+1), sync_word, 0, 0, c);
 
-				pcm   += 2;
-				spdif += 4;
+				s32_pcm += 2;
+				spdif   += 4;
 				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
+				berlin_pcm->spdif_frames %= SPDIF_BLOCK_SIZE;
 			}
 		}
 	}
@@ -613,16 +665,16 @@ static int snd_berlin_playback_copy(struct snd_pcm_substream *substream,
 }
 
 static void berlin_playback_transfer(struct snd_pcm_substream *substream,
-				   struct snd_pcm_indirect *rec, size_t bytes)
+					struct snd_pcm_indirect *rec, size_t bytes)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
 	void *src = (void *)(runtime->dma_area + rec->sw_data);
+	if (!src)
+		return;
 
-	if (src == NULL)
-		snd_printk("!!!!! src is NULL !!!!\n");
-	else
-		snd_berlin_playback_copy(substream, berlin_pcm->channel_num, rec->sw_data, src, bytes);
+	snd_berlin_playback_copy(substream, berlin_pcm->channel_num,
+		rec->sw_data, src, bytes);
 }
 
 static int snd_berlin_playback_ack(struct snd_pcm_substream *substream)
@@ -636,106 +688,6 @@ static int snd_berlin_playback_ack(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int snd_berlin_playback_silence(struct snd_pcm_substream *substream,
-					int channel, snd_pcm_uframes_t pos,
-					snd_pcm_uframes_t count)
-{
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct snd_berlin_card_pcm *berlin_pcm = runtime->private_data;
-	unsigned char *pcm_buf, *spdif_buf;
-	unsigned int i, sync_word;
-	unsigned int *spdif;
-	unsigned char c;
-
-	pcm_buf = berlin_pcm->pcm_dma_area +
-			frames_to_bytes(runtime, pos)*berlin_pcm->pcm_ratio;
-	memset(pcm_buf, 0, frames_to_bytes(runtime, count)*berlin_pcm->pcm_ratio);
-
-	if(berlin_pcm->sample_format == SNDRV_PCM_FORMAT_S16_LE) {
-		if(berlin_pcm->channel_num == 1) {
-			spdif_buf = berlin_pcm->spdif_dma_area +
-				frames_to_bytes(runtime, pos)*berlin_pcm->spdif_ratio;
-			spdif = (unsigned int *)spdif_buf;
-			for(i=0; i<(frames_to_bytes(runtime, count)>>1); i++)
-			{
-				c = spdif_get_channel_status(berlin_pcm->channel_status,
-								berlin_pcm->spdif_frames);
-
-				sync_word = berlin_pcm->spdif_frames ? TYPE_M : TYPE_B;
-				spdif_enc_subframe(spdif, 0, sync_word, 0, 0, c);
-
-				sync_word = TYPE_W;
-				spdif_enc_subframe((spdif+2), 0, sync_word, 0, 0, c);
-
-				spdif += 4;
-				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
-			}
-		} else {
-			spdif_buf = berlin_pcm->spdif_dma_area +
-				frames_to_bytes(runtime, pos)*berlin_pcm->spdif_ratio;
-			spdif = (unsigned int *)spdif_buf;
-			for(i=0; i<(frames_to_bytes(runtime, count)>>2); i++)
-			{
-				c = spdif_get_channel_status(berlin_pcm->channel_status,
-								berlin_pcm->spdif_frames);
-
-				sync_word = berlin_pcm->spdif_frames ? TYPE_M : TYPE_B;
-				spdif_enc_subframe(spdif, 0, sync_word, 0, 0, c);
-
-				sync_word = TYPE_W;
-				spdif_enc_subframe((spdif+2), 0, sync_word, 0, 0, c);
-
-				spdif += 4;
-				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
-			}
-		}
-	} else {
-		if(berlin_pcm->channel_num == 1) {
-			spdif_buf = berlin_pcm->spdif_dma_area +
-				frames_to_bytes(runtime, pos)*berlin_pcm->spdif_ratio;
-			spdif = (unsigned int *)spdif_buf;
-			for(i=0; i<(frames_to_bytes(runtime, count)>>2); i++)
-                        {
-				c = spdif_get_channel_status(berlin_pcm->channel_status,
-								berlin_pcm->spdif_frames);
-
-				sync_word = berlin_pcm->spdif_frames ? TYPE_M : TYPE_B;
-				spdif_enc_subframe(spdif, 0, sync_word, 0, 0, c);
-
-				sync_word = TYPE_W;
-				spdif_enc_subframe((spdif+2), 0, sync_word, 0, 0, c);
-
-				spdif += 4;
-				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
-			}
-		} else {
-			spdif_buf = berlin_pcm->spdif_dma_area +
-				frames_to_bytes(runtime, pos)*berlin_pcm->spdif_ratio;
-			spdif = (unsigned int *)spdif_buf;
-			for(i=0; i<(frames_to_bytes(runtime, count)>>3); i++)
-			{
-				c = spdif_get_channel_status(berlin_pcm->channel_status,
-								berlin_pcm->spdif_frames);
-
-				sync_word = berlin_pcm->spdif_frames ? TYPE_M : TYPE_B;
-				spdif_enc_subframe(spdif, 0, sync_word, 0, 0, c);
-
-				sync_word = TYPE_W;
-				spdif_enc_subframe((spdif+2), 0, sync_word, 0, 0, c);
-
-				spdif += 4;
-				berlin_pcm->spdif_frames += 1;
-				berlin_pcm->spdif_frames = (berlin_pcm->spdif_frames)%SPDIF_BLOCK_SIZE;
-			}
-		}
-	}
-
-	return 0;
-}
-
 static struct snd_pcm_ops snd_berlin_playback_ops = {
 	.open    = snd_berlin_playback_open,
 	.close   = snd_berlin_playback_close,
@@ -745,9 +697,7 @@ static struct snd_pcm_ops snd_berlin_playback_ops = {
 	.prepare = snd_berlin_playback_prepare,
 	.trigger = snd_berlin_playback_trigger,
 	.pointer = snd_berlin_playback_pointer,
-//	.copy    = snd_berlin_playback_copy,
 	.ack     = snd_berlin_playback_ack,
-//	.silence = snd_berlin_playback_silence,
 };
 
 static int snd_berlin_card_new_pcm(struct snd_berlin_chip *chip)
@@ -778,22 +728,25 @@ static int snd_berlin_hwdep_dummy_op(struct snd_hwdep *hw, struct file *file)
 static int snd_berlin_hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 				unsigned int cmd, unsigned long arg)
 {
-	unsigned int *mode = (unsigned int *)arg;
-	unsigned int s = 0;
-
-
-	mutex_lock(&berlin_mutex);
-	switch (cmd) {
-	case SNDRV_BERLIN_GET_OUTPUT_MODE :
-		s = copy_to_user(mode, &berlin_output_mode, sizeof(int));
-		break;
-	case SNDRV_BERLIN_SET_OUTPUT_MODE :
-		berlin_output_mode = *mode;
-		break;
+	switch(cmd) {
+		case SNDRV_BERLIN_GET_OUTPUT_MODE: {
+			unsigned int mode = atomic_read(&g_output_mode);
+			int bytes_not_copied =
+				copy_to_user((void*)arg, &mode, sizeof(mode));
+			return bytes_not_copied == 0 ? 0 : -EFAULT;
+		}
+		case SNDRV_BERLIN_SET_OUTPUT_MODE: {
+			unsigned int mode;
+			int bytes_not_copied =
+				copy_from_user(&mode, (void*)arg, sizeof(mode));
+			if (bytes_not_copied)
+				return -EFAULT;
+			atomic_set(&g_output_mode, mode);
+			return 0;
+		}
+		default:
+			return -EINVAL;
 	}
-	mutex_unlock(&berlin_mutex);
-
-	return s;
 }
 
 static int snd_berlin_card_new_hwdep(struct snd_berlin_chip *chip)
@@ -837,8 +790,8 @@ static int snd_berlin_card_init(int dev)
 	if (snd_berlin_card == NULL)
 		return -ENOMEM;
 
-	chip = kzalloc(sizeof(struct snd_berlin_chip), GFP_KERNEL);
-	if(chip == NULL)
+	chip = kzalloc(sizeof(*chip), GFP_KERNEL);
+	if (chip == NULL)
 	{
 		err = -ENOMEM;
 		goto __nodev;
@@ -867,7 +820,7 @@ static int snd_berlin_card_init(int dev)
 	}
 
 __nodev:
-	if(chip)
+	if (chip)
 		kfree(chip);
 
 	snd_card_free(snd_berlin_card);

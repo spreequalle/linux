@@ -42,6 +42,7 @@
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
 #include <asm/uaccess.h>
+#include <linux/reboot.h>
 
 /*******************************************************************************
   Local head files
@@ -237,6 +238,10 @@
 #define HDMIRX_INTR_CLR_DEPTH			0x08
 #define HDMIRX_INTR_VSI_STOP			0x09
 #define HDMIRX_INTR_GMD_PKT			0x0A
+
+#define RA_Vpp_HDMI_ctrl    0x10068
+#define MSK32HDMI_ctrl_DAMP 0x7FF80000
+#define MSK32HDMI_ctrl_EAMP 0x00000FFF
 
 #ifdef BERLIN_BOOTLOGO
 #define MEMMAP_AVIO_BCM_REG_BASE			0xF7B50000
@@ -2700,6 +2705,32 @@ static irqreturn_t amp_devices_zsp_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void amp_power_off_hdmi() {
+	UNSG32 addr, value;
+
+	addr = SOC_VPP_BASE + RA_Vpp_HDMI_ctrl;
+	GA_REG_WORD32_READ(addr, &value);
+	value &= (~MSK32HDMI_ctrl_DAMP);
+	GA_REG_WORD32_WRITE(addr, value);
+
+	addr = SOC_VPP_BASE + RA_Vpp_HDMI_ctrl + 4;
+	GA_REG_WORD32_READ(addr, &value);
+	value &= (~MSK32HDMI_ctrl_EAMP);
+	GA_REG_WORD32_WRITE(addr, value);
+}
+
+static int amp_reboot_notify_sys(struct notifier_block *this, unsigned long code,
+                            void *unused)
+{
+	amp_power_off_hdmi();
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block amp_reboot_notifier = {
+    .notifier_call = amp_reboot_notify_sys
+};
+
 static int amp_device_init(unsigned int cpu_id, void *pHandle)
 {
 	unsigned int vec_num;
@@ -2792,6 +2823,9 @@ static int amp_device_init(unsigned int cpu_id, void *pHandle)
 	}
 #endif
 
+	err = register_reboot_notifier(&amp_reboot_notifier);
+	if(err) return err;
+
 	amp_trace("amp_device_init ---ok");
 
 	return S_OK;
@@ -2800,6 +2834,8 @@ static int amp_device_init(unsigned int cpu_id, void *pHandle)
 static int amp_device_exit(unsigned int cpu_id, void *pHandle)
 {
 	int err = 0;
+
+	unregister_reboot_notifier(&amp_reboot_notifier);
 
 #if CONFIG_VIP_ISR_MSGQ
 	err = PEMsgQ_Destroy(&hPEVIPMsgQ);

@@ -541,7 +541,7 @@ err_exit:
 
 int memory_engine_free(memory_engine_t *engine, int alignaddr)
 {
-	int res;
+	int res = 0;
 #ifdef  SHM_GUARD_BYTES_ENABLE
 	int flag  = 0;
 #endif
@@ -559,6 +559,7 @@ int memory_engine_free(memory_engine_t *engine, int alignaddr)
 	if (node == NULL) {
 		printk("memory_engine_lookup_shm_node Error alignaddr[%x]\n",
 								alignaddr);
+		res = -EFAULT;
 		goto err_exit;
 	}
 

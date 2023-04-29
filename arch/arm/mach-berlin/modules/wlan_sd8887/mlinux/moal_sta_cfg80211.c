@@ -4262,7 +4262,7 @@ woal_add_supported_rates_ie(moal_private *priv, struct sk_buff *skb,
 {
 	t_u8 basic_rates[] = {
 		0x82, 0x84, 0x8b, 0x96,
-		0x0c, 0x12, 0x18, 0x24
+	    	0x24, 0x30, 0x48, 0x6c	
 	};
 	t_u8 basic_rates_5G[] = {
 		0x0c, 0x12, 0x18, 0x24,
@@ -4857,7 +4857,7 @@ woal_construct_tdls_action_frame(moal_private *priv,
 		/* move back for addr4 */
 		memmove(pos + ETH_ALEN, &mgmt->u.action.category,
 			1 + sizeof(mgmt->u.action.u.tdls_discover_resp));
-	/** init address 4 */
+		/** init address 4 */
 		memcpy(pos, addr, ETH_ALEN);
 
 		woal_add_supported_rates_ie(priv, skb, band);
@@ -5966,22 +5966,22 @@ woal_cfg80211_init_wiphy(moal_private *priv, t_u8 wait_option)
 
 	/* Set retry limit count to wiphy */
 	if (GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_STA) {
-	if (MLAN_STATUS_SUCCESS !=
+		if (MLAN_STATUS_SUCCESS !=
 		    woal_set_get_retry(priv, MLAN_ACT_GET, wait_option,
 				       &retry_count)) {
-		ret = MLAN_STATUS_FAILURE;
-		goto done;
-	}
+			ret = MLAN_STATUS_FAILURE;
+			goto done;
+		}
 	}
 #ifdef UAP_SUPPORT
 	else {
 		memset(&sys_cfg, 0x00, sizeof(sys_cfg));
-	if (MLAN_STATUS_SUCCESS !=
+		if (MLAN_STATUS_SUCCESS !=
 		    woal_set_get_sys_config(priv, MLAN_ACT_GET, wait_option,
 					    &sys_cfg)) {
-		ret = MLAN_STATUS_FAILURE;
-		goto done;
-	}
+			ret = MLAN_STATUS_FAILURE;
+			goto done;
+		}
 		retry_count = sys_cfg.retry_limit;
 	}
 #endif

@@ -7177,8 +7177,19 @@ woal_request_country_power_table(moal_private *priv, char *country)
 	if (MLAN_STATUS_SUCCESS !=
 	    woal_set_user_init_data(handle, COUNTRY_POWER_TABLE,
 				    MOAL_IOCTL_WAIT)) {
-		PRINTM(MFATAL, "Download power table to firmware failed\n");
-		ret = MLAN_STATUS_FAILURE;
+		PRINTM(MERROR,
+		       "Loading power table:%s Failed. Attempting to load txpower_ROW.bin\n",
+		       country_txpwrlimit);
+		strcpy(country_txpwrlimit, "mrvl/txpower_ROW.bin");
+		if (MLAN_STATUS_SUCCESS != woal_set_user_init_data(handle,
+								   COUNTRY_POWER_TABLE,
+								   MOAL_IOCTL_WAIT)) {
+			PRINTM(MERROR,"Loading txpower_ROW.bin Failed as well.\n");
+			ret = MLAN_STATUS_FAILURE;
+		}
+		else {
+			ret = MLAN_STATUS_SUCCESS;
+		}
 	}
 	LEAVE();
 	return ret;

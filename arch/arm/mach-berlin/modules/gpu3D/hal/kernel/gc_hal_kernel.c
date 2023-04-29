@@ -302,7 +302,6 @@ gckKERNEL_Construct(
     }
 
     kernel->timeOut      = gcdGPU_TIMEOUT;
-
     /* Save context. */
     kernel->context = Context;
 
@@ -3669,9 +3668,12 @@ gckKERNEL_SetTimeOut(
     IN gctUINT32 timeOut
     )
 {
+    gctUINT32 time = timeOut;
     gcmkHEADER_ARG("Kernel=0x%x timeOut=%d", Kernel, timeOut);
 #if gcdGPU_TIMEOUT
-    Kernel->timeOut = timeOut;
+    if (timeOut == gcvINFINITE || timeOut == 20000)
+	time = gcdGPU_TIMEOUT;
+    Kernel->timeOut = time;
 #endif
     gcmkFOOTER_NO();
 }
