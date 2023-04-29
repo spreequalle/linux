@@ -734,6 +734,14 @@ void __init setup_arch(char **cmdline_p)
 	mdesc = setup_machine_fdt(__atags_pointer);
 	if (!mdesc)
 		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
+	else if (mdesc->fixup) {
+		char *from = NULL;
+		mdesc->fixup(NULL, &from, &meminfo);
+		/* parse_early_param needs a boot_command_line */
+		if (from) {
+			strlcpy(boot_command_line, from, COMMAND_LINE_SIZE);
+		}
+	}
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
 
