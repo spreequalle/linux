@@ -646,17 +646,19 @@ woal_cfg80211_set_wep_keys(moal_private *priv, const t_u8 *key, int key_len,
  * @brief clear all mgmt ies
  *
  * @param priv              A pointer to moal private structure
+ * @param wait_option       wait_option
  * @return                  N/A
  */
 void
-woal_clear_all_mgmt_ies(moal_private *priv)
+woal_clear_all_mgmt_ies(moal_private *priv, t_u8 wait_option)
 {
 	t_u16 mask = 0;
 	/* clear BEACON WPS/P2P IE */
 	if (priv->beacon_wps_index != MLAN_CUSTOM_IE_AUTO_IDX_MASK) {
 		PRINTM(MCMND, "Clear BEACON WPS ie\n");
 		woal_cfg80211_mgmt_frame_ie(priv, NULL, 0, NULL, 0, NULL, 0,
-					    NULL, 0, MGMT_MASK_BEACON_WPS_P2P);
+					    NULL, 0, MGMT_MASK_BEACON_WPS_P2P,
+					    wait_option);
 	}
 	/* clear mgmt frame ies */
 	if (priv->probereq_index != MLAN_CUSTOM_IE_AUTO_IDX_MASK)
@@ -672,7 +674,7 @@ woal_clear_all_mgmt_ies(moal_private *priv)
 		       priv->beacon_index, priv->probereq_index,
 		       priv->proberesp_index, priv->assocresp_index);
 		woal_cfg80211_mgmt_frame_ie(priv, NULL, 0, NULL, 0, NULL, 0,
-					    NULL, 0, mask);
+					    NULL, 0, mask, wait_option);
 	}
 }
 
@@ -708,7 +710,7 @@ woal_cfg80211_bss_role_cfg(moal_private *priv, t_u16 action, t_u8 *bss_role)
 		/* set back the mac address */
 		woal_request_set_mac_address(priv);
 		/* clear the mgmt ies */
-		woal_clear_all_mgmt_ies(priv);
+		woal_clear_all_mgmt_ies(priv, MOAL_IOCTL_WAIT);
 		/* Initialize private structures */
 		woal_init_priv(priv, MOAL_IOCTL_WAIT);
 
@@ -1271,7 +1273,8 @@ woal_cfg80211_change_virtual_intf(struct wiphy *wiphy,
 			    MLAN_CUSTOM_IE_AUTO_IDX_MASK)
 				woal_cfg80211_mgmt_frame_ie(priv, NULL, 0, NULL,
 							    0, NULL, 0, NULL, 0,
-							    MGMT_MASK_PROBE_REQ);
+							    MGMT_MASK_PROBE_REQ,
+							    MOAL_IOCTL_WAIT);
 			bss_role = MLAN_BSS_ROLE_UAP;
 			woal_cfg80211_bss_role_cfg(priv, MLAN_ACT_SET,
 						   &bss_role);
@@ -2326,7 +2329,8 @@ done:
  * @param assocresp_ies_data    Assoc resp ie
  * @param assocresp_index       The index for assoc resp when auto index
  * @param probereq_ies_data     Probe req ie
- * @param probereq_index        The index for probe req when auto index *
+ * @param probereq_index        The index for probe req when auto index
+ * @param wait_option           wait option
  *
  * @return              0 -- success, otherwise fail
  */
@@ -2335,7 +2339,8 @@ woal_cfg80211_custom_ie(moal_private *priv,
 			custom_ie *beacon_ies_data, t_u16 *beacon_index,
 			custom_ie *proberesp_ies_data, t_u16 *proberesp_index,
 			custom_ie *assocresp_ies_data, t_u16 *assocresp_index,
-			custom_ie *probereq_ies_data, t_u16 *probereq_index)
+			custom_ie *probereq_ies_data, t_u16 *probereq_index,
+			t_u8 wait_option)
 {
 	mlan_ioctl_req *ioctl_req = NULL;
 	mlan_ds_misc_cfg *misc = NULL;
@@ -2399,7 +2404,7 @@ woal_cfg80211_custom_ie(moal_private *priv,
 
 	memcpy(&misc->param.cust_ie, custom_ie, sizeof(mlan_ds_misc_custom_ie));
 
-	status = woal_request_ioctl(priv, ioctl_req, MOAL_IOCTL_WAIT);
+	status = woal_request_ioctl(priv, ioctl_req, wait_option);
 	if (MLAN_STATUS_SUCCESS != status) {
 		ret = -EFAULT;
 		goto done;
@@ -2674,6 +2679,7 @@ woal_is_selected_registrar_on(const t_u8 *ie, int len)
  * @param probereq_ies          A pointer to probe req ies
  * @param probereq_ies_len      Probe req ies length *
  * @param mask					Mgmt frame mask
+ * @param wait_option           wait_option
  *
  * @return                      0 -- success, otherwise fail
  */
@@ -2683,7 +2689,7 @@ woal_cfg80211_mgmt_frame_ie(moal_private *priv,
 			    const t_u8 *proberesp_ies, size_t proberesp_ies_len,
 			    const t_u8 *assocresp_ies, size_t assocresp_ies_len,
 			    const t_u8 *probereq_ies, size_t probereq_ies_len,
-			    t_u16 mask)
+			    t_u16 mask, t_u8 wait_option)
 {
 	int ret = 0;
 	t_u8 *pos = NULL;
@@ -2745,7 +2751,7 @@ woal_cfg80211_mgmt_frame_ie(moal_private *priv,
 					    &proberesp_index,
 					    assocresp_ies_data,
 					    &assocresp_index, probereq_ies_data,
-					    &probereq_index)) {
+					    &probereq_index, wait_option)) {
 			PRINTM(MERROR, "Fail to set beacon wps IE\n");
 			ret = -EFAULT;
 		}
@@ -2853,7 +2859,7 @@ woal_cfg80211_mgmt_frame_ie(moal_private *priv,
 					    proberesp_ies_data,
 					    &proberesp_p2p_index, NULL,
 					    &assocresp_index, NULL,
-					    &probereq_index)) {
+					    &probereq_index, wait_option)) {
 			PRINTM(MERROR, "Fail to set proberesp p2p IE\n");
 			ret = -EFAULT;
 			goto done;
@@ -2960,7 +2966,8 @@ woal_cfg80211_mgmt_frame_ie(moal_private *priv,
 	    woal_cfg80211_custom_ie(priv, beacon_ies_data, &beacon_index,
 				    proberesp_ies_data, &proberesp_index,
 				    assocresp_ies_data, &assocresp_index,
-				    probereq_ies_data, &probereq_index)) {
+				    probereq_ies_data, &probereq_index,
+				    wait_option)) {
 		PRINTM(MERROR,
 		       "Fail to set beacon proberesp assoc probereq IES\n");
 		ret = -EFAULT;

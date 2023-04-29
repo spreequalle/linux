@@ -733,7 +733,7 @@ static void unionfs_put_link(struct dentry *dentry, struct nameidata *nd,
  * This is a variant of fs/namei.c:permission() or inode_permission() which
  * skips over EROFS tests (because we perform copyup on EROFS).
  */
-static int __inode_permission(struct inode *inode, int mask)
+static int __unionfs_inode_permission(struct inode *inode, int mask)
 {
 	int retval;
 
@@ -826,7 +826,7 @@ static int unionfs_permission(struct inode *inode, int mask)
 		 * copyup taking place later on.  However, if user never had
 		 * access to the file, then no copyup could ever take place.
 		 */
-		err = __inode_permission(lower_inode, mask);
+		err = __unionfs_inode_permission(lower_inode, mask);
 		if (err && err != -EACCES && err != EPERM && bindex > 0) {
 			umode_t mode = lower_inode->i_mode;
 			if ((is_robranch_super(inode->i_sb, bindex) ||

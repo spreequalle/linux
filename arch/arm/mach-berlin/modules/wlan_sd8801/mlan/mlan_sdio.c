@@ -70,25 +70,6 @@ static t_u8 fw_crc_header_rb[FW_CRC_HEADER_RB] = {
 ********************************************************/
 
 /**
- *  @brief This function counts the bits of unsigned int number
- *
- *  @param num  number
- *  @return     number of bits
- */
-static t_u32 INLINE
-bitcount(t_u32 num)
-{
-	t_u32 count = 0;
-	static t_u32 nibblebits[] = {
-		0, 1, 1, 2, 1, 2, 2, 3,
-		1, 2, 2, 3, 2, 3, 3, 4
-	};
-	for (; num != 0; num >>= 4)
-		count += nibblebits[num & 0x0f];
-	return count;
-}
-
-/**
  *  @brief This function initialize the SDIO port
  *
  *  @param pmadapter    A pointer to mlan_adapter structure
@@ -1699,6 +1680,9 @@ wlan_get_sdio_device(pmlan_adapter pmadapter)
 	case CARD_TYPE_SD8897:
 		pmadapter->psdio_device = &mlan_sdio_sd8897;
 		break;
+	case CARD_TYPE_SD8797:
+		pmadapter->psdio_device = &mlan_sdio_sd8797;
+		break;
 	default:
 		PRINTM(MERROR, "can't get right card type \n");
 		ret = MLAN_STATUS_FAILURE;
@@ -1751,6 +1735,7 @@ wlan_interrupt(pmlan_adapter pmadapter)
 		 * Clear the interrupt status register
 		 */
 		//PRINTM(MINTR, "wlan_interrupt: sdio_ireg = 0x%x\n", sdio_ireg);
+		pmadapter->num_of_irq++;
 		pcb->moal_spin_lock(pmadapter->pmoal_handle,
 				    pmadapter->pint_lock);
 		pmadapter->sdio_ireg |= sdio_ireg;

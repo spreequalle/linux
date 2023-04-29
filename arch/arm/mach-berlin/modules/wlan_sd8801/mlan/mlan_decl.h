@@ -27,7 +27,7 @@ Change log:
 #define _MLAN_DECL_H_
 
 /** MLAN release version */
-#define MLAN_RELEASE_VERSION		"C058+fixes"
+#define MLAN_RELEASE_VERSION		"C066"
 
 /** Re-define generic data types for MLAN/MOAL */
 /** Signed char (1-byte) */
@@ -332,6 +332,7 @@ typedef enum _mlan_status {
 	MLAN_STATUS_SUCCESS = 0,
 	MLAN_STATUS_PENDING,
 	MLAN_STATUS_RESOURCE,
+	MLAN_STATUS_COMPLETE,
 } mlan_status;
 
 /** mlan_error_code */

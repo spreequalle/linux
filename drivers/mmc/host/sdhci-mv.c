@@ -22,10 +22,8 @@
 #include <linux/of_device.h>
 #include "sdhci-pltfm.h"
 
-#define SDHCI_TX_CONFIG  0x118
 struct pltfm_mv_data {
 	int flags;
-	int idrv_low;  /* I/O driven strength is low */
 };
 
 static const struct of_device_id sdhci_mv_dt_ids[] = {
@@ -41,31 +39,8 @@ static unsigned int sdhci_mv_get_max_clock(struct sdhci_host *host)
 	return clk_get_rate(pltfm_host->clk);
 }
 
-static void sdhci_mv_reset_exit(struct sdhci_host *host, u8 mask)
-{
-        struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-	struct pltfm_mv_data *mv_data = pltfm_host->priv;
-	u32 ctrl;
-
-	if (!(mask & SDHCI_RESET_ALL))
-	return;
-
-	/* adjust TX config when I/O driven strength is low */
-	if (mv_data->idrv_low)
-	{
-	    ctrl = sdhci_readl(host, SDHCI_TX_CONFIG);
-	    ctrl |= (1<<31);
-	    ctrl &= ~((1<<9)-1);
-	    ctrl |= 7;
-	    sdhci_writel(host, ctrl, SDHCI_TX_CONFIG);
-	}
-}
-
-
-
 static struct sdhci_ops sdhci_mv_ops = {
 	.get_max_clock = sdhci_mv_get_max_clock,
-	.platform_reset_exit = sdhci_mv_reset_exit,
 };
 
 static struct sdhci_pltfm_data sdhci_mv_pdata = {
@@ -79,8 +54,6 @@ static void sdhci_mv_probe_dt(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct sdhci_host *host = platform_get_drvdata(pdev);
-	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-	struct pltfm_mv_data *mv_data = pltfm_host->priv;
 
 	if (of_get_property(np, "mrvl,card-wired", NULL)) {
 		host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
@@ -95,9 +68,6 @@ static void sdhci_mv_probe_dt(struct platform_device *pdev)
 
 	if (of_get_property(np, "mrvl,no-hispd", NULL))
 		host->quirks |= SDHCI_QUIRK_NO_HISPD_BIT;
-
-	if (of_get_property(np, "mrvl,idrv-low", NULL))
-	        mv_data->idrv_low = 1;
 }
 
 static int sdhci_mv_probe(struct platform_device *pdev)

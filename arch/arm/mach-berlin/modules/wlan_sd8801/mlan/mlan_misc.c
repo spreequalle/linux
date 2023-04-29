@@ -2647,10 +2647,10 @@ wlan_radio_ioctl_ant_cfg(IN pmlan_adapter pmadapter,
 	if (pioctl_req->action == MLAN_ACT_SET) {
 		/* User input validation */
 		if ((!radio_cfg->param.antenna ||
-		     radio_cfg->param.antenna & ~RF_ANTENNA_MASK(pmadapter->
-								 number_of_antenna))
-		    && (radio_cfg->param.antenna != RF_ANTENNA_AUTO ||
-			pmadapter->number_of_antenna <= 1)) {
+		     bitcount(radio_cfg->param.antenna & 0xFFFF) >
+		     pmadapter->number_of_antenna) &&
+		    (radio_cfg->param.antenna != RF_ANTENNA_AUTO ||
+		     pmadapter->number_of_antenna <= 1)) {
 			PRINTM(MERROR, "Invalid antenna setting\n");
 			pioctl_req->status_code = MLAN_ERROR_INVALID_PARAMETER;
 			ret = MLAN_STATUS_FAILURE;

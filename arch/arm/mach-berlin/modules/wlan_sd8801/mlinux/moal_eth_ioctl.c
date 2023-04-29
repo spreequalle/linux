@@ -165,7 +165,8 @@ woal_set_ap_wps_p2p_ie(moal_private *priv, t_u8 *ie, size_t len)
 		if (MLAN_STATUS_SUCCESS !=
 		    woal_cfg80211_mgmt_frame_ie(priv, pos, ie_len, NULL, 0,
 						NULL, 0, NULL, 0,
-						MGMT_MASK_BEACON_WPS_P2P)) {
+						MGMT_MASK_BEACON_WPS_P2P,
+						MOAL_IOCTL_WAIT)) {
 			PRINTM(MERROR, "Failed to set beacon wps/p2p ie\n");
 			ret = -EFAULT;
 			goto done;
@@ -176,7 +177,8 @@ woal_set_ap_wps_p2p_ie(moal_private *priv, t_u8 *ie, size_t len)
 		if (MLAN_STATUS_SUCCESS !=
 		    woal_cfg80211_mgmt_frame_ie(priv, NULL, 0, pos, ie_len,
 						NULL, 0, NULL, 0,
-						MGMT_MASK_PROBE_RESP)) {
+						MGMT_MASK_PROBE_RESP,
+						MOAL_IOCTL_WAIT)) {
 			PRINTM(MERROR, "Failed to set probe resp ie\n");
 			ret = -EFAULT;
 			goto done;
@@ -187,7 +189,8 @@ woal_set_ap_wps_p2p_ie(moal_private *priv, t_u8 *ie, size_t len)
 		if (MLAN_STATUS_SUCCESS !=
 		    woal_cfg80211_mgmt_frame_ie(priv, NULL, 0, NULL, 0, pos,
 						ie_len, NULL, 0,
-						MGMT_MASK_ASSOC_RESP)) {
+						MGMT_MASK_ASSOC_RESP,
+						MOAL_IOCTL_WAIT)) {
 			PRINTM(MERROR, "Failed to set assoc resp ie\n");
 			ret = -EFAULT;
 			goto done;
@@ -9874,6 +9877,16 @@ woal_android_priv_cmd(struct net_device *dev, struct ifreq *req)
 			len = woal_priv_hotspotcfg(priv, buf,
 						   priv_cmd.total_len);
 			goto handled;
+#ifdef RX_PACKET_COALESCE
+		} else if (strnicmp
+			   (buf + strlen(CMD_MARVELL), PRIV_CMD_RX_COAL_CFG,
+			    strlen(PRIV_CMD_RX_COAL_CFG)) == 0) {
+			/* RX packet coalescing Configuration */
+			len = woal_priv_rx_pkt_coalesce_cfg(priv, buf,
+							    priv_cmd.total_len);
+			goto handled;
+#endif
+
 		} else if (strnicmp
 			   (buf + strlen(CMD_MARVELL), PRIV_CMD_MGMT_FRAME_CTRL,
 			    strlen(PRIV_CMD_MGMT_FRAME_CTRL)) == 0) {

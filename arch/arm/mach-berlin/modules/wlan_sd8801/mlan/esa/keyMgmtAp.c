@@ -687,6 +687,7 @@ Status_e
 ProcessPWKMsg4(hostsa_private *priv,
 	       cm_Connection *connPtr, t_u8 *pbuf, t_u32 len)
 {
+	hostsa_mlan_fns *pm_fns = &priv->mlan_fns;
 	EAPOL_KeyMsg_t *rx_eapol_ptr;
 	apKeyMgmtInfoSta_t *pKeyMgmtInfo;
 	eapolHskData_t *pHskData = &connPtr->hskData;
@@ -709,6 +710,8 @@ ProcessPWKMsg4(hostsa_private *priv,
 	KeyMgmtStopHskTimer(connPtr);
 	connPtr->staData.keyMgmtInfo.numHskTries = 0;
 	if (pKeyMgmtInfo->rom.staSecType.wpa2) {
+		pm_fns->Hostsa_sendEventRsnConnect(priv->pmlan_private,
+						   connPtr->mac_addr);
 		pKeyMgmtInfo->rom.keyMgmtState = HSK_END;
 	} else {
 		return GenerateApEapolMsg(priv, connPtr, GRPMSG1_PENDING);
@@ -786,6 +789,7 @@ Status_e
 ProcessGrpMsg2(hostsa_private *priv,
 	       cm_Connection *connPtr, t_u8 *pbuf, t_u32 len)
 {
+	hostsa_mlan_fns *pm_fns = &priv->mlan_fns;
 	EAPOL_KeyMsg_t *rx_eapol_ptr;
 	apKeyMgmtInfoSta_t *pKeyMgmtInfo;
 
@@ -804,6 +808,8 @@ ProcessGrpMsg2(hostsa_private *priv,
 
 	if (WAITING_4_GRPMSG2 == pKeyMgmtInfo->rom.keyMgmtState) {
 		/* sendEventRsnConnect(connPtr, pKeyMgmtInfo); */
+		pm_fns->Hostsa_sendEventRsnConnect(priv->pmlan_private,
+						   connPtr->mac_addr);
 	}
 
 	pKeyMgmtInfo->rom.keyMgmtState = HSK_END;

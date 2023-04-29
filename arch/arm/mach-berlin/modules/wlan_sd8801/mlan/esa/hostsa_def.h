@@ -130,5 +130,7 @@ typedef struct _hostsa_mlan_fns {
 	void (*hostsa_StaSendDeauth) (t_void *pmlan_private,
 				      t_u8 *addr, t_u16 reason);
 	t_u8 (*Hostsa_get_bss_role) (t_void *pmlan_private);
+	t_void (*Hostsa_sendEventRsnConnect) (t_void *pmlan_private,
+					      t_u8 *addr);
 } hostsa_mlan_fns, *phostsa_mlan_fns;
 #endif

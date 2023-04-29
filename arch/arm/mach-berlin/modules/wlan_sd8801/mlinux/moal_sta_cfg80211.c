@@ -2364,7 +2364,8 @@ woal_cfg80211_scan(struct wiphy *wiphy, struct net_device *dev,
 						NULL, 0, NULL, 0,
 						(t_u8 *)priv->scan_request->ie,
 						priv->scan_request->ie_len,
-						MGMT_MASK_PROBE_REQ)) {
+						MGMT_MASK_PROBE_REQ,
+						MOAL_IOCTL_WAIT)) {
 			PRINTM(MERROR, "Fail to set scan request IE\n");
 			ret = -EFAULT;
 			goto done;
@@ -2374,7 +2375,8 @@ woal_cfg80211_scan(struct wiphy *wiphy, struct net_device *dev,
 		if (priv->probereq_index != MLAN_CUSTOM_IE_AUTO_IDX_MASK)
 			woal_cfg80211_mgmt_frame_ie(priv, NULL, 0, NULL, 0,
 						    NULL, 0, NULL, 0,
-						    MGMT_MASK_PROBE_REQ);
+						    MGMT_MASK_PROBE_REQ,
+						    MOAL_IOCTL_WAIT);
 	}
 #ifdef UAP_CFG80211
 	if (GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_UAP) {
@@ -3459,7 +3461,8 @@ woal_cfg80211_sched_scan_start(struct wiphy *wiphy,
 						NULL, 0, NULL, 0,
 						(t_u8 *)request->ie,
 						request->ie_len,
-						MGMT_MASK_PROBE_REQ)) {
+						MGMT_MASK_PROBE_REQ,
+						MOAL_IOCTL_WAIT)) {
 			PRINTM(MERROR, "Fail to set sched scan IE\n");
 			ret = -EFAULT;
 			goto done;
@@ -3469,7 +3472,8 @@ woal_cfg80211_sched_scan_start(struct wiphy *wiphy,
 		if (priv->probereq_index != MLAN_CUSTOM_IE_AUTO_IDX_MASK)
 			woal_cfg80211_mgmt_frame_ie(priv, NULL, 0, NULL, 0,
 						    NULL, 0, NULL, 0,
-						    MGMT_MASK_PROBE_REQ);
+						    MGMT_MASK_PROBE_REQ,
+						    MOAL_IOCTL_WAIT);
 	}
 
 	/* Interval between scan cycles in milliseconds,supplicant set to 10
@@ -4876,7 +4880,7 @@ woal_start_roaming(moal_private *priv)
 	memcpy(ssid_bssid.ssid.ssid, priv->sme_current.ssid,
 	       priv->sme_current.ssid_len);
 	if (MLAN_STATUS_SUCCESS !=
-	    woal_find_best_network(priv, MOAL_IOCTL_WAIT, &ssid_bssid)) {
+	    woal_find_best_network(priv, MOAL_CMD_WAIT, &ssid_bssid)) {
 		PRINTM(MIOCTL, "Can not find better network\n");
 		ret = -EFAULT;
 		goto done;

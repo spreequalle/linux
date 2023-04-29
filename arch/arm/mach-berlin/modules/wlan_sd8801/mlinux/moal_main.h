@@ -533,9 +533,6 @@ out:
 /* IOCTL Timeout */
 #define MOAL_IOCTL_TIMEOUT                    (20 * HZ)
 
-/** shutdown timeout */
-#define MOAL_SHUTDOWN_TIMEOUT                 (25 * 1000)
-
 /** Threshold value of number of times the Tx timeout happened */
 #define NUM_TX_TIMEOUT_THRESHOLD      5
 
@@ -1203,10 +1200,6 @@ struct _moal_handle {
 	/** Bitmap for re-association on/off */
 	t_u8 reassoc_on;
 #endif				/* REASSOCIATION */
-    /** shutdown timer set flag */
-	BOOLEAN is_shutdown_timer_set;
-	/** shutdown timer */
-	moal_drv_timer shutdown_timer __ATTRIB_ALIGN__;
 	/** Driver workqueue */
 	struct workqueue_struct *workqueue;
 	/** main work */
@@ -1300,6 +1293,8 @@ struct _moal_handle {
 	t_u8 main_state;
     /** driver state */
 	t_u8 driver_state;
+    /** ioctl timeout */
+	t_u8 ioctl_timeout;
     /** FW dump state */
 	t_u8 fw_dump;
 	/** cmd52 function */
@@ -1699,6 +1694,8 @@ typedef struct _HostCmd_DS_802_11_CFG_DATA {
 #define CARD_TYPE_SD8801   0x04
 /** SD8897 card type */
 #define CARD_TYPE_SD8897   0x05
+/** SD8797 card type */
+#define CARD_TYPE_SD8797   0x06
 
 /** combo scan header */
 #define WEXT_CSCAN_HEADER		"CSCAN S\x01\x00\x00S\x00"
@@ -2036,8 +2033,6 @@ void woal_mlan_debug_info(moal_private *priv);
 int woal_reassociation_thread(void *data);
 void woal_reassoc_timer_func(void *context);
 #endif /* REASSOCIATION */
-
-void woal_shutdown_timer_func(void *context);
 
 t_void woal_main_work_queue(struct work_struct *work);
 t_void woal_rx_work_queue(struct work_struct *work);

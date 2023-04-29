@@ -484,6 +484,56 @@ Hostsa_get_bss_role(t_void *pmlan_private)
 }
 
 /**
+ *  @brief send event to moal to notice that 4 way handshake complete
+ *
+ *  @param pmlan_private   A void pointer
+ *  @param addr  pointer to station mac address
+ *
+ *  @return
+ */
+t_void
+Hostsa_sendEventRsnConnect(t_void *pmlan_private, t_u8 *addr)
+{
+	mlan_private *pmpriv = (mlan_private *)pmlan_private;
+	mlan_adapter *pmadapter = pmpriv->adapter;
+	t_u8 *event_buf = MNULL, *pos = MNULL;
+	t_u32 event_cause = 0;
+	mlan_event *pevent = MNULL;
+	mlan_status ret = MLAN_STATUS_SUCCESS;
+
+	ENTER();
+
+	ret = pmadapter->callbacks.moal_malloc(pmadapter->pmoal_handle,
+					       MAX_EVENT_SIZE, MLAN_MEM_DEF,
+					       &event_buf);
+	if ((ret != MLAN_STATUS_SUCCESS) || !event_buf) {
+		PRINTM(MERROR, "Could not allocate buffer for event buf\n");
+		goto done;
+	}
+	pevent = (pmlan_event)event_buf;
+	memset(pmadapter, event_buf, 0, MAX_EVENT_SIZE);
+
+	pevent->event_id = MLAN_EVENT_ID_DRV_PASSTHRU;
+	pevent->bss_index = pmpriv->bss_index;
+	event_cause = wlan_cpu_to_le32(0x51);	/* MICRO_AP_EV_ID_RSN_CONNECT */
+	memcpy(pmadapter, (t_u8 *)pevent->event_buf,
+	       (t_u8 *)&event_cause, sizeof(event_cause));
+	pos = pevent->event_buf + sizeof(event_cause) + 2;	/* reserved 2
+								   byte */
+	memcpy(pmadapter, (t_u8 *)pos, addr, MLAN_MAC_ADDR_LENGTH);
+
+	pevent->event_len = MLAN_MAC_ADDR_LENGTH + sizeof(event_cause) + 2;
+	wlan_recv_event(pmpriv, MLAN_EVENT_ID_DRV_PASSTHRU, event_buf);
+
+done:
+	if (event_buf)
+		pmadapter->callbacks.moal_mfree(pmadapter->pmoal_handle,
+						event_buf);
+
+	LEAVE();
+}
+
+/**
  *  @brief This function initializes callbacks that hostsa interface uses.
  *
  *  @param pmpriv     A pointer to mlan_private structure
@@ -543,6 +593,7 @@ hostsa_mlan_callbacks(IN pmlan_private pmpriv,
 	pmlan_fns->Hostsa_StaControlledPortOpen = StaControlledPortOpen;
 	pmlan_fns->hostsa_StaSendDeauth = hostsa_StaSendDeauth;
 	pmlan_fns->Hostsa_get_bss_role = Hostsa_get_bss_role;
+	pmlan_fns->Hostsa_sendEventRsnConnect = Hostsa_sendEventRsnConnect;
 };
 
 /**

@@ -567,7 +567,7 @@ moal_ioctl_complete(IN t_void *pmoal_handle,
 		return MLAN_STATUS_SUCCESS;
 	}
 
-	if (status != MLAN_STATUS_SUCCESS)
+	if (status != MLAN_STATUS_SUCCESS && status != MLAN_STATUS_COMPLETE)
 		PRINTM(MERROR,
 		       "IOCTL failed: %p id=0x%x, sub_id=0x%x action=%d, status_code=0x%x\n",
 		       pioctl_req, pioctl_req->req_id,

@@ -169,7 +169,6 @@
 			mrvl,no-hispd;
 			mrvl,card-wired;
 			mrvl,host-off-card-on;
-			mrvl,idrv-low;
 		};
 
 		sdhci@F7AB0000 {

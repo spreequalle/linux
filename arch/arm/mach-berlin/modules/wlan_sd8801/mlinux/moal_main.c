@@ -48,6 +48,7 @@ Change log:
 #include <linux/if_ether.h>
 #include <linux/in.h>
 #include <linux/tcp.h>
+#include <linux/delay.h>
 #include <net/tcp.h>
 #include <net/dsfield.h>
 
@@ -69,6 +70,14 @@ static struct _card_info card_info_sd8777 = {
 
 /** card info for sd8787 */
 static struct _card_info card_info_sd8787 = {
+	.embedded_supp = 1,
+	.drcs = 0,
+	.go_noa = 0,
+	.v15_update = 0,
+};
+
+/** card info for sd8797 */
+static struct _card_info card_info_sd8797 = {
 	.embedded_supp = 1,
 	.drcs = 0,
 	.go_noa = 0,
@@ -124,6 +133,8 @@ char driver_version[] =
 #define CARD_SD8801     "SD8801"
 /** SD8897 Card */
 #define CARD_SD8897     "SD8897"
+/** SD8797 Card */
+#define CARD_SD8797     "SD8797"
 
 /** Firmware name */
 char *fw_name;
@@ -312,6 +323,10 @@ t_u32 dev_cap_mask = DEFAULT_DEV_CAP_MASK;
 
 /** Semaphore for add/remove card */
 struct semaphore AddRemoveCardSem;
+/** Semaphore for loading user data config */
+struct semaphore LoadUserDataSem;
+/** Mutex for loading user data config */
+struct semaphore LoadUserDataMtx;
 /**
  * The global variable of a pointer to moal_handle
  * structure variable
@@ -894,6 +909,8 @@ woal_update_drv_tbl(moal_handle *handle, int drv_mode_local)
 			handle->drv_mode.fw_name = DEFAULT_AP_STA_FW_NAME_8801;
 		else if (handle->card_type == CARD_TYPE_SD8897)
 			handle->drv_mode.fw_name = DEFAULT_AP_STA_FW_NAME_8897;
+		else if (handle->card_type == CARD_TYPE_SD8797)
+			handle->drv_mode.fw_name = DEFAULT_AP_STA_FW_NAME_8797;
 		else
 			handle->drv_mode.fw_name = DEFAULT_AP_STA_FW_NAME;
 #else
@@ -908,6 +925,8 @@ woal_update_drv_tbl(moal_handle *handle, int drv_mode_local)
 			handle->drv_mode.fw_name = DEFAULT_AP_FW_NAME_8801;
 		else if (handle->card_type == CARD_TYPE_SD8897)
 			handle->drv_mode.fw_name = DEFAULT_AP_FW_NAME_8897;
+		else if (handle->card_type == CARD_TYPE_SD8797)
+			handle->drv_mode.fw_name = DEFAULT_AP_FW_NAME_8797;
 		else
 			handle->drv_mode.fw_name = DEFAULT_AP_FW_NAME;
 #else
@@ -921,6 +940,8 @@ woal_update_drv_tbl(moal_handle *handle, int drv_mode_local)
 			handle->drv_mode.fw_name = DEFAULT_FW_NAME_8801;
 		else if (handle->card_type == CARD_TYPE_SD8897)
 			handle->drv_mode.fw_name = DEFAULT_FW_NAME_8897;
+		else if (handle->card_type == CARD_TYPE_SD8797)
+			handle->drv_mode.fw_name = DEFAULT_FW_NAME_8797;
 		else
 			handle->drv_mode.fw_name = DEFAULT_FW_NAME;
 #endif /* UAP_SUPPORT */
@@ -1155,6 +1176,8 @@ woal_init_sw(moal_handle *handle)
 		memcpy(driver_version, CARD_SD8801, strlen(CARD_SD8801));
 	else if (handle->card_type == CARD_TYPE_SD8897)
 		memcpy(driver_version, CARD_SD8897, strlen(CARD_SD8897));
+	else if (handle->card_type == CARD_TYPE_SD8797)
+		memcpy(driver_version, CARD_SD8797, strlen(CARD_SD8797));
 	memcpy(handle->driver_version, driver_version, strlen(driver_version));
 
 	if (woal_update_drv_tbl(handle, drv_mode) != MLAN_STATUS_SUCCESS) {
@@ -1218,11 +1241,6 @@ woal_init_sw(moal_handle *handle)
 	handle->is_reassoc_timer_set = MFALSE;
 #endif /* REASSOCIATION */
 
-	/* Initialize the timer for the reassociation */
-	woal_initialize_timer(&handle->shutdown_timer,
-			      woal_shutdown_timer_func, handle);
-
-	handle->is_shutdown_timer_set = MFALSE;
 #if defined(WIFI_DIRECT_SUPPORT)
 #if defined(STA_CFG80211) && defined(UAP_CFG80211)
 	/* Initialize the timer for GO timeout */
@@ -1862,6 +1880,65 @@ done:
 #define INIT_HOSTCMD_CFG_DATA   0x02
 #define COUNTRY_POWER_TABLE     0x04
 
+#define NUM_USER_DATA_RETRIES	10
+/* Timeout for each retry, in milliseconds*/
+#define TIMEOUT_USER_DATA_RETRY	100
+static void
+woal_do_request_firmware_callback(const struct firmware *firmware, void *context)
+{
+	moal_handle *handle = (moal_handle *)context;
+	handle->user_data = firmware;
+	MOAL_REL_SEMAPHORE(&LoadUserDataSem);
+	return;
+}
+
+static t_u32
+woal_do_request_firmware(moal_handle *handle, char *name)
+{
+	mlan_status ret = MLAN_STATUS_FAILURE;
+	int err;
+	int numretry = 0;
+	if (req_fw_nowait) {
+		while (numretry < NUM_USER_DATA_RETRIES) {
+			numretry++;
+			err = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+					      name,
+					      handle->hotplug_device,
+					      GFP_KERNEL, handle,
+					      woal_do_request_firmware_callback);
+			if (err < 0)
+			{
+				PRINTM(MERROR,"woal_do_request_firmware Read Error\n",name);
+				break;
+			}
+
+			if (MOAL_ACQ_SEMAPHORE_BLOCK(&LoadUserDataSem)) {
+				PRINTM(MERROR,
+				       "Acquire semaphore error, woal_do_request_firmware \n");
+				break;
+			}
+
+			if (handle->user_data) {
+				ret = MLAN_STATUS_SUCCESS;
+				break;
+			}
+			PRINTM(MERROR,"woal_do_request_firmware Async read failed, retrying..\n");
+			woal_sched_timeout(TIMEOUT_USER_DATA_RETRY);
+		}
+	}
+	else {
+		if ((request_firmware
+		     (&handle->user_data, name,
+		      handle->hotplug_device)) < 0) {
+			PRINTM(MERROR,
+			       "request_firmware(%s) failed\n",name);
+			return ret;
+		}
+		ret = MLAN_STATUS_SUCCESS;
+	}
+	return ret;
+}
+
 /**
  *    @brief WOAL set user defined init data and param
  *
@@ -1876,24 +1953,23 @@ woal_set_user_init_data(moal_handle *handle, int type)
 	t_size len;
 
 	ENTER();
-
+MOAL_ACQ_SEMAPHORE_BLOCK(&LoadUserDataMtx);
 	if (type == INIT_CFG_DATA) {
-		if ((request_firmware
-		     (&handle->user_data, init_cfg,
-		      handle->hotplug_device)) < 0) {
+		if (MLAN_STATUS_SUCCESS != woal_do_request_firmware(handle, init_cfg)) {
+
 			PRINTM(MERROR,
 			       "Init config file request_firmware() failed\n");
 			goto done;
 		}
 	} else if (type == TXPWRLIMIT_CFG_DATA) {
-		if ((request_firmware
-		     (&handle->user_data, txpwrlimit_cfg,
-		      handle->hotplug_device)) < 0) {
+		PRINTM(MERROR,"%s:%d TXPWRLIMIT_CFG_DATA: name:%s\n",__FUNCTION__,__LINE__,txpwrlimit_cfg);
+		if (MLAN_STATUS_SUCCESS != woal_do_request_firmware(handle, txpwrlimit_cfg)) {
 			PRINTM(MERROR,
 			       "Init config file request_firmware() failed\n");
 			goto done;
 		}
 	} else if (type == COUNTRY_POWER_TABLE) {
+		PRINTM(MERROR,"%s:%d COUNTRY_POWER_TABLE: name:%s\n",__FUNCTION__,__LINE__,txpwrlimit_cfg);
 		int status =
 			request_firmware(&handle->user_data, txpwrlimit_cfg,
 					 handle->hotplug_device);
@@ -1901,16 +1977,16 @@ woal_set_user_init_data(moal_handle *handle, int type)
 		if (status == -ENOENT) {
 			PRINTM(MIOCTL,
 			       "Country power table file does not exist\n");
-			ret = MLAN_STATUS_SUCCESS;
+			PRINTM(MERROR,
+			       "Country power table file does not exist\n");
+			ret = MLAN_STATUS_FAILURE;
 		} else if (status) {
 			PRINTM(MERROR,
 			       "Init config file request_firmware() failed\n");
 			goto done;
 		}
 	} else if (type == INIT_HOSTCMD_CFG_DATA) {
-		if ((request_firmware
-		     (&handle->user_data, init_hostcmd_cfg,
-		      handle->hotplug_device)) < 0) {
+		if (MLAN_STATUS_SUCCESS != woal_do_request_firmware(handle, init_hostcmd_cfg)) {
 			PRINTM(MERROR,
 			       "Init config file request_firmware() failed\n");
 			goto done;
@@ -1930,6 +2006,7 @@ woal_set_user_init_data(moal_handle *handle, int type)
 		} else if (type == TXPWRLIMIT_CFG_DATA ||
 			   type == INIT_HOSTCMD_CFG_DATA ||
 			   type == COUNTRY_POWER_TABLE) {
+			PRINTM(MERROR,"%s:%d data length = %d\n",__FUNCTION__,__LINE__,len);
 			if (MLAN_STATUS_SUCCESS !=
 			    woal_process_hostcmd_cfg(handle, cfg_data, len)) {
 				PRINTM(MERROR,
@@ -1946,6 +2023,7 @@ done:
 		handle->user_data = NULL;
 	}
 
+	MOAL_REL_SEMAPHORE(&LoadUserDataMtx);
 	LEAVE();
 	return ret;
 }
@@ -2011,7 +2089,7 @@ woal_add_card_dpc(moal_handle *handle)
 	/* Add low power mode check */
 	if ((handle->card_type == CARD_TYPE_SD8801 ||
 	     handle->card_type == CARD_TYPE_SD8887) && low_power_mode_enable &&
-	    woal_set_low_pwr_mode(handle, MOAL_IOCTL_WAIT)) {
+	    woal_set_low_pwr_mode(handle, MOAL_CMD_WAIT)) {
 		/* Proceed with Warning */
 		PRINTM(MERROR, "Unable to set Low Power Mode\n");
 	}
@@ -2198,9 +2276,52 @@ woal_request_fw_callback(const struct firmware *firmware, void *context)
 	woal_request_fw_dpc((moal_handle *)context, firmware);
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 32)
 	if (firmware)
+	{
 		release_firmware(firmware);
+	}
 #endif
 	LEAVE();
+	return;
+}
+
+#define SD8887_REV_REG  0xc8
+#define SD8887_A0       0x0
+#define SD8887_A2       0x2
+/**
+ * @brief   Get FW name for differnt chip revision
+ *
+ * @param handle  A pointer to moal_handle structure
+ *
+ * @return        MLAN_STATUS_SUCCESS or MLAN_STATUS_FAILURE
+ */
+void
+woal_check_fw_name(moal_handle *handle)
+{
+	t_u32 rev_id_reg = 0;
+	t_u32 revision_id = 0;
+
+	if (handle->card_type == CARD_TYPE_SD8887)
+		rev_id_reg = SD8887_REV_REG;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 32)
+	sdio_claim_host(((struct sdio_mmc_card *)handle->card)->func);
+#endif
+	woal_read_reg(handle, rev_id_reg, &revision_id);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 32)
+	sdio_release_host(((struct sdio_mmc_card *)handle->card)->func);
+#endif
+	/* Check revision ID */
+	if (handle->card_type == CARD_TYPE_SD8887) {
+		switch (revision_id) {
+		case SD8887_A0:
+			handle->drv_mode.fw_name = SD8887_A0_FW_NAME;
+			break;
+		case SD8887_A2:
+			handle->drv_mode.fw_name = SD8887_A2_FW_NAME;
+			break;
+		default:
+			break;
+		}
+	}
 	return;
 }
 
@@ -2218,6 +2339,9 @@ woal_request_fw(moal_handle *handle)
 	int err;
 
 	ENTER();
+
+	if (!fw_name && handle->card_type == CARD_TYPE_SD8887)
+		woal_check_fw_name(handle);
 
 	if (req_fw_nowait) {
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 32)
@@ -3398,6 +3522,30 @@ woal_mlan_debug_info(moal_private *priv)
 
 	PRINTM(MERROR, "------------mlan_debug_info End-------------\n");
 	LEAVE();
+}
+
+/**
+ *  @brief This function handle the shutdown timeout issue
+ *
+ *  @param handle   Pointer to structure moal_handle
+ *
+ *  @return         N/A
+ */
+void
+woal_ioctl_timeout(moal_handle *handle)
+{
+	moal_private *priv = NULL;
+
+	ENTER();
+
+	PRINTM(MMSG, "woal_ioctl_timout.\n");
+	priv = woal_get_priv(handle, MLAN_BSS_ROLE_ANY);
+	if (priv) {
+		woal_mlan_debug_info(priv);
+		woal_moal_debug_info(priv, NULL, MFALSE);
+	}
+	LEAVE();
+	return;
 }
 
 /**
@@ -4817,32 +4965,6 @@ woal_reassoc_timer_func(void *context)
 }
 #endif /* REASSOCIATION */
 
-/**
- *  @brief This function handle the shutdown timeout issue
- *
- *
- *  @param context  A pointer to context
- *  @return         N/A
- */
-void
-woal_shutdown_timer_func(void *context)
-{
-	moal_handle *handle = (moal_handle *)context;
-	moal_private *priv = NULL;
-
-	ENTER();
-
-	PRINTM(MMSG, "shutdown_timer fired.\n");
-	handle->is_shutdown_timer_set = MFALSE;
-	priv = woal_get_priv(handle, MLAN_BSS_ROLE_ANY);
-	if (priv) {
-		woal_mlan_debug_info(priv);
-		woal_moal_debug_info(priv, NULL, MFALSE);
-	}
-	LEAVE();
-	return;
-}
-
 #ifdef STA_SUPPORT
 
 /**
@@ -5667,6 +5789,9 @@ done:
 /* SD8801 */
 #define SQRAM_SIZE_8801                        0x33000
 #define DTCM_SIZE_8801                         0x14000
+/* SD8797 */
+#define SQRAM_SIZE_8797                        0x7c000
+#define DTCM_SIZE_8797                         0x14000
 
 #define SQRAM_SIZE                        0x33500
 
@@ -5737,6 +5862,9 @@ woal_dump_firmware_info(moal_handle *phandle)
 	} else if (phandle->card_type == CARD_TYPE_SD8801) {
 		dtcm_size = DTCM_SIZE_8801;
 		sqram_size = SQRAM_SIZE_8801;
+	} else if (phandle->card_type == CARD_TYPE_SD8797) {
+		dtcm_size = DTCM_SIZE_8797;
+		sqram_size = SQRAM_SIZE_8797;
 	} else
 		dtcm_size = DTCM_SIZE;
 
@@ -6229,6 +6357,9 @@ woal_get_card_info(moal_handle *phandle)
 		break;
 	case CARD_TYPE_SD8897:
 		phandle->card_info = &card_info_sd8897;
+		break;
+	case CARD_TYPE_SD8797:
+		phandle->card_info = &card_info_sd8797;
 		break;
 	default:
 		PRINTM(MERROR,
@@ -6839,7 +6970,10 @@ woal_add_card(void *card)
 		PRINTM(MFATAL, "Failed to register wlan device!\n");
 		goto err_registerdev;
 	}
-
+	if (req_fw_nowait) {
+		MOAL_INIT_SEMAPHORE_LOCKED(&LoadUserDataSem);
+		MOAL_INIT_SEMAPHORE(&LoadUserDataMtx);
+	}
 	/* Init FW and HW */
 	if (MLAN_STATUS_SUCCESS != woal_init_fw(handle)) {
 		PRINTM(MFATAL, "Firmware Init Failed\n");
@@ -6996,10 +7130,6 @@ woal_remove_card(void *card)
 	while (handle->reassoc_thread.pid)
 		woal_sched_timeout(2);
 #endif /* REASSOCIATION */
-	if (handle->is_shutdown_timer_set) {
-		woal_cancel_timer(&handle->shutdown_timer);
-		handle->is_shutdown_timer_set = MFALSE;
-	}
 #ifdef CONFIG_PROC_FS
 	woal_proc_exit(handle);
 #endif
@@ -7203,8 +7333,7 @@ woal_cleanup_module(void)
 			goto exit;
 		if (MTRUE == woal_check_driver_status(handle))
 			goto exit;
-		woal_mod_timer(&handle->shutdown_timer, MOAL_SHUTDOWN_TIMEOUT);
-		handle->is_shutdown_timer_set = MTRUE;
+
 #ifdef SDIO_SUSPEND_RESUME
 #ifdef MMC_PM_KEEP_POWER
 		if (handle->is_suspended == MTRUE) {
@@ -7218,9 +7347,15 @@ woal_cleanup_module(void)
 		for (i = 0; i < handle->priv_num; i++) {
 #ifdef STA_SUPPORT
 			if (GET_BSS_ROLE(handle->priv[i]) == MLAN_BSS_ROLE_STA) {
-				if (handle->priv[i]->media_connected == MTRUE)
+				if (handle->priv[i]->media_connected == MTRUE) {
 					woal_disconnect(handle->priv[i],
-							MOAL_CMD_WAIT, NULL);
+							MOAL_CMD_WAIT_TIMEOUT,
+							NULL);
+					if (handle->ioctl_timeout) {
+						woal_ioctl_timeout(handle);
+						goto exit;
+					}
+				}
 #ifdef STA_CFG80211
 				if (IS_STA_CFG80211(cfg80211_wext) &&
 				    (handle->priv[i]->bss_type ==
@@ -7240,7 +7375,11 @@ woal_cleanup_module(void)
 				if (IS_STA_CFG80211(cfg80211_wext) &&
 				    handle->priv[i]->sched_scanning) {
 					woal_stop_bg_scan(handle->priv[i],
-							  MOAL_IOCTL_WAIT);
+							  MOAL_IOCTL_WAIT_TIMEOUT);
+					if (handle->ioctl_timeout) {
+						woal_ioctl_timeout(handle);
+						goto exit;
+					}
 					handle->priv[i]->bg_scan_start = MFALSE;
 					handle->priv[i]->bg_scan_reported =
 						MFALSE;
@@ -7261,11 +7400,21 @@ woal_cleanup_module(void)
 				if (mfg_mode != MLAN_INIT_PARA_ENABLED)
 #endif
 					woal_disconnect(handle->priv[i],
-							MOAL_CMD_WAIT, NULL);
+							MOAL_CMD_WAIT_TIMEOUT,
+							NULL);
+				if (handle->ioctl_timeout) {
+					woal_ioctl_timeout(handle);
+					goto exit;
+				}
 			}
 #endif
 #if defined(STA_CFG80211) || defined(UAP_CFG80211)
-			woal_clear_all_mgmt_ies(handle->priv[i]);
+			woal_clear_all_mgmt_ies(handle->priv[i],
+						MOAL_CMD_WAIT_TIMEOUT);
+			if (handle->ioctl_timeout) {
+				woal_ioctl_timeout(handle);
+				goto exit;
+			}
 			spin_lock_irqsave(&handle->priv[i]->tx_stat_lock, flag);
 	/** report previous tx status */
 			if (handle->priv[i]->last_tx_buf &&
@@ -7305,17 +7454,17 @@ woal_cleanup_module(void)
 #endif
 			woal_set_deep_sleep(woal_get_priv
 					    (handle, MLAN_BSS_ROLE_ANY),
-					    MOAL_CMD_WAIT, MFALSE, 0);
+					    MOAL_CMD_WAIT_TIMEOUT, MFALSE, 0);
 
 #ifdef MFG_CMD_SUPPORT
 		if (mfg_mode != MLAN_INIT_PARA_ENABLED)
 #endif
 			woal_shutdown_fw(woal_get_priv
 					 (handle, MLAN_BSS_ROLE_ANY),
-					 MOAL_CMD_WAIT);
-		if (handle->is_shutdown_timer_set) {
-			woal_cancel_timer(&handle->shutdown_timer);
-			handle->is_shutdown_timer_set = MFALSE;
+					 MOAL_CMD_WAIT_TIMEOUT);
+		if (handle->ioctl_timeout) {
+			woal_ioctl_timeout(handle);
+			goto exit;
 		}
 	}
 

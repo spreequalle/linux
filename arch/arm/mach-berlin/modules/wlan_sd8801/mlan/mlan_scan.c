@@ -1299,7 +1299,10 @@ wlan_scan_setup_scan_config(IN mlan_private *pmpriv,
 					scan_dur = pmadapter->active_scan_time;
 				}
 			}
-
+			if (pmadapter->coex_scan &&
+			    pmadapter->coex_min_scan_time &&
+			    (pmadapter->coex_min_scan_time > scan_dur))
+				scan_dur = pmadapter->coex_min_scan_time;
 			(pscan_chan_list + chan_idx)->min_scan_time =
 				wlan_cpu_to_le16(scan_dur);
 			(pscan_chan_list + chan_idx)->max_scan_time =
@@ -2387,37 +2390,24 @@ wlan_ret_802_11_scan_store_beacon(IN mlan_private *pmpriv,
 }
 
 /**
- *  @brief Restore a beacon buffer of the current bss descriptor
+ *  @brief update beacon buffer of the current bss descriptor
  *
  *  @param pmpriv       A pointer to mlan_private structure
  *
  *  @return             MLAN_STATUS_SUCCESS, otherwise failure
  */
 static mlan_status
-wlan_restore_curr_bcn(IN mlan_private *pmpriv)
+wlan_update_curr_bcn(IN mlan_private *pmpriv)
 {
-	mlan_adapter *pmadapter = pmpriv->adapter;
-	mlan_callbacks *pcb = (pmlan_callbacks)&pmadapter->callbacks;
 	BSSDescriptor_t *pcurr_bss = &pmpriv->curr_bss_params.bss_descriptor;
 	mlan_status ret = MLAN_STATUS_SUCCESS;
 
 	ENTER();
 
-	if (pmpriv->pcurr_bcn_buf &&
-	    ((pmadapter->pbcn_buf_end + pmpriv->curr_bcn_size) <
-	     (pmadapter->bcn_buf + pmadapter->bcn_buf_size))) {
-
-		pcb->moal_spin_lock(pmadapter->pmoal_handle,
-				    pmpriv->curr_bcn_buf_lock);
-
-		/* restore the current beacon buffer */
-		memcpy(pmadapter, pmadapter->pbcn_buf_end,
-		       pmpriv->pcurr_bcn_buf, pmpriv->curr_bcn_size);
-		pcurr_bss->pbeacon_buf = pmadapter->pbcn_buf_end;
+	if (pmpriv->pcurr_bcn_buf && pmpriv->curr_bcn_size) {
+		pcurr_bss->pbeacon_buf = pmpriv->pcurr_bcn_buf;
 		pcurr_bss->beacon_buf_size = pmpriv->curr_bcn_size;
-		pcurr_bss->beacon_buf_size_max =
-			pmpriv->curr_bcn_size + SCAN_BEACON_ENTRY_PAD;
-		pmadapter->pbcn_buf_end += pcurr_bss->beacon_buf_size_max;
+		pcurr_bss->beacon_buf_size_max = pmpriv->curr_bcn_size;
 
 		/* adjust the pointers in the current bss descriptor */
 		if (pcurr_bss->pwpa_ie) {
@@ -2461,14 +2451,10 @@ wlan_restore_curr_bcn(IN mlan_private *pmpriv)
 				 pcurr_bss->overlap_bss_offset);
 		}
 
-		pcb->moal_spin_unlock(pmadapter->pmoal_handle,
-				      pmpriv->curr_bcn_buf_lock);
-
 		PRINTM(MINFO, "current beacon restored %d\n",
 		       pmpriv->curr_bcn_size);
 	} else {
-		PRINTM(MERROR,
-		       "curr_bcn_buf not saved or bcn_buf has no space\n");
+		PRINTM(MERROR, "curr_bcn_buf not saved\n");
 		ret = MLAN_STATUS_FAILURE;
 	}
 
@@ -2496,7 +2482,6 @@ wlan_scan_process_results(IN mlan_private *pmpriv)
 	mlan_adapter *pmadapter = pmpriv->adapter;
 	t_s32 j;
 	t_u32 i;
-	mlan_status ret = MLAN_STATUS_SUCCESS;
 
 	ENTER();
 
@@ -2555,26 +2540,21 @@ wlan_scan_process_results(IN mlan_private *pmpriv)
 			       &pmadapter->pscan_table[j],
 			       sizeof(pmpriv->curr_bss_params.bss_descriptor));
 
-			wlan_save_curr_bcn(pmpriv);
 			pmadapter->callbacks.moal_spin_unlock(pmadapter->
 							      pmoal_handle,
 							      pmpriv->
 							      curr_bcn_buf_lock);
+			wlan_save_curr_bcn(pmpriv);
 		} else {
-			ret = wlan_restore_curr_bcn(pmpriv);
-	    /** append current AP to the end of scan table when restore curr_bcn success */
-			if (ret == MLAN_STATUS_SUCCESS) {
-				if (pmadapter->num_in_scan_table <
-				    MRVDRV_MAX_BSSID_LIST)
-					pmadapter->num_in_scan_table++;
-				memcpy(pmadapter,
-				       &pmadapter->pscan_table[pmadapter->
-							       num_in_scan_table
-							       - 1],
-				       &pmpriv->curr_bss_params.bss_descriptor,
-				       sizeof(pmpriv->curr_bss_params.
-					      bss_descriptor));
-			}
+			// Apend to the end of scan table.
+			if (pmadapter->num_in_scan_table <
+			    MRVDRV_MAX_BSSID_LIST)
+				pmadapter->num_in_scan_table++;
+			memcpy(pmadapter,
+			       &pmadapter->pscan_table[pmadapter->
+						       num_in_scan_table - 1],
+			       &pmpriv->curr_bss_params.bss_descriptor,
+			       sizeof(pmpriv->curr_bss_params.bss_descriptor));
 		}
 
 	}
@@ -3292,21 +3272,6 @@ wlan_scan_networks(IN mlan_private *pmpriv,
 		pmadapter->pbcn_buf_end = pmadapter->bcn_buf;
 		for (i = 0; i < pmadapter->num_in_chan_stats; i++)
 			pmadapter->pchan_stats[i].cca_scan_duration = 0;
-	/** appened current AP at the beginning of scantable to avoid no beacon buffer */
-		if (pmpriv->media_connected == MTRUE) {
-			ret = wlan_restore_curr_bcn(pmpriv);
-	    /** append current AP to scan table */
-			if (ret == MLAN_STATUS_SUCCESS) {
-				pmadapter->num_in_scan_table++;
-				memcpy(pmadapter,
-				       &pmadapter->pscan_table[pmadapter->
-							       num_in_scan_table
-							       - 1],
-				       &pmpriv->curr_bss_params.bss_descriptor,
-				       sizeof(pmpriv->curr_bss_params.
-					      bss_descriptor));
-			}
-		}
 	}
 
 	ret = wlan_scan_channel_list(pmpriv,
@@ -5138,6 +5103,7 @@ wlan_save_curr_bcn(IN mlan_private *pmpriv)
 	mlan_status ret = MLAN_STATUS_SUCCESS;
 
 	ENTER();
+	pcb->moal_spin_lock(pmadapter->pmoal_handle, pmpriv->curr_bcn_buf_lock);
 	/* save the beacon buffer if it is not saved or updated */
 	if ((pmpriv->pcurr_bcn_buf == MNULL) ||
 	    (pmpriv->curr_bcn_size != pcurr_bss->beacon_buf_size) ||
@@ -5168,6 +5134,10 @@ wlan_save_curr_bcn(IN mlan_private *pmpriv)
 			}
 		}
 	}
+	wlan_update_curr_bcn(pmpriv);
+	pcb->moal_spin_unlock(pmadapter->pmoal_handle,
+			      pmpriv->curr_bcn_buf_lock);
+
 	LEAVE();
 }
 
