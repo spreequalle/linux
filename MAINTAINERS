@@ -5666,13 +5666,6 @@ F:	drivers/scsi/osd/
 F:	include/scsi/osd_*
 F:	fs/exofs/
 
-OVERLAYFS FILESYSTEM
-M:	Miklos Szeredi <miklos@szeredi.hu>
-L:	linux-fsdevel@vger.kernel.org
-S:	Supported
-F:	fs/overlayfs/*
-F:	Documentation/filesystems/overlayfs.txt
-
 P54 WIRELESS DRIVER
 M:	Christian Lamparter <chunkeey@googlemail.com>
 L:	linux-wireless@vger.kernel.org
@@ -7867,16 +7860,6 @@ F:	Documentation/cdrom/
 F:	drivers/cdrom/cdrom.c
 F:	include/linux/cdrom.h
 F:	include/uapi/linux/cdrom.h
-
-UNION FILE SYSTEM
-P:	Erez Zadok
-M:	ezk@cs.sunysb.edu
-L:	unionfs@filesystems.org
-W:	http://unionfs.filesystems.org/
-T:	git git://git.fsl.cs.sunysb.edu/unionfs-latest.git
-S:	Maintained
-F:	Documentation/filesystems/unionfs/
-F:	fs/unionfs/
 
 UNIVERSAL FLASH STORAGE HOST CONTROLLER DRIVER
 M:	Vinayak Holikatti <vinholikatti@gmail.com>

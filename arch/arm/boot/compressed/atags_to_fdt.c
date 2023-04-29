@@ -15,6 +15,15 @@ static int node_offset(void *fdt, const char *node_path)
 	return offset;
 }
 
+static int setprop(void *fdt, const char *node_path, const char *property,
+		   uint32_t *val_array, int size)
+{
+	int offset = node_offset(fdt, node_path);
+	if (offset < 0)
+		return offset;
+	return fdt_setprop(fdt, offset, property, val_array, size);
+}
+
 static int setprop_string(void *fdt, const char *node_path,
 			  const char *property, const char *string)
 {
@@ -86,6 +95,8 @@ static void merge_fdt_bootargs(void *fdt, const char *fdt_cmdline)
 int atags_to_fdt(void *atag_list, void *fdt, int total_space)
 {
 	struct tag *atag = atag_list;
+	uint32_t mem_reg_property[2 * NR_BANKS];
+	int memcount = 0;
 	int ret;
 
 	/* make sure we've got an aligned pointer */
@@ -121,6 +132,13 @@ int atags_to_fdt(void *atag_list, void *fdt, int total_space)
 			else
 				setprop_string(fdt, "/chosen", "bootargs",
 					       atag->u.cmdline.cmdline);
+		} else if (atag->hdr.tag == ATAG_MEM) {
+			if (memcount >= sizeof(mem_reg_property)/4)
+				continue;
+			if (!atag->u.mem.size)
+				continue;
+			mem_reg_property[memcount++] = cpu_to_fdt32(atag->u.mem.start);
+			mem_reg_property[memcount++] = cpu_to_fdt32(atag->u.mem.size);
 		} else if (atag->hdr.tag == ATAG_INITRD2) {
 			uint32_t initrd_start, initrd_size;
 			initrd_start = atag->u.initrd.start;
@@ -131,6 +149,9 @@ int atags_to_fdt(void *atag_list, void *fdt, int total_space)
 					initrd_start + initrd_size);
 		}
 	}
+
+	if (memcount)
+		setprop(fdt, "/memory", "reg", mem_reg_property, 4*memcount);
 
 	return fdt_pack(fdt);
 }

@@ -198,13 +198,7 @@ extern int __cpufreq_driver_target(struct cpufreq_policy *policy,
 
 
 extern int __cpufreq_driver_getavg(struct cpufreq_policy *policy,
-			   unsigned int cpu);
-extern int __cpu_get_mv(struct cpufreq_policy *policy,
-			unsigned int *mv);
-extern int __cpu_get_boost(struct cpufreq_policy *policy,
-			unsigned int *boost);
-extern int __cpu_set_boost(struct cpufreq_policy *policy,
-			unsigned int boost);
+				   unsigned int cpu);
 
 int cpufreq_register_governor(struct cpufreq_governor *governor);
 void cpufreq_unregister_governor(struct cpufreq_governor *governor);

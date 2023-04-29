@@ -138,6 +138,7 @@ static int pe_irqs[IRQ_PE_MAX];
 #define CEC_IOCTL_RX_MSG_BUF_MSG     0xbeef0008
 
 #define VDEC_IOCTL_ENABLE_INT   0xbeef1001
+#define VDEC_IOCTL_DISABLE_INT  0xbeef1002
 #define AOUT_IOCTL_START_CMD    0xbeef2001
 #define AIP_IOCTL_START_CMD     0xbeef2002
 #define AIP_IOCTL_STOP_CMD      0xbeef2003
@@ -357,8 +358,6 @@ typedef struct pe_message_queue {
 
 static PEMsgQ_t hPEMsgQ;
 
-volatile static UINT prev_intr=0;
-static UINT total_hpd=0, dropped_hpd=0;
 
 static HRESULT PEMsgQ_Add(PEMsgQ_t *pMsgQ, MV_CC_MSG_t *pMsg)
 {
@@ -672,7 +671,7 @@ static void pe_sa_do_tasklet(unsigned long unused)
 {
 	MV_CC_MSG_t msg = { 0, };
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	msg.m_MsgID = 1 << avioDhubChMap_ag_SA_R;
 	MV_CC_MsgQ_PostMsgByID(PE_MODULE_MSG_ID_AUD, &msg);
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
@@ -682,7 +681,7 @@ static void pe_spdif_do_tasklet(unsigned long unused)
 {
 	MV_CC_MSG_t msg = { 0, };
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	msg.m_MsgID = 1 << avioDhubChMap_ag_SPDIF_R;
 	MV_CC_MsgQ_PostMsgByID(PE_MODULE_MSG_ID_AUD, &msg);
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
@@ -690,8 +689,6 @@ static void pe_spdif_do_tasklet(unsigned long unused)
 
 static void pe_aip_do_tasklet(unsigned long unused)
 {
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
-
 	MV_CC_MSG_t msg = { 0, };
 #if (BERLIN_CHIP_VERSION >= BERLIN_BG2_A0)
 	msg.m_MsgID = 1 << avioDhubChMap_vip_MIC0_W;
@@ -699,7 +696,6 @@ static void pe_aip_do_tasklet(unsigned long unused)
 	msg.m_MsgID = 1 << avioDhubChMap_ag_MIC_W;
 #endif
 	MV_CC_MsgQ_PostMsgByID(PE_MODULE_MSG_ID_AIP, &msg);
-#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CDP) */
 }
 
 static void pe_hdmi_do_tasklet(unsigned long unused)
@@ -737,7 +733,7 @@ static void pe_pg_dhub_done_tasklet(unsigned long unused)
 {
 	MV_CC_MSG_t msg = { 0, };
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	msg.m_MsgID = 1 << avioDhubChMap_ag_PG_ENG_W;
 	MV_CC_MsgQ_PostMsgByID(PE_MODULE_MSG_ID_RLE, &msg);
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
@@ -746,20 +742,17 @@ static void pe_pg_dhub_done_tasklet(unsigned long unused)
 static void pe_rle_do_err_tasklet(unsigned long unused)
 {
 	MV_CC_MSG_t msg = { 0, };
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+
 	msg.m_MsgID = 1 << avioDhubSemMap_ag_spu_intr0;
 	MV_CC_MsgQ_PostMsgByID(PE_MODULE_MSG_ID_RLE, &msg);
-#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CDP) */
 }
 
 static void pe_rle_do_done_tasklet(unsigned long unused)
 {
 	MV_CC_MSG_t msg = { 0, };
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
 	msg.m_MsgID = 1 << avioDhubSemMap_ag_spu_intr1;
 	MV_CC_MsgQ_PostMsgByID(PE_MODULE_MSG_ID_RLE, &msg);
-#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CDP) */
 }
 
 static irqreturn_t pe_devices_vpp_cec_isr(int irq, void *dev_id)
@@ -876,7 +869,6 @@ static irqreturn_t pe_devices_vpp_cec_isr(int irq, void *dev_id)
 		{
 			MV_CC_MSG_t msg =
 			    { VPP_CC_MSG_TYPE_CEC, reg, vpp_intr_timestamp };
-			prev_intr = 0;
 			spin_lock(&msgQ_spinlock);
 			ret = PEMsgQ_Add(&hPEMsgQ, &msg);
 			spin_unlock(&msgQ_spinlock);
@@ -927,6 +919,13 @@ static pe_irq_profiler_t pe_irq_profiler;
 #endif
 
 static atomic_t vpp_isr_msg_err_cnt = ATOMIC_INIT(0);
+
+#define HPD_DEBOUNCE
+
+#ifdef  HPD_DEBOUNCE
+#define HPD_DELAY_CNT (6)
+static int hpd_debounce_delaycnt = 0;
+#endif
 
 static irqreturn_t pe_devices_vpp_isr(int irq, void *dev_id)
 {
@@ -1125,12 +1124,16 @@ static irqreturn_t pe_devices_vpp_isr(int irq, void *dev_id)
                 (vpp_intr_status[avioDhubSemMap_vpp_vppOUT3_intr])
 #endif
 		) {
+#ifdef  HPD_DEBOUNCE
+		hpd_debounce_delaycnt = HPD_DELAY_CNT;
+		bCLR(instat, avioDhubSemMap_vpp_vppOUT3_intr);
+#else
 #ifdef NEW_ISR
 		vpp_intr |= bSETMASK(avioDhubSemMap_vpp_vppOUT3_intr);
 #else
 		vpp_intr = 1;
 #endif
-		total_hpd++;
+#endif
 
 		bSET(instat_used, avioDhubSemMap_vpp_vppOUT3_intr);
 
@@ -1138,24 +1141,28 @@ static irqreturn_t pe_devices_vpp_isr(int irq, void *dev_id)
 		/* clear interrupt */
 		semaphore_pop(pSemHandle, avioDhubSemMap_vpp_vppOUT3_intr, 1);
 		semaphore_clr_full(pSemHandle, avioDhubSemMap_vpp_vppOUT3_intr);
+#ifdef  HPD_DEBOUNCE
+		// disable interrupt
+		semaphore_intr_enable(pSemHandle, avioDhubSemMap_vpp_vppOUT3_intr,
+		0/*empty*/, 0/*full*/, 0/*almost empty*/, 0/*almost full*/, 0/*cpu id*/);
+#endif
 	}
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 &&  BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	if (bTST(instat, avioDhubSemMap_vpp_CH10_intr)
-
 #else /* (BERLIN_CHIP_VERSION == BERLIN_BG2CD_A0) */
 	if (bTST(instat, avioDhubSemMap_vpp_CH7_intr)
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
 #ifdef NEW_ISR
                 &&
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
                 (vpp_intr_status[avioDhubSemMap_vpp_CH10_intr])
 #else /* (BERLIN_CHIP_VERSION == BERLIN_BG2CD_A0) */
                 (vpp_intr_status[avioDhubSemMap_vpp_CH7_intr])
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
 #endif
 		) {
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 		bSET(instat_used, avioDhubSemMap_vpp_CH10_intr);
 #else /* (BERLIN_CHIP_VERSION == BERLIN_BG2CD_A0) */
 		bSET(instat_used, avioDhubSemMap_vpp_CH7_intr);
@@ -1163,7 +1170,7 @@ static irqreturn_t pe_devices_vpp_isr(int irq, void *dev_id)
 		/* HDMI audio interrupt */
 		vpp_hdmi_audio_int_cnt++;
 		/* clear interrupt */
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 		semaphore_pop(pSemHandle, avioDhubSemMap_vpp_CH10_intr, 1);
 		semaphore_clr_full(pSemHandle, avioDhubSemMap_vpp_CH10_intr);
 #else /* (BERLIN_CHIP_VERSION == BERLIN_BG2CD_A0) */
@@ -1172,7 +1179,7 @@ static irqreturn_t pe_devices_vpp_isr(int irq, void *dev_id)
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
 		aout_resume_cmd(HDMI_PATH);
 		tasklet_hi_schedule(&pe_hdmi_tasklet);
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 		bCLR(instat, avioDhubSemMap_vpp_CH10_intr);
 #else /* (BERLIN_CHIP_VERSION == BERLIN_BG2CD_A0) */
 		bCLR(instat, avioDhubSemMap_vpp_CH7_intr);
@@ -1221,25 +1228,31 @@ static irqreturn_t pe_devices_vpp_isr(int irq, void *dev_id)
 #endif
 
 	if (vpp_intr) {
+#ifdef  HPD_DEBOUNCE
+        if(hpd_debounce_delaycnt)
+        {
+            if (bTST(instat, avioDhubSemMap_vpp_vppCPCB0_intr))
+            { // use display interrupt as debounce counter.
+                hpd_debounce_delaycnt--;
+            }
+            if(hpd_debounce_delaycnt == 0)
+            {
+                semaphore_clr_full(pSemHandle, avioDhubSemMap_vpp_vppOUT3_intr);
+                // enable interrupt
+                semaphore_intr_enable(pSemHandle, avioDhubSemMap_vpp_vppOUT3_intr,
+                  0/*empty*/, 1/*full*/, 0/*almost empty*/, 0/*almost full*/, 0/*cpu id*/);
+#ifdef NEW_ISR
+                vpp_intr |= bSETMASK(avioDhubSemMap_vpp_vppOUT3_intr);
+#else
+                vpp_intr = 1;
+#endif
+                bSET(instat, avioDhubSemMap_vpp_vppOUT3_intr);
+            }
+        }
+#endif
 #if CONFIG_VPP_IOCTL_MSG
 
 #if CONFIG_VPP_ISR_MSGQ
-
-		if( bTST(prev_intr, avioDhubSemMap_vpp_vppOUT3_intr) &&
-				bTST(instat,avioDhubSemMap_vpp_vppOUT3_intr) &&
-				PEMsgQ_Fullness(&hPEMsgQ) &&
-#ifdef NEW_ISR
-				!(vpp_intr & (~bSETMASK(avioDhubSemMap_vpp_vppOUT3_intr)))
-#else
-				!(instat & (~bSETMASK(avioDhubSemMap_vpp_vppOUT3_intr)))
-#endif
-				)
-		{
-			dropped_hpd++;
-			return IRQ_HANDLED;
-		}
-		else {
-			prev_intr =	instat;
 		MV_CC_MSG_t msg =
 		    { VPP_CC_MSG_TYPE_VPP,
 #ifdef NEW_ISR
@@ -1251,7 +1264,6 @@ static irqreturn_t pe_devices_vpp_isr(int irq, void *dev_id)
  		spin_lock(&msgQ_spinlock);
 		ret = PEMsgQ_Add(&hPEMsgQ, &msg);
 		spin_unlock(&msgQ_spinlock);
-		}
 
 		if(ret != S_OK) {
 			if (!atomic_read(&vpp_isr_msg_err_cnt)) {
@@ -1456,7 +1468,6 @@ static void start_vip_sd_rd_bcm(void)
 
 static irqreturn_t pe_devices_vip_isr(int irq, void *dev_id)
 {
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
 	INT instat;
 	HDL_semaphore *pSemHandle;
 	INT vip_intr = 0;
@@ -1501,7 +1512,7 @@ static irqreturn_t pe_devices_vip_isr(int irq, void *dev_id)
 		vip_intr = 1;
 #endif
 	}
-#if (BERLIN_CHIP_VERSION >= BERLIN_BG2_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION >= BERLIN_BG2_A0)
 	if (bTST(instat, avioDhubSemMap_vip_vbi_vde_intr)
 #ifdef NEW_ISR
                 &&
@@ -1552,7 +1563,6 @@ static irqreturn_t pe_devices_vip_isr(int irq, void *dev_id)
 #endif
 	}
 
-#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CDP) */
 	return IRQ_HANDLED;
 }
 #endif
@@ -1605,7 +1615,7 @@ static void aout_disable_int_msg_update(int *aout_info)
 	if(*p == HDMI_PATH)
 		disable_hdmi_int_msg = *(p+1);
 
-	return;
+	return;	
 }
 
 static void aout_start_cmd(int *aout_info)
@@ -1630,7 +1640,7 @@ static void aout_start_cmd(int *aout_info)
 	} else if (*p == LoRo_PATH) {
 		p_sa_fifo =
 		    (AOUT_PATH_CMD_FIFO *) MV_SHM_GetNonCacheVirtAddr(*(p + 1));
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 		p_dma_info =
 		    (AOUT_DMA_INFO *) AoutFifoGetKernelRdDMAInfo(p_sa_fifo, 0);
 		chanId = avioDhubChMap_ag_SA_R;
@@ -1641,7 +1651,7 @@ static void aout_start_cmd(int *aout_info)
 	} else if (*p == SPDIF_PATH) {
 		p_spdif_fifo =
 		    (AOUT_PATH_CMD_FIFO *) MV_SHM_GetNonCacheVirtAddr(*(p + 1));
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 		p_dma_info =
 		    (AOUT_DMA_INFO *) AoutFifoGetKernelRdDMAInfo(p_spdif_fifo,
 								 0);
@@ -1710,7 +1720,7 @@ static void aout_resume_cmd(int path_id)
 			}
 		}
 	} else if (path_id == LoRo_PATH) {
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 		if (!p_sa_fifo->fifo_underflow)
 			AoutFifoKernelRdUpdate(p_sa_fifo, 1);
 
@@ -1740,7 +1750,7 @@ static void aout_resume_cmd(int path_id)
 		}
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
 	} else if (path_id == SPDIF_PATH) {
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 		if (!p_spdif_fifo->fifo_underflow)
 			AoutFifoKernelRdUpdate(p_spdif_fifo, 1);
 
@@ -1837,8 +1847,6 @@ static int AIPFifoCheckKernelFullness(AIP_DMA_CMD_FIFO *p_aip_cmd_fifo)
 
 static void aip_start_cmd(int *aip_info)
 {
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
-
 	int *p = aip_info;
 	int chanId, pair;
 	AIP_DMA_CMD *p_dma_cmd;
@@ -1919,7 +1927,6 @@ static void aip_start_cmd(int *aip_info)
                 }
                 AIPFifoKernelPreRdUpdate(p_aip_fifo, 1);
 	}
-#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CDP) */
 }
 
 static void aip_stop_cmd(void)
@@ -1933,7 +1940,6 @@ static void aip_resume_cmd()
 	unsigned int chanId;
 	int pair;
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
 	if (!p_aip_fifo->fifo_overflow)
 		AIPFifoKernelRdUpdate(p_aip_fifo, 1);
 
@@ -1990,7 +1996,6 @@ static void aip_resume_cmd()
 #endif
 		}
 	}
-#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CDP) */
 }
 
 static int HwAPPFifoCheckKernelFullness(HWAPP_CMD_FIFO *p_app_cmd_fifo)
@@ -2087,7 +2092,7 @@ static irqreturn_t pe_devices_aout_isr(int irq, void *dev_id)
 		}
 	}
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	chanId = avioDhubChMap_ag_SA_R;
 	if (bTST(instat, chanId)) {
 		semaphore_pop(pSemHandle, chanId, 1);
@@ -2097,7 +2102,7 @@ static irqreturn_t pe_devices_aout_isr(int irq, void *dev_id)
 	}
 #endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0 && BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	chanId = avioDhubChMap_ag_SPDIF_R;
 	if (bTST(instat, chanId)) {
 		semaphore_pop(pSemHandle, chanId, 1);
@@ -2128,7 +2133,6 @@ static irqreturn_t pe_devices_aout_isr(int irq, void *dev_id)
 		tasklet_hi_schedule(&pe_app_tasklet);
 	}
 
-#if (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
 #if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	chanId = avioDhubChMap_ag_PG_ENG_W;
 	if (bTST(instat, chanId)) {
@@ -2152,7 +2156,6 @@ static irqreturn_t pe_devices_aout_isr(int irq, void *dev_id)
 		tasklet_hi_schedule(&pe_rle_done_tasklet);
 	}
 
-#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CDP) */
 	return IRQ_HANDLED;
 }
 
@@ -2255,7 +2258,7 @@ static int pe_device_init(unsigned int cpu_id, void *pHandle)
 			   &VPP_dhubHandle, VPP_config, VPP_NUM_OF_CHANNELS);
 	DhubInitialization(cpu_id, AG_DHUB_BASE, AG_HBO_SRAM_BASE,
 			   &AG_dhubHandle, AG_config, AG_NUM_OF_CHANNELS);
-#if (BERLIN_CHIP_VERSION >= BERLIN_BG2) && (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) && (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION >= BERLIN_BG2) && (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	DhubInitialization(cpu_id, VIP_DHUB_BASE, VIP_HBO_SRAM_BASE,
 			   &VIP_dhubHandle, VIP_config, VIP_NUM_OF_CHANNELS);
 #endif
@@ -2352,7 +2355,7 @@ static int pe_driver_open(struct inode *inode, struct file *filp)
 			   &VPP_dhubHandle, VPP_config, VPP_NUM_OF_CHANNELS);
 	DhubInitialization(pe_cpu_id, AG_DHUB_BASE, AG_HBO_SRAM_BASE,
 			   &AG_dhubHandle, AG_config, AG_NUM_OF_CHANNELS);
-#if (BERLIN_CHIP_VERSION >= BERLIN_BG2) && (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) && (BERLIN_CHIP_VERSION != BERLIN_BG2CDP)
+#if (BERLIN_CHIP_VERSION >= BERLIN_BG2) && (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
 	DhubInitialization(pe_cpu_id, VIP_DHUB_BASE, VIP_HBO_SRAM_BASE,
 			   &VIP_dhubHandle, VIP_config, VIP_NUM_OF_CHANNELS);
 #endif
@@ -2770,6 +2773,22 @@ static long pe_driver_ioctl_unlocked(struct file *filp, unsigned int cmd,
 #endif
 		break;
 
+	case VDEC_IOCTL_DISABLE_INT:
+		/* special handle for Vdec interrupt */
+#if CONFIG_VDEC_UNBLC_IRQ_FIX
+		if ((vdec_enable_int_cnt - vdec_int_cnt) > 0) {
+			disable_irq_nosync(pe_irqs[IRQ_DHUBINTRVPRO]);
+			vdec_int_cnt++;
+		}
+		if ((vdec_enable_int_cnt - vdec_int_cnt) != 0) {
+			pe_trace("enable_irq vdec, vdec_int_depth:%d, %d\n",
+				 vdec_int_cnt, vdec_enable_int_cnt);
+		}
+#else
+		disable_irq_nosync(pe_irqs[IRQ_DHUBINTRVPRO]);
+#endif
+		break;
+
 	case AOUT_IOCTL_DISABLE_INT_MSG:
                 if (copy_from_user
                     (aout_info, (void __user *)arg, 2 * sizeof(int)))
@@ -2871,7 +2890,7 @@ static int pe_driver_setup_cdev(struct cdev *dev, int major, int minor,
 
 static int __init pe_driver_init(void)
 {
-	int i, res;
+	int i, res;	
 	struct device_node *np, *iter;
 	struct resource r;
 

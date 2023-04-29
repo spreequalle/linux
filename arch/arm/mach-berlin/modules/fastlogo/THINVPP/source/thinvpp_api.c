@@ -21,8 +21,11 @@
 #define _THINVPP_API_C_
 
 #include "Galois_memmap.h"
+#include "galois_io.h"
 
-#include "fastlogo.h"
+#include "thinvpp_module.h"
+#include "thinvpp_apifuncs.h"
+#include "thinvpp_isr.h"
 
 #include <linux/mm.h>
 #include <asm/page.h>
@@ -33,6 +36,8 @@
 #include "api_dhub.h"
 
 #define bTST(x, b) (((x) >> (b)) & 1)
+
+extern logo_device_t fastlogo_ctx;
 
 void VPP_dhub_sem_clear(void)
 {
@@ -54,7 +59,7 @@ void VPP_dhub_sem_clear(void)
     }
 
 
-    dhubID = soc->avioDhubChMap_vpp_BCM_R;
+    dhubID = avioDhubChMap_vpp_BCM_R;
     pDhubHandle = &VPP_dhubHandle;
 
     /* clear BCM interrupt */
@@ -77,8 +82,7 @@ void VPP_dhub_sem_clear(void)
  * RETURN: MV_THINVPP_OK - succeed
  *         MV_THINVPP_EUNCONFIG - not initialized
  ***********************************************/
-//int MV_THINVPP_Create(int base_addr)
-int MV_THINVPP_Create(void)
+int MV_THINVPP_Create(int base_addr)
 {
     if (!(thinvpp_obj = (THINVPP_OBJ *)THINVPP_MALLOC(sizeof(THINVPP_OBJ)))){
         return (MV_THINVPP_ENOMEM);
@@ -86,15 +90,13 @@ int MV_THINVPP_Create(void)
 
     THINVPP_MEMSET(thinvpp_obj, 0, sizeof(THINVPP_OBJ));
 
-    thinvpp_obj->base_addr = MEMMAP_VPP_REG_BASE;
+    thinvpp_obj->base_addr = base_addr;
 
 #if LOGO_USE_SHM
     // do no need double buffers for dhub queues
     THINVPP_BCMBUF_Set(&(thinvpp_obj->vbi_bcm_buf[0]), fastlogo_ctx.bcmQ, fastlogo_ctx.bcmQ_phys, fastlogo_ctx.bcmQ_len);
     THINVPP_CFGQ_Set(&(thinvpp_obj->dv[CPCB_1].vbi_dma_cfgQ[0]), fastlogo_ctx.dmaQ, fastlogo_ctx.dmaQ_phys, fastlogo_ctx.dmaQ_len);
     THINVPP_CFGQ_Set(&(thinvpp_obj->dv[CPCB_1].vbi_bcm_cfgQ[0]), fastlogo_ctx.cfgQ, fastlogo_ctx.cfgQ_phys, fastlogo_ctx.cfgQ_len);
-
-    return (MV_THINVPP_OK);
 #else
     if (THINVPP_BCMBUF_Create(&(thinvpp_obj->vbi_bcm_buf[0]), BCM_BUFFER_SIZE) != MV_THINVPP_OK){
         goto nomem_exit;
@@ -117,6 +119,7 @@ int MV_THINVPP_Create(void)
     if (THINVPP_CFGQ_Create(&(thinvpp_obj->dv[CPCB_1].vbi_bcm_cfgQ[1]), DMA_CMD_BUFFER_SIZE) != MV_THINVPP_OK) {
         goto nomem_exit;
     }
+#endif
 
     return (MV_THINVPP_OK);
 
@@ -138,7 +141,6 @@ nomem_exit:
     THINVPP_FREE(thinvpp_obj);
 
     return (MV_THINVPP_ENOMEM);
-#endif
 }
 
 /***********************************************
@@ -233,6 +235,7 @@ int MV_THINVPP_Reset(void)
     thinvpp_obj->hdmi_mute = 0;
 
 #if !LOGO_USE_SHM
+    // do no need double buffers for dhub queues
     THINVPP_BCMBUF_Reset(&thinvpp_obj->vbi_bcm_buf[1]);
 #endif
     thinvpp_obj->pVbiBcmBufCpcb[CPCB_1] = &(thinvpp_obj->vbi_bcm_buf[0]);
@@ -241,7 +244,11 @@ int MV_THINVPP_Reset(void)
     thinvpp_obj->dv[CPCB_1].curr_cpcb_vbi_bcm_cfgQ = &(thinvpp_obj->dv[CPCB_1].vbi_bcm_cfgQ[0]);
 
     /* reset dHub cmdQ */
-    for (i = 0; i < (soc->VPP_NUM_OF_CHANNELS - 1); i++)
+#if (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0)
+    for (i = 0; i < avioDhubChMap_vpp_TT_R; i++)
+#else /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
+    for (i = 0; i < avioDhubChMap_vpp_SPDIF_W; i++)
+#endif /* (BERLIN_CHIP_VERSION != BERLIN_BG2CD_A0) */
         thinvpp_obj->dhub_cmdQ[i] = 0;
 
     /* select BCM sub-buffer to dump register settings */
@@ -467,6 +474,7 @@ int MV_THINVPP_OpenDispWindow(int planeID, VPP_WIN *win, VPP_WIN_ATTR *attr)
 volatile int stop_flag=0;
 int MV_THINVPP_CloseDispWindow(void)
 {
+    int n;
     if (!thinvpp_obj)
         return (MV_THINVPP_ENODEV);
 
@@ -478,6 +486,7 @@ extern int curr_logo_tp_count;
 
 int MV_THINVPP_Stop(void)
 {
+    int n;
     if (!thinvpp_obj)
         return (MV_THINVPP_ENODEV);
 

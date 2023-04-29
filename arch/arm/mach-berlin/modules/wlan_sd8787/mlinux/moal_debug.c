@@ -2,7 +2,7 @@
   *
   * @brief This file contains functions for debug proc file.
   *
-  * Copyright (C) 2008-2011, Marvell International Ltd.
+  * Copyright (C) 2008-2014, Marvell International Ltd.
   *
   * This software file (the "File") is distributed by Marvell International
   * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -93,6 +93,8 @@ static struct debug_data items[] = {
 	 item_addr(is_hs_configured)}
 	,
 	{"hs_activated", item_size(hs_activated), item_addr(hs_activated)}
+	,
+	{"rx_pkts_queued", item_size(rx_pkts_queued), item_addr(rx_pkts_queued)}
 	,
 	{"tx_pkts_queued", item_size(tx_pkts_queued), item_addr(tx_pkts_queued)}
 	,
@@ -288,6 +290,8 @@ static struct debug_data uap_items[] = {
 	 item_addr(is_hs_configured)}
 	,
 	{"hs_activated", item_size(hs_activated), item_addr(hs_activated)}
+	,
+	{"rx_pkts_queued", item_size(rx_pkts_queued), item_addr(rx_pkts_queued)}
 	,
 	{"tx_pkts_queued", item_size(tx_pkts_queued), item_addr(tx_pkts_queued)}
 	,
@@ -1023,16 +1027,93 @@ int woal_peer_mgmt_frame_ioctl(t_u16 mask)
 	return 0;
 }
 
+/* proc log support*/
+/**
+ *  @brief Proc read function for log
+ *
+ *  @param sfp     pointer to seq_file structure
+ *  @param data
+ *
+ *  @return        Number of output data or MLAN_STATUS_FAILURE
+ */
+static int woal_log_read(struct seq_file *sfp, void *data)
+{
+    moal_private *priv = (moal_private *)sfp->private;
+    mlan_ds_get_stats stats;
+    ENTER();
+    if (!priv){
+        LEAVE();
+        return -EFAULT;
+    }
+    if (MODULE_GET == 0) {
+        LEAVE();
+        return -EFAULT;
+    }
+	if (GET_BSS_ROLE(priv) != MLAN_BSS_ROLE_STA){
+		MODULE_PUT;
+		LEAVE();
+		return 0;
+	}
+
+    memset(&stats, 0x00, sizeof(stats));
+    if(MLAN_STATUS_SUCCESS != woal_get_stats_info(priv, MOAL_IOCTL_WAIT, &stats)) {
+        PRINTM(MERROR, "woal_log_read: Get log: Failed to get stats info!");
+	MODULE_PUT;
+	LEAVE();
+        return -EFAULT;
+    }
+
+    seq_printf(sfp, "mcasttxframe = %d\n", stats.mcast_tx_frame);
+    seq_printf(sfp, "failed = %d\n", stats.failed);
+    seq_printf(sfp, "retry = %d\n", stats.retry);
+    seq_printf(sfp, "multiretry = %d\n", stats.multi_retry);
+    seq_printf(sfp, "framedup = %d\n", stats.frame_dup);
+    seq_printf(sfp, "rtssuccess = %d\n", stats.rts_success);
+    seq_printf(sfp, "rtsfailure = %d\n", stats.rts_failure);
+    seq_printf(sfp, "ackfailure = %d\n", stats.ack_failure);
+    seq_printf(sfp, "rxfrag = %d\n", stats.rx_frag);
+    seq_printf(sfp, "mcastrxframe = %d\n", stats.mcast_rx_frame);
+    seq_printf(sfp, "fcserror = %d\n", stats.fcs_error);
+    seq_printf(sfp, "txframe = %d\n", stats.tx_frame);
+    seq_printf(sfp, "wepicverrcnt-1 = %d\n", stats.wep_icv_error[0]);
+    seq_printf(sfp, "wepicverrcnt-2 = %d\n", stats.wep_icv_error[1]);
+    seq_printf(sfp, "wepicverrcnt-3 = %d\n", stats.wep_icv_error[2]);
+    seq_printf(sfp, "wepicverrcnt-4 = %d\n", stats.wep_icv_error[3]);
+    seq_printf(sfp, "beacon_rcnt = %d\n", stats.bcn_rcv_cnt);
+    seq_printf(sfp, "beacon_mcnt = %d\n", stats.bcn_miss_cnt);
+
+    MODULE_PUT;
+    LEAVE();
+    return 0;
+}
+
+/**
+ *  @brief Proc read function for log
+ *
+ *  @param inode     pointer to inode
+ *  @param file       file pointer
+ *
+ *  @return        number of data
+ */
+static int woal_log_proc_open(struct inode *inode, struct file *file)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+    return single_open(file, woal_log_read, PDE_DATA(inode));
+#else
+    return single_open(file, woal_log_read, PDE(inode)->data);
+#endif
+}
+
 /********************************************************
 		Local Functions
 ********************************************************/
 /**
  *  @brief Proc read function
  *
- *  @param sfp 	   pointer to seq_file structure
+ *  @param sfp     pointer to seq_file structure
  *  @param data
  *
- *  @return 	   Number of output data or MLAN_STATUS_FAILURE
+ *  @return        Number of output data or MLAN_STATUS_FAILURE
  */
 static int
 woal_debug_read(struct seq_file *sfp, void *data)
@@ -1159,29 +1240,27 @@ woal_debug_read(struct seq_file *sfp, void *data)
 			seq_printf(sfp, "\n");
 		}
 	}
-	if (info.tdls_peer_list) {
-		for (i = 0; i < info.tdls_peer_num; i++) {
-			unsigned int j;
-			seq_printf(sfp,
-				   "tdls peer: %02x:%02x:%02x:%02x:%02x:%02x snr=%d nf=%d\n",
-				   info.tdls_peer_list[i].mac_addr[0],
-				   info.tdls_peer_list[i].mac_addr[1],
-				   info.tdls_peer_list[i].mac_addr[2],
-				   info.tdls_peer_list[i].mac_addr[3],
-				   info.tdls_peer_list[i].mac_addr[4],
-				   info.tdls_peer_list[i].mac_addr[5],
-				   info.tdls_peer_list[i].snr,
-				   -info.tdls_peer_list[i].nf);
-			seq_printf(sfp, "htcap: ");
-			for (j = 0; j < sizeof(IEEEtypes_HTCap_t); j++)
-				seq_printf(sfp, "%02x ",
-					   info.tdls_peer_list[i].ht_cap[j]);
-			seq_printf(sfp, "\nExtcap: ");
-			for (j = 0; j < sizeof(IEEEtypes_ExtCap_t); j++)
-				seq_printf(sfp, "%02x ",
-					   info.tdls_peer_list[i].ext_cap[j]);
-			seq_printf(sfp, "\n");
-		}
+	for (i = 0; i < info.tdls_peer_num; i++) {
+		unsigned int j;
+		seq_printf(sfp,
+			   "tdls peer: %02x:%02x:%02x:%02x:%02x:%02x snr=%d nf=%d\n",
+			   info.tdls_peer_list[i].mac_addr[0],
+			   info.tdls_peer_list[i].mac_addr[1],
+			   info.tdls_peer_list[i].mac_addr[2],
+			   info.tdls_peer_list[i].mac_addr[3],
+			   info.tdls_peer_list[i].mac_addr[4],
+			   info.tdls_peer_list[i].mac_addr[5],
+			   info.tdls_peer_list[i].snr,
+			   -info.tdls_peer_list[i].nf);
+		seq_printf(sfp, "htcap: ");
+		for (j = 0; j < sizeof(IEEEtypes_HTCap_t); j++)
+			seq_printf(sfp, "%02x ",
+				   info.tdls_peer_list[i].ht_cap[j]);
+		seq_printf(sfp, "\nExtcap: ");
+		for (j = 0; j < sizeof(IEEEtypes_ExtCap_t); j++)
+			seq_printf(sfp, "%02x ",
+				   info.tdls_peer_list[i].ext_cap[j]);
+		seq_printf(sfp, "\n");
 	}
 exit:
 	MODULE_PUT;
@@ -1192,12 +1271,12 @@ exit:
 /**
  *  @brief Proc write function
  *
- *  @param f	   file pointer
+ *  @param f       file pointer
  *  @param buf     pointer to data buffer
  *  @param count   data number to write
  *  @param off     Offset
  *
- *  @return 	   number of data
+ *  @return        number of data
  */
 static ssize_t
 woal_debug_write(struct file *f, const char __user * buf, size_t count,
@@ -1217,6 +1296,7 @@ woal_debug_write(struct file *f, const char __user * buf, size_t count,
 #ifdef DEBUG_LEVEL1
 	t_u32 last_drvdbg = drvdbg;
 #endif
+	gfp_t flag;
 
 	ENTER();
 
@@ -1224,14 +1304,13 @@ woal_debug_write(struct file *f, const char __user * buf, size_t count,
 		LEAVE();
 		return MLAN_STATUS_FAILURE;
 	}
-
-	pdata = (char *)kmalloc(count + 1, GFP_KERNEL);
+	flag = (in_atomic() || irqs_disabled())? GFP_ATOMIC : GFP_KERNEL;
+	pdata = kzalloc(count + 1, flag);
 	if (pdata == NULL) {
 		MODULE_PUT;
 		LEAVE();
 		return 0;
 	}
-	memset(pdata, 0, count + 1);
 
 	if (copy_from_user(pdata, buf, count)) {
 		PRINTM(MERROR, "Copy from user failed\n");
@@ -1275,18 +1354,9 @@ woal_debug_write(struct file *f, const char __user * buf, size_t count,
 	kfree(pdata);
 
 #ifdef DEBUG_LEVEL1
-	if (last_drvdbg != drvdbg) {
+	if (last_drvdbg != drvdbg)
 		woal_set_drvdbg(priv, drvdbg);
 
-	}
-#endif
-#if 0
-	/* Set debug information */
-	if (woal_set_debug_info(priv, MOAL_PROC_WAIT, &info)) {
-		MODULE_PUT;
-		LEAVE();
-		return 0;
-	}
 #endif
 	MODULE_PUT;
 	LEAVE();
@@ -1330,6 +1400,14 @@ static struct file_operations peers_file_ops = {
 	.release = seq_release
 };
 
+static const struct file_operations log_proc_fops = {
+    .owner      = THIS_MODULE,
+    .open       = woal_log_proc_open,
+    .read       = seq_read,
+    .llseek     = seq_lseek,
+    .release    = single_release,
+
+};
 
 /********************************************************
 		Global Functions
@@ -1337,9 +1415,9 @@ static struct file_operations peers_file_ops = {
 /**
  *  @brief Create debug proc file
  *
- *  @param priv	   A pointer to a moal_private structure
+ *  @param priv    A pointer to a moal_private structure
  *
- *  @return 	   N/A
+ *  @return        N/A
  */
 void
 woal_debug_entry(moal_private * priv)
@@ -1456,15 +1534,33 @@ woal_debug_entry(moal_private * priv)
     woal_peer_list_size = 0;
     sema_init(&woal_peer_sem,1);
 
+    if(priv->bss_type == MLAN_BSS_TYPE_STA || priv->bss_type == MLAN_BSS_TYPE_UAP){
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
+        r = proc_create_data("log", 0644, priv->proc_entry, &log_proc_fops, priv);
+        if (r == NULL)
+#else
+        r = create_proc_entry("log", 0644, priv->proc_entry);
+        if (r) {
+            r->data         = priv;
+            r->proc_fops    = &log_proc_fops;
+        } else
+#endif
+        {
+            PRINTM(MMSG,"Fail to create proc log entry\n");
+	LEAVE();
+            return;
+        }
+    }
+
     LEAVE();
 }
 
 /**
  *  @brief Remove proc file
  *
- *  @param priv	 A pointer to a moal_private structure
+ *  @param priv  A pointer to a moal_private structure
  *
- *  @return 	 N/A
+ *  @return      N/A
  */
 void
 woal_debug_remove(moal_private * priv)
@@ -1477,6 +1573,8 @@ woal_debug_remove(moal_private * priv)
 	remove_proc_entry("histogram", priv->proc_entry);
 	woal_peer_delete_peer_list();
 	remove_proc_entry("peers", priv->proc_entry);
+    if(priv->bss_type == MLAN_BSS_TYPE_STA || priv->bss_type == MLAN_BSS_TYPE_UAP)
+        remove_proc_entry("log", priv->proc_entry);
 
 	LEAVE();
 }

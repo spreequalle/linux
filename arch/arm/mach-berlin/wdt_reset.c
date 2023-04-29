@@ -1,19 +1,3 @@
-/********************************************************************************
- * Marvell GPL License Option
- *
- * If you received this File from Marvell, you may opt to use, redistribute and/or
- * modify this File in accordance with the terms and conditions of the General
- * Public License Version 2, June 1991 (the "GPL License"), a copy of which is
- * available along with the File in the license.txt file or by writing to the Free
- * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
- * on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
- *
- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
- * DISCLAIMED.  The GPL License provides additional details about this warranty
- * disclaimer.
- ******************************************************************************/
-
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <asm/page.h>
@@ -24,26 +8,20 @@
 #include <asm/mach/time.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
-#include <asm/system_misc.h>
 
 #include "common.h"
+#include "clock.h"
 
 
 #ifndef CONFIG_BERLIN_SM
-
-#ifdef CONFIG_BERLIN2CDP
-  #define SM_APB_WDT_VER 0x3130372A
-  #define RA_smSysCtl_SM_WDT_MASK 0x003C
-#else
-  #define SM_APB_WDT_VER 0x3130332A
-  #define RA_smSysCtl_SM_WDT_MASK 0x0034
-#endif
+#define SM_APB_WDT_VER 0x3130332a
 
 #define SM_APB_ICTL_BASE        (SOC_SM_APB_REG_BASE)
 #define SM_APB_WDT0_BASE        (SOC_SM_APB_REG_BASE + 0x1000)
 #define SM_APB_WDT1_BASE        (SOC_SM_APB_REG_BASE + 0x2000)
 #define SM_APB_WDT2_BASE        (SOC_SM_APB_REG_BASE + 0x3000)
 
+#define RA_smSysCtl_SM_WDT_MASK 0x0034
 static void BFM_HOST_Bus_Write32(unsigned int addr, unsigned int val)
 {
 	writel(val, addr);
@@ -117,7 +95,8 @@ static int Galois_SM_WDT(unsigned int wdt_instance, unsigned int rst_type, int i
 		BFM_HOST_Bus_Write32( (wdt_base+0x00),0x10);
 	else
 		BFM_HOST_Bus_Write32( (wdt_base+0x00),0x12);      //
-	BFM_HOST_Bus_Write32( (wdt_base+0x04),0x08);          // time out around 2^(16 + 6) / 25M = 0.64 sec
+        // time out around 2^(16 + 6) / 25M = 0.64 sec
+	BFM_HOST_Bus_Write32( (wdt_base+0x04),0x08);
 	BFM_HOST_Bus_Read32((wdt_base+0x00),&read);
 	read |=0x01;                                          // enable WDT
 	BFM_HOST_Bus_Write32( (wdt_base+0x00),read);
@@ -165,18 +144,12 @@ static int Galois_SM_WDT(unsigned int wdt_instance, unsigned int rst_type, int i
 
 static galois_soc_watchdog_reset(void)
 {
-#ifdef CONFIG_BERLIN2CDP
-	Galois_SM_WDT(0, 1, 0);
-#else
 	Galois_SM_WDT(3, 1, 0);
-#endif
 	for (;;);
 }
-
-static int __init reset_init(void)
+void galois_arch_reset(char mode, const char *cmd)
 {
-	arm_pm_restart = galois_soc_watchdog_reset;
-	return 0;
+	galois_soc_watchdog_reset();
 }
-late_initcall(reset_init);
+
 #endif

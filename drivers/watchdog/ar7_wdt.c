@@ -285,9 +285,11 @@ static int ar7_wdt_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	ar7_wdt = devm_ioremap_resource(&pdev->dev, ar7_regs_wdt);
-	if (IS_ERR(ar7_wdt))
-		return PTR_ERR(ar7_wdt);
+	ar7_wdt = devm_request_and_ioremap(&pdev->dev, ar7_regs_wdt);
+	if (!ar7_wdt) {
+		pr_err("could not ioremap registers\n");
+		return -ENXIO;
+	}
 
 	vbus_clk = clk_get(NULL, "vbus");
 	if (IS_ERR(vbus_clk)) {

@@ -58,138 +58,197 @@ extern mlan_debug_info info;
 #ifdef STA_SUPPORT
 static struct debug_data items[] = {
 #ifdef DEBUG_LEVEL1
-	{"drvdbg", sizeof(drvdbg), (t_ptr)&drvdbg},
+	{"drvdbg", sizeof(drvdbg), (t_ptr) & drvdbg}
+	,
 #endif
-	{"wmm_ac_vo", item_size(wmm_ac_vo), item_addr(wmm_ac_vo)},
-	{"wmm_ac_vi", item_size(wmm_ac_vi), item_addr(wmm_ac_vi)},
-	{"wmm_ac_be", item_size(wmm_ac_be), item_addr(wmm_ac_be)},
-	{"wmm_ac_bk", item_size(wmm_ac_bk), item_addr(wmm_ac_bk)},
+	{"wmm_ac_vo", item_size(wmm_ac_vo), item_addr(wmm_ac_vo)}
+	,
+	{"wmm_ac_vi", item_size(wmm_ac_vi), item_addr(wmm_ac_vi)}
+	,
+	{"wmm_ac_be", item_size(wmm_ac_be), item_addr(wmm_ac_be)}
+	,
+	{"wmm_ac_bk", item_size(wmm_ac_bk), item_addr(wmm_ac_bk)}
+	,
 	{"max_tx_buf_size", item_size(max_tx_buf_size),
-	 item_addr(max_tx_buf_size)},
-	{"tx_buf_size", item_size(tx_buf_size), item_addr(tx_buf_size)},
+	 item_addr(max_tx_buf_size)}
+	,
+	{"tx_buf_size", item_size(tx_buf_size), item_addr(tx_buf_size)}
+	,
 	{"curr_tx_buf_size", item_size(curr_tx_buf_size),
-	 item_addr(curr_tx_buf_size)},
-	{"ps_mode", item_size(ps_mode), item_addr(ps_mode)},
-	{"ps_state", item_size(ps_state), item_addr(ps_state)},
-	{"is_deep_sleep", item_size(is_deep_sleep), item_addr(is_deep_sleep)},
+	 item_addr(curr_tx_buf_size)}
+	,
+	{"ps_mode", item_size(ps_mode), item_addr(ps_mode)}
+	,
+	{"ps_state", item_size(ps_state), item_addr(ps_state)}
+	,
+	{"is_deep_sleep", item_size(is_deep_sleep), item_addr(is_deep_sleep)}
+	,
 	{"wakeup_dev_req", item_size(pm_wakeup_card_req),
-	 item_addr(pm_wakeup_card_req)},
+	 item_addr(pm_wakeup_card_req)}
+	,
 	{"wakeup_tries", item_size(pm_wakeup_fw_try),
-	 item_addr(pm_wakeup_fw_try)},
+	 item_addr(pm_wakeup_fw_try)}
+	,
 	{"hs_configured", item_size(is_hs_configured),
-	 item_addr(is_hs_configured)},
-	{"hs_activated", item_size(hs_activated), item_addr(hs_activated)},
-	{"rx_pkts_queued", item_size(rx_pkts_queued),
-	 item_addr(rx_pkts_queued)},
-	{"tx_pkts_queued", item_size(tx_pkts_queued),
-	 item_addr(tx_pkts_queued)},
-	{"pps_uapsd_mode", item_size(pps_uapsd_mode),
-	 item_addr(pps_uapsd_mode)},
-	{"sleep_pd", item_size(sleep_pd), item_addr(sleep_pd)},
-	{"qos_cfg", item_size(qos_cfg), item_addr(qos_cfg)},
-	{"tx_lock_flag", item_size(tx_lock_flag), item_addr(tx_lock_flag)},
-	{"port_open", item_size(port_open), item_addr(port_open)},
+	 item_addr(is_hs_configured)}
+	,
+	{"hs_activated", item_size(hs_activated), item_addr(hs_activated)}
+	,
+	{"rx_pkts_queued", item_size(rx_pkts_queued), item_addr(rx_pkts_queued)}
+	,
+	{"tx_pkts_queued", item_size(tx_pkts_queued), item_addr(tx_pkts_queued)}
+	,
+	{"pps_uapsd_mode", item_size(pps_uapsd_mode), item_addr(pps_uapsd_mode)}
+	,
+	{"sleep_pd", item_size(sleep_pd), item_addr(sleep_pd)}
+	,
+	{"qos_cfg", item_size(qos_cfg), item_addr(qos_cfg)}
+	,
+	{"tx_lock_flag", item_size(tx_lock_flag), item_addr(tx_lock_flag)}
+	,
+	{"port_open", item_size(port_open), item_addr(port_open)}
+	,
 	{"bypass_pkt_count", item_size(bypass_pkt_count),
-	 item_addr(bypass_pkt_count)},
+	 item_addr(bypass_pkt_count)}
+	,
 	{"scan_processing", item_size(scan_processing),
-	 item_addr(scan_processing)},
-	{"num_tx_timeout", item_size(num_tx_timeout),
-	 item_addr(num_tx_timeout)},
+	 item_addr(scan_processing)}
+	,
+	{"num_tx_timeout", item_size(num_tx_timeout), item_addr(num_tx_timeout)}
+	,
 	{"num_cmd_timeout", item_size(num_cmd_timeout),
-	 item_addr(num_cmd_timeout)},
-	{"dbg.num_cmd_timeout", item_size(dbg_num_cmd_timeout),
-	 item_addr(dbg_num_cmd_timeout)},
-	{"timeout_cmd_id", item_size(timeout_cmd_id),
-	 item_addr(timeout_cmd_id)},
+	 item_addr(num_cmd_timeout)}
+	,
+	{"timeout_cmd_id", item_size(timeout_cmd_id), item_addr(timeout_cmd_id)}
+	,
 	{"timeout_cmd_act", item_size(timeout_cmd_act),
-	 item_addr(timeout_cmd_act)},
-	{"last_cmd_id", item_size(last_cmd_id), item_addr(last_cmd_id)},
-	{"last_cmd_act", item_size(last_cmd_act), item_addr(last_cmd_act)},
-	{"last_cmd_index", item_size(last_cmd_index),
-	 item_addr(last_cmd_index)},
+	 item_addr(timeout_cmd_act)}
+	,
+	{"last_cmd_id", item_size(last_cmd_id), item_addr(last_cmd_id)}
+	,
+	{"last_cmd_act", item_size(last_cmd_act), item_addr(last_cmd_act)}
+	,
+	{"last_cmd_index", item_size(last_cmd_index), item_addr(last_cmd_index)}
+	,
 	{"last_cmd_resp_id", item_size(last_cmd_resp_id),
-	 item_addr(last_cmd_resp_id)},
+	 item_addr(last_cmd_resp_id)}
+	,
 	{"last_cmd_resp_index", item_size(last_cmd_resp_index),
-	 item_addr(last_cmd_resp_index)},
-	{"last_event", item_size(last_event), item_addr(last_event)},
+	 item_addr(last_cmd_resp_index)}
+	,
+	{"last_event", item_size(last_event), item_addr(last_event)}
+	,
 	{"last_event_index", item_size(last_event_index),
-	 item_addr(last_event_index)},
+	 item_addr(last_event_index)}
+	,
 	{"num_no_cmd_node", item_size(num_no_cmd_node),
-	 item_addr(num_no_cmd_node)},
+	 item_addr(num_no_cmd_node)}
+	,
 	{"num_cmd_h2c_fail", item_size(num_cmd_host_to_card_failure),
-	 item_addr(num_cmd_host_to_card_failure)},
+	 item_addr(num_cmd_host_to_card_failure)}
+	,
 	{"num_cmd_sleep_cfm_fail",
 	 item_size(num_cmd_sleep_cfm_host_to_card_failure),
-	 item_addr(num_cmd_sleep_cfm_host_to_card_failure)},
+	 item_addr(num_cmd_sleep_cfm_host_to_card_failure)}
+	,
 	{"num_tx_h2c_fail", item_size(num_tx_host_to_card_failure),
-	 item_addr(num_tx_host_to_card_failure)},
+	 item_addr(num_tx_host_to_card_failure)}
+	,
 	{"num_cmdevt_c2h_fail", item_size(num_cmdevt_card_to_host_failure),
-	 item_addr(num_cmdevt_card_to_host_failure)},
+	 item_addr(num_cmdevt_card_to_host_failure)}
+	,
 	{"num_rx_c2h_fail", item_size(num_rx_card_to_host_failure),
-	 item_addr(num_rx_card_to_host_failure)},
+	 item_addr(num_rx_card_to_host_failure)}
+	,
 	{"num_int_read_fail", item_size(num_int_read_failure),
-	 item_addr(num_int_read_failure)},
+	 item_addr(num_int_read_failure)}
+	,
 	{"last_int_status", item_size(last_int_status),
-	 item_addr(last_int_status)},
-	{"num_of_irq", item_size(num_of_irq), item_addr(num_of_irq)},
-	{"mp_invalid_update", item_size(mp_invalid_update),
-	 item_addr(mp_invalid_update)},
+	 item_addr(last_int_status)}
+	,
 #ifdef SDIO_MULTI_PORT_TX_AGGR
 	{"mpa_sent_last_pkt", item_size(mpa_sent_last_pkt),
-	 item_addr(mpa_sent_last_pkt)},
+	 item_addr(mpa_sent_last_pkt)}
+	,
 	{"mpa_sent_no_ports", item_size(mpa_sent_no_ports),
-	 item_addr(mpa_sent_no_ports)},
+	 item_addr(mpa_sent_no_ports)}
+	,
 #endif
 	{"num_evt_deauth", item_size(num_event_deauth),
-	 item_addr(num_event_deauth)},
+	 item_addr(num_event_deauth)}
+	,
 	{"num_evt_disassoc", item_size(num_event_disassoc),
-	 item_addr(num_event_disassoc)},
+	 item_addr(num_event_disassoc)}
+	,
 	{"num_evt_link_lost", item_size(num_event_link_lost),
-	 item_addr(num_event_link_lost)},
-	{"num_cmd_deauth", item_size(num_cmd_deauth),
-	 item_addr(num_cmd_deauth)},
+	 item_addr(num_event_link_lost)}
+	,
+	{"num_cmd_deauth", item_size(num_cmd_deauth), item_addr(num_cmd_deauth)}
+	,
 	{"num_cmd_assoc_ok", item_size(num_cmd_assoc_success),
-	 item_addr(num_cmd_assoc_success)},
+	 item_addr(num_cmd_assoc_success)}
+	,
 	{"num_cmd_assoc_fail", item_size(num_cmd_assoc_failure),
-	 item_addr(num_cmd_assoc_failure)},
-	{"cmd_sent", item_size(cmd_sent), item_addr(cmd_sent)},
-	{"data_sent", item_size(data_sent), item_addr(data_sent)},
-	{"mp_rd_bitmap", item_size(mp_rd_bitmap), item_addr(mp_rd_bitmap)},
-	{"curr_rd_port", item_size(curr_rd_port), item_addr(curr_rd_port)},
-	{"mp_wr_bitmap", item_size(mp_wr_bitmap), item_addr(mp_wr_bitmap)},
-	{"curr_wr_port", item_size(curr_wr_port), item_addr(curr_wr_port)},
+	 item_addr(num_cmd_assoc_failure)}
+	,
+	{"cmd_sent", item_size(cmd_sent), item_addr(cmd_sent)}
+	,
+	{"data_sent", item_size(data_sent), item_addr(data_sent)}
+	,
+	{"mp_rd_bitmap", item_size(mp_rd_bitmap), item_addr(mp_rd_bitmap)}
+	,
+	{"curr_rd_port", item_size(curr_rd_port), item_addr(curr_rd_port)}
+	,
+	{"mp_wr_bitmap", item_size(mp_wr_bitmap), item_addr(mp_wr_bitmap)}
+	,
+	{"curr_wr_port", item_size(curr_wr_port), item_addr(curr_wr_port)}
+	,
 	{"cmd_resp_received", item_size(cmd_resp_received),
-	 item_addr(cmd_resp_received)},
-	{"event_received", item_size(event_received),
-	 item_addr(event_received)},
+	 item_addr(cmd_resp_received)}
+	,
+	{"event_received", item_size(event_received), item_addr(event_received)}
+	,
 
 	{"ioctl_pending", item_handle_size(ioctl_pending),
-	 item_handle_addr(ioctl_pending)},
+	 item_handle_addr(ioctl_pending)}
+	,
 	{"tx_pending", item_handle_size(tx_pending),
-	 item_handle_addr(tx_pending)},
+	 item_handle_addr(tx_pending)}
+	,
 	{"rx_pending", item_handle_size(rx_pending),
-	 item_handle_addr(rx_pending)},
+	 item_handle_addr(rx_pending)}
+	,
 	{"lock_count", item_handle_size(lock_count),
-	 item_handle_addr(lock_count)},
+	 item_handle_addr(lock_count)}
+	,
 	{"malloc_count", item_handle_size(malloc_count),
-	 item_handle_addr(malloc_count)},
+	 item_handle_addr(malloc_count)}
+	,
 	{"vmalloc_count", item_handle_size(vmalloc_count),
-	 item_handle_addr(vmalloc_count)},
+	 item_handle_addr(vmalloc_count)}
+	,
 	{"mbufalloc_count", item_handle_size(mbufalloc_count),
-	 item_handle_addr(mbufalloc_count)},
+	 item_handle_addr(mbufalloc_count)}
+	,
 	{"main_state", item_handle_size(main_state),
-	 item_handle_addr(main_state)},
+	 item_handle_addr(main_state)}
+	,
 	{"driver_state", item_handle_size(driver_state),
-	 item_handle_addr(driver_state)},
+	 item_handle_addr(driver_state)}
+	,
 #ifdef SDIO_MMC_DEBUG
-	{"sdiocmd53w", item_handle_size(cmd53w), item_handle_addr(cmd53w)},
-	{"sdiocmd53r", item_handle_size(cmd53r), item_handle_addr(cmd53r)},
+	{"sdiocmd53w", item_handle_size(cmd53w), item_handle_addr(cmd53w)}
+	,
+	{"sdiocmd53r", item_handle_size(cmd53r), item_handle_addr(cmd53r)}
+	,
 #endif
 #if defined(SDIO_SUSPEND_RESUME)
 	{"hs_skip_count", item_handle_size(hs_skip_count),
-	 item_handle_addr(hs_skip_count)},
+	 item_handle_addr(hs_skip_count)}
+	,
 	{"hs_force_count", item_handle_size(hs_force_count),
-	 item_handle_addr(hs_force_count)},
+	 item_handle_addr(hs_force_count)}
+	,
 #endif
 };
 
@@ -198,283 +257,359 @@ static struct debug_data items[] = {
 #ifdef UAP_SUPPORT
 static struct debug_data uap_items[] = {
 #ifdef DEBUG_LEVEL1
-	{"drvdbg", sizeof(drvdbg), (t_ptr)&drvdbg},
+	{"drvdbg", sizeof(drvdbg), (t_ptr) & drvdbg}
+	,
 #endif
-	{"wmm_ac_vo", item_size(wmm_ac_vo), item_addr(wmm_ac_vo)},
-	{"wmm_ac_vi", item_size(wmm_ac_vi), item_addr(wmm_ac_vi)},
-	{"wmm_ac_be", item_size(wmm_ac_be), item_addr(wmm_ac_be)},
-	{"wmm_ac_bk", item_size(wmm_ac_bk), item_addr(wmm_ac_bk)},
+	{"wmm_ac_vo", item_size(wmm_ac_vo), item_addr(wmm_ac_vo)}
+	,
+	{"wmm_ac_vi", item_size(wmm_ac_vi), item_addr(wmm_ac_vi)}
+	,
+	{"wmm_ac_be", item_size(wmm_ac_be), item_addr(wmm_ac_be)}
+	,
+	{"wmm_ac_bk", item_size(wmm_ac_bk), item_addr(wmm_ac_bk)}
+	,
 	{"max_tx_buf_size", item_size(max_tx_buf_size),
-	 item_addr(max_tx_buf_size)},
-	{"tx_buf_size", item_size(tx_buf_size), item_addr(tx_buf_size)},
+	 item_addr(max_tx_buf_size)}
+	,
+	{"tx_buf_size", item_size(tx_buf_size), item_addr(tx_buf_size)}
+	,
 	{"curr_tx_buf_size", item_size(curr_tx_buf_size),
-	 item_addr(curr_tx_buf_size)},
-	{"ps_mode", item_size(ps_mode), item_addr(ps_mode)},
-	{"ps_state", item_size(ps_state), item_addr(ps_state)},
+	 item_addr(curr_tx_buf_size)}
+	,
+	{"ps_mode", item_size(ps_mode), item_addr(ps_mode)}
+	,
+	{"ps_state", item_size(ps_state), item_addr(ps_state)}
+	,
 	{"wakeup_dev_req", item_size(pm_wakeup_card_req),
-	 item_addr(pm_wakeup_card_req)},
+	 item_addr(pm_wakeup_card_req)}
+	,
 	{"wakeup_tries", item_size(pm_wakeup_fw_try),
-	 item_addr(pm_wakeup_fw_try)},
+	 item_addr(pm_wakeup_fw_try)}
+	,
 	{"hs_configured", item_size(is_hs_configured),
-	 item_addr(is_hs_configured)},
-	{"hs_activated", item_size(hs_activated), item_addr(hs_activated)},
-	{"rx_pkts_queued", item_size(rx_pkts_queued),
-	 item_addr(rx_pkts_queued)},
-	{"tx_pkts_queued", item_size(tx_pkts_queued),
-	 item_addr(tx_pkts_queued)},
+	 item_addr(is_hs_configured)}
+	,
+	{"hs_activated", item_size(hs_activated), item_addr(hs_activated)}
+	,
+	{"rx_pkts_queued", item_size(rx_pkts_queued), item_addr(rx_pkts_queued)}
+	,
+	{"tx_pkts_queued", item_size(tx_pkts_queued), item_addr(tx_pkts_queued)}
+	,
 	{"bypass_pkt_count", item_size(bypass_pkt_count),
-	 item_addr(bypass_pkt_count)},
+	 item_addr(bypass_pkt_count)}
+	,
 	{"num_bridge_pkts", item_size(num_bridge_pkts),
-	 item_addr(num_bridge_pkts)},
-	{"num_drop_pkts", item_size(num_drop_pkts), item_addr(num_drop_pkts)},
-	{"num_tx_timeout", item_size(num_tx_timeout),
-	 item_addr(num_tx_timeout)},
+	 item_addr(num_bridge_pkts)}
+	,
+	{"num_drop_pkts", item_size(num_drop_pkts), item_addr(num_drop_pkts)}
+	,
+	{"num_tx_timeout", item_size(num_tx_timeout), item_addr(num_tx_timeout)}
+	,
 	{"num_cmd_timeout", item_size(num_cmd_timeout),
-	 item_addr(num_cmd_timeout)},
-	{"timeout_cmd_id", item_size(timeout_cmd_id),
-	 item_addr(timeout_cmd_id)},
+	 item_addr(num_cmd_timeout)}
+	,
+	{"timeout_cmd_id", item_size(timeout_cmd_id), item_addr(timeout_cmd_id)}
+	,
 	{"timeout_cmd_act", item_size(timeout_cmd_act),
-	 item_addr(timeout_cmd_act)},
-	{"last_cmd_id", item_size(last_cmd_id), item_addr(last_cmd_id)},
-	{"last_cmd_act", item_size(last_cmd_act), item_addr(last_cmd_act)},
-	{"last_cmd_index", item_size(last_cmd_index),
-	 item_addr(last_cmd_index)},
+	 item_addr(timeout_cmd_act)}
+	,
+	{"last_cmd_id", item_size(last_cmd_id), item_addr(last_cmd_id)}
+	,
+	{"last_cmd_act", item_size(last_cmd_act), item_addr(last_cmd_act)}
+	,
+	{"last_cmd_index", item_size(last_cmd_index), item_addr(last_cmd_index)}
+	,
 	{"last_cmd_resp_id", item_size(last_cmd_resp_id),
-	 item_addr(last_cmd_resp_id)},
+	 item_addr(last_cmd_resp_id)}
+	,
 	{"last_cmd_resp_index", item_size(last_cmd_resp_index),
-	 item_addr(last_cmd_resp_index)},
-	{"last_event", item_size(last_event), item_addr(last_event)},
+	 item_addr(last_cmd_resp_index)}
+	,
+	{"last_event", item_size(last_event), item_addr(last_event)}
+	,
 	{"last_event_index", item_size(last_event_index),
-	 item_addr(last_event_index)},
+	 item_addr(last_event_index)}
+	,
 	{"num_no_cmd_node", item_size(num_no_cmd_node),
-	 item_addr(num_no_cmd_node)},
+	 item_addr(num_no_cmd_node)}
+	,
 	{"num_cmd_h2c_fail", item_size(num_cmd_host_to_card_failure),
-	 item_addr(num_cmd_host_to_card_failure)},
+	 item_addr(num_cmd_host_to_card_failure)}
+	,
 	{"num_cmd_sleep_cfm_fail",
 	 item_size(num_cmd_sleep_cfm_host_to_card_failure),
-	 item_addr(num_cmd_sleep_cfm_host_to_card_failure)},
+	 item_addr(num_cmd_sleep_cfm_host_to_card_failure)}
+	,
 	{"num_tx_h2c_fail", item_size(num_tx_host_to_card_failure),
-	 item_addr(num_tx_host_to_card_failure)},
+	 item_addr(num_tx_host_to_card_failure)}
+	,
 	{"num_cmdevt_c2h_fail", item_size(num_cmdevt_card_to_host_failure),
-	 item_addr(num_cmdevt_card_to_host_failure)},
+	 item_addr(num_cmdevt_card_to_host_failure)}
+	,
 	{"num_rx_c2h_fail", item_size(num_rx_card_to_host_failure),
-	 item_addr(num_rx_card_to_host_failure)},
+	 item_addr(num_rx_card_to_host_failure)}
+	,
 	{"num_int_read_fail", item_size(num_int_read_failure),
-	 item_addr(num_int_read_failure)},
+	 item_addr(num_int_read_failure)}
+	,
 	{"last_int_status", item_size(last_int_status),
-	 item_addr(last_int_status)},
-	{"num_of_irq", item_size(num_of_irq), item_addr(num_of_irq)},
-	{"mp_invalid_update", item_size(mp_invalid_update),
-	 item_addr(mp_invalid_update)},
+	 item_addr(last_int_status)}
+	,
 #ifdef SDIO_MULTI_PORT_TX_AGGR
 	{"mpa_sent_last_pkt", item_size(mpa_sent_last_pkt),
-	 item_addr(mpa_sent_last_pkt)},
+	 item_addr(mpa_sent_last_pkt)}
+	,
 	{"mpa_sent_no_ports", item_size(mpa_sent_no_ports),
-	 item_addr(mpa_sent_no_ports)},
+	 item_addr(mpa_sent_no_ports)}
+	,
 #endif
-	{"cmd_sent", item_size(cmd_sent), item_addr(cmd_sent)},
-	{"data_sent", item_size(data_sent), item_addr(data_sent)},
-	{"mp_rd_bitmap", item_size(mp_rd_bitmap), item_addr(mp_rd_bitmap)},
-	{"curr_rd_port", item_size(curr_rd_port), item_addr(curr_rd_port)},
-	{"mp_wr_bitmap", item_size(mp_wr_bitmap), item_addr(mp_wr_bitmap)},
-	{"curr_wr_port", item_size(curr_wr_port), item_addr(curr_wr_port)},
+	{"cmd_sent", item_size(cmd_sent), item_addr(cmd_sent)}
+	,
+	{"data_sent", item_size(data_sent), item_addr(data_sent)}
+	,
+	{"mp_rd_bitmap", item_size(mp_rd_bitmap), item_addr(mp_rd_bitmap)}
+	,
+	{"curr_rd_port", item_size(curr_rd_port), item_addr(curr_rd_port)}
+	,
+	{"mp_wr_bitmap", item_size(mp_wr_bitmap), item_addr(mp_wr_bitmap)}
+	,
+	{"curr_wr_port", item_size(curr_wr_port), item_addr(curr_wr_port)}
+	,
 	{"cmd_resp_received", item_size(cmd_resp_received),
-	 item_addr(cmd_resp_received)},
-	{"event_received", item_size(event_received),
-	 item_addr(event_received)},
+	 item_addr(cmd_resp_received)}
+	,
+	{"event_received", item_size(event_received), item_addr(event_received)}
+	,
 
 	{"ioctl_pending", item_handle_size(ioctl_pending),
-	 item_handle_addr(ioctl_pending)},
+	 item_handle_addr(ioctl_pending)}
+	,
 	{"tx_pending", item_handle_size(tx_pending),
-	 item_handle_addr(tx_pending)},
+	 item_handle_addr(tx_pending)}
+	,
 	{"rx_pending", item_handle_size(rx_pending),
-	 item_handle_addr(rx_pending)},
+	 item_handle_addr(rx_pending)}
+	,
 	{"lock_count", item_handle_size(lock_count),
-	 item_handle_addr(lock_count)},
+	 item_handle_addr(lock_count)}
+	,
 	{"malloc_count", item_handle_size(malloc_count),
-	 item_handle_addr(malloc_count)},
+	 item_handle_addr(malloc_count)}
+	,
 	{"vmalloc_count", item_handle_size(vmalloc_count),
-	 item_handle_addr(vmalloc_count)},
+	 item_handle_addr(vmalloc_count)}
+	,
 	{"mbufalloc_count", item_handle_size(mbufalloc_count),
-	 item_handle_addr(mbufalloc_count)},
+	 item_handle_addr(mbufalloc_count)}
+	,
 	{"main_state", item_handle_size(main_state),
-	 item_handle_addr(main_state)},
+	 item_handle_addr(main_state)}
+	,
 	{"driver_state", item_handle_size(driver_state),
-	 item_handle_addr(driver_state)},
+	 item_handle_addr(driver_state)}
+	,
 #ifdef SDIO_MMC_DEBUG
-	{"sdiocmd53w", item_handle_size(cmd53w), item_handle_addr(cmd53w)},
-	{"sdiocmd53r", item_handle_size(cmd53r), item_handle_addr(cmd53r)},
+	{"sdiocmd53w", item_handle_size(cmd53w), item_handle_addr(cmd53w)}
+	,
+	{"sdiocmd53r", item_handle_size(cmd53r), item_handle_addr(cmd53r)}
+	,
 #endif
 #if defined(SDIO_SUSPEND_RESUME)
 	{"hs_skip_count", item_handle_size(hs_skip_count),
-	 item_handle_addr(hs_skip_count)},
+	 item_handle_addr(hs_skip_count)}
+	,
 	{"hs_force_count", item_handle_size(hs_force_count),
-	 item_handle_addr(hs_force_count)},
+	 item_handle_addr(hs_force_count)}
+	,
 #endif
 };
 #endif /* UAP_SUPPORT */
 
-/**
- *  @brief This function reset histogram data
- *
- *  @param priv 		A pointer to moal_private
- *
- *  @return   N/A
- */
-void
-woal_hist_data_reset(moal_private *priv)
-{
-	hgm_data *phist_data = priv->hist_data;
-	int ix;
+/* Histogram support*/
+struct _hgm_seq_data {
+	int   histDataSize;
+	int   pos;
+	int   numHgmSamples;
+	char  *pHgmData;
+};
 
-	atomic_set(&(phist_data->num_samples), 0);
-	for (ix = 0; ix < RX_RATE_MAX; ix++)
-		atomic_set(&(phist_data->rx_rate[ix]), 0);
-	for (ix = 0; ix < SNR_MAX; ix++)
-		atomic_set(&(phist_data->snr[ix]), 0);
-	for (ix = 0; ix < NOISE_FLR_MAX; ix++)
-		atomic_set(&(phist_data->noise_flr[ix]), 0);
-	for (ix = 0; ix < SIG_STRENGTH_MAX; ix++)
-		atomic_set(&(phist_data->sig_str[ix]), 0);
-}
+static struct _hgm_seq_data hgm_seq_data;
+static unsigned int woal_debug_get_uint(char *pBuf);
 
-/**
- *  @brief This function set histogram data
- *
- *  @param priv 		A pointer to moal_private
- *  @param rx_rate      rx rate
- *  @param snr			snr
- *  @param nflr			NF
- *
- *  @return   N/A
- */
 static void
-woal_hist_data_set(moal_private *priv, t_s8 rx_rate, t_s8 snr, t_s8 nflr)
+hgm_seq_init_globals()
 {
-	hgm_data *phist_data = priv->hist_data;
-
-	atomic_inc(&(phist_data->num_samples));
-	atomic_inc(&(phist_data->rx_rate[rx_rate]));
-	atomic_inc(&(phist_data->snr[snr]));
-	atomic_inc(&(phist_data->noise_flr[128 + nflr]));
-	atomic_inc(&(phist_data->sig_str[nflr - snr]));
-}
-
-/**
- *  @brief This function add histogram data
- *
- *  @param priv 		A pointer to moal_private
- *  @param rx_rate      rx rate
- *  @param snr			snr
- *  @param nflr			NF
- *
- *  @return   N/A
- */
-void
-woal_hist_data_add(moal_private *priv, t_s8 rx_rate, t_s8 snr, t_s8 nflr)
-{
-	hgm_data *phist_data = priv->hist_data;
-	unsigned long curr_size;
-
-	curr_size = atomic_read(&(phist_data->num_samples));
-	if (curr_size > HIST_MAX_SAMPLES)
-		woal_hist_data_reset(priv);
-	woal_hist_data_set(priv, rx_rate, snr, nflr);
-}
-
-/**
- *  @brief Proc read function for histogram
- *
- *  @param sfp     pointer to seq_file structure
- *  @param data
- *
- *  @return        Number of output data or MLAN_STATUS_FAILURE
- */
-static int
-woal_histogram_read(struct seq_file *sfp, void *data)
-{
-	moal_private *priv = (moal_private *)sfp->private;
-	hgm_data *phist_data = NULL;
-	int i = 0;
-	int value = 0;
+	int i;
 	ENTER();
-	if (!priv || !priv->hist_data) {
-		LEAVE();
-		return -EFAULT;
-	}
-	phist_data = priv->hist_data;
-	if (MODULE_GET == 0) {
-		LEAVE();
-		return -EFAULT;
-	}
-	seq_printf(sfp, "total samples = %d \n",
-		   atomic_read(&(phist_data->num_samples)));
-	seq_printf(sfp,
-		   "rx rates (in Mbps): 0=1M   1=2M   2=5.5M  3=11M   4=6M  5=9M  6=12M\n");
-	seq_printf(sfp,
-		   "                    7=18M  8=24M  9=36M  10=48M  11=54M   12-27=MCS0-15(BW20) 28-43=MCS0-15(BW40)\n");
-	seq_printf(sfp, "\n");
-	for (i = 0; i < RX_RATE_MAX; i++) {
-		value = atomic_read(&(phist_data->rx_rate[i]));
-		if (value)
-			seq_printf(sfp, "rx_rate[%02d] = %d\n", i, value);
-	}
-	for (i = 0; i < SNR_MAX; i++) {
-		value = atomic_read(&(phist_data->snr[i]));
-		if (value)
-			seq_printf(sfp, "snr[%02ddB] = %d\n", i, value);
-	}
-	for (i = 0; i < NOISE_FLR_MAX; i++) {
-		value = atomic_read(&(phist_data->noise_flr[i]));
-		if (value)
-			seq_printf(sfp, "noise_flr[-%02ddBm] = %d\n",
-				   (int)(i - 128), value);
-	}
-	for (i = 0; i < SIG_STRENGTH_MAX; i++) {
-		value = atomic_read(&(phist_data->sig_str[i]));
-		if (value)
-			seq_printf(sfp, "sig_strength[-%02ddBm] = %d\n", i,
-				   value);
+
+	if (!hgm_seq_data.pHgmData){
+		hgm_seq_data.histDataSize = (RX_RATE_MAX+SNR_MAX+NOISE_FLR_MAX+SIG_STRENGTH_MAX) * sizeof(unsigned int);
+		hgm_seq_data.pHgmData = (char *) kmalloc(hgm_seq_data.histDataSize, GFP_KERNEL);
+
+		if (!hgm_seq_data.pHgmData){
+			printk(KERN_ERR "hgm_seq_init_globals: Could not allocate memory\n");
+			LEAVE();
+			return;
+		}
+
+		for (i = 0; i < hgm_seq_data.histDataSize; i++)
+			hgm_seq_data.pHgmData[i] = 0;
 	}
 
-	MODULE_PUT;
 	LEAVE();
+	return;
+}
+
+static void *
+hgm_seq_start(struct seq_file *s, loff_t *pos)
+{
+
+	ENTER();
+
+	if (unlikely(!hgm_seq_data.pHgmData)){
+		LEAVE();
+		return NULL;
+	}
+	else if (0 == *pos) {
+		if (0 != mlan_hist_data_get( hgm_seq_data.pHgmData, &(hgm_seq_data.numHgmSamples) )){
+			LEAVE();
+			return NULL;
+		}
+	}
+
+	hgm_seq_data.pos = *pos;
+	if ((*pos) >= hgm_seq_data.histDataSize) {     // are we done?
+		LEAVE();
+		return NULL;
+	}
+
+	LEAVE();
+	return (void *) &hgm_seq_data;
+}
+
+
+static int
+hgm_seq_show(struct seq_file *s, void *v)
+{
+	struct _hgm_seq_data *hgm = (struct _hgm_seq_data *) v;
+	int pos;
+	int rx_max = RX_RATE_MAX;
+	int snr_max = rx_max + SNR_MAX;
+	int nflr_max = snr_max + NOISE_FLR_MAX;
+	int sigs_max = nflr_max + SIG_STRENGTH_MAX;
+	int i,nTemp;
+	struct debug_data_priv *pdbg_data_priv;
+	struct debug_data *pdbg_data;
+	moal_private *pmoal_priv=NULL;
+
+	if (s){
+		pdbg_data_priv = (struct debug_data_priv *)s->private;
+		pdbg_data = pdbg_data_priv->items;
+		pmoal_priv =  pdbg_data_priv->priv;
+	}
+	else
+		PRINTM(MERROR,"hgm_seq_show(): s == NULL!\n");
+
+
+	pos = hgm->pos;
+
+	if (unlikely(pos == 0)){
+		// Position 0, print banner, num items and first entry.
+		seq_printf(s, "total samples = %d \n", hgm->numHgmSamples);
+		seq_printf(s, "rx rates (in Mbps): 0=1M   1=2M   2=5.5M  3=11M   4=6M  5=9M  6=12M\n");
+		seq_printf(s, "                    7=18M  8=24M  9=36M  10=48M  11=54M   12-19 == MCS0-7(BW20)\n\n");
+
+		i = woal_debug_get_uint((char *) (pos + hgm->pHgmData));
+		if (i){
+			seq_printf(s, "rx_rate[%02d] = %d\n", pos, i);
+		}
+	}
+	else if (pos < rx_max*sizeof(unsigned int)){
+		i = woal_debug_get_uint((char *) (pos + hgm->pHgmData));
+		if (i){
+			seq_printf(s, "rx_rate[%02d] = %d\n", pos/sizeof(unsigned int), i);
+		}
+	}
+	else if (pos < snr_max*sizeof(unsigned int)){
+		i = woal_debug_get_uint((char *) (pos + hgm->pHgmData));
+		if (i){
+			seq_printf(s, "snr[%02ddB] = %d\n", (pos/sizeof(unsigned int)) - rx_max, i);
+		}
+	}
+	else if (pos < nflr_max*sizeof(unsigned int)){
+		i = woal_debug_get_uint((char *) (pos + hgm->pHgmData));
+		if (i){
+			seq_printf(s, "noise_flr[-%02ddBm] = %d\n", ((pos/sizeof(unsigned int))-snr_max)-128, i);
+		}
+	}
+	else if (pos < sigs_max*sizeof(unsigned int)){
+		i = woal_debug_get_uint((char *) (pos + hgm->pHgmData));
+		if (i){
+			seq_printf(s, "sig_strength[-%02ddBm] = %d\n", (pos/sizeof(unsigned int)) - nflr_max, i);
+		}
+	}
+	else{
+		return 0;
+	}
+
 	return 0;
 }
 
-static int
-woal_histogram_proc_open(struct inode *inode, struct file *file)
+static void *
+hgm_seq_next(struct seq_file *s, void *v, loff_t *pos)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-	return single_open(file, woal_histogram_read, PDE_DATA(inode));
-#else
-	return single_open(file, woal_histogram_read, PDE(inode)->data);
-#endif
+	struct _hgm_seq_data *hgm = (struct _hgm_seq_data *) v;
+
+	if ((*pos) >= hgm->histDataSize)     // we are done
+	   return NULL;
+
+	(*pos) += sizeof(unsigned int);                // increase my position counter
+	hgm->pos = *pos;
+
+	return v;
 }
 
-/**
- *  @brief Proc write function for histogram
- *
- *  @param f       file pointer
- *  @param buf     pointer to data buffer
- *  @param count   data number to write
- *  @param off     Offset
- *
- *  @return        number of data
- */
-static ssize_t
-woal_histogram_write(struct file *f, const char __user * buf, size_t count,
-		     loff_t * off)
+static void
+hgm_seq_stop(struct seq_file *s, void *v)
 {
-	struct seq_file *sfp = f->private_data;
-	moal_private *priv = (moal_private *)sfp->private;
-	woal_hist_data_reset(priv);
+	return;
+}
+
+static struct seq_operations hgm_seq_ops = {
+	.start = hgm_seq_start,
+	.next  = hgm_seq_next,
+	.stop  = hgm_seq_stop,
+	.show  = hgm_seq_show
+};
+
+static int hgm_seq_open(struct inode *inode, struct file *file)
+{
+	int ret;
+	ret =  seq_open(file, &hgm_seq_ops);
+	if (!ret){
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+		((struct seq_file *)file->private_data)->private = PDE_DATA(inode);
+#else
+		((struct seq_file *)file->private_data)->private = PDE(inode)->data;
+#endif
+	}
+	return ret;
+}
+
+static unsigned int woal_debug_get_uint(char *pBuf)
+{
+	unsigned int n;
+	mlan_memcpy((void *) &n, (void *) pBuf, sizeof(unsigned int));
+	return n;
+}
+
+static int
+woal_debug_write_histogram(struct file *filp, const char __user *buf,
+	size_t count, loff_t *ppos)
+{
+	mlan_hist_data_clear();
 	return count;
 }
-
-
-
-
 
 /**************** Peers Support ************************/
 
@@ -508,16 +643,6 @@ static t_u16 seq_read_numItemsDone;
 
 static int woal_peer_add_peer(t_s8 snr, t_s8 nf, t_s8 sig_str, mlan_802_11_mac_addr mac);
 static int woal_peer_delete_peer_list();
-
-void* mlan_memcpy(void *pDest, void *pSrc, unsigned int count)
-{
-	char *d = (char *) pDest;
-	char *s = (char *) pSrc;
-	while (count--){
-		*d++ = *s++;
-	}
-	return pDest;
-}
 
 static int peer_get_mgmt_frame_mask(moal_private *priv, int *pmask, int get)
 {
@@ -561,6 +686,31 @@ int peer_seq_unlock()
 	up(&woal_peer_sem);
 	return 0;
 }
+/*
+static void
+peers_seq_init_globals()
+{
+	int i;
+	ENTER();
+
+	if (!hgm_seq_data.pHgmData){
+		hgm_seq_data.histDataSize = (RX_RATE_MAX+SNR_MAX+NOISE_FLR_MAX+SIG_STRENGTH_MAX) * sizeof(unsigned int);
+		hgm_seq_data.pHgmData = (char *) kmalloc(hgm_seq_data.histDataSize, GFP_KERNEL);
+
+		if (!hgm_seq_data.pHgmData){
+			printk(KERN_ERR "hgm_seq_init_globals: Could not allocate memory\n");
+			LEAVE();
+			return;
+		}
+
+		for (i = 0; i < hgm_seq_data.histDataSize; i++)
+			hgm_seq_data.pHgmData[i] = 0;
+	}
+
+	LEAVE();
+	return;
+}
+*/
 
 static void *
 peers_seq_start(struct seq_file *s, loff_t *pos)
@@ -569,14 +719,17 @@ peers_seq_start(struct seq_file *s, loff_t *pos)
 	if ( 0 == *pos) {
             seq_read_numItemsDone = 0;
 	    peer_seq_unlock();
+		PRINTM(MINFO, "peers_seq_start: pos == 0, list_size = %d\n",woal_peer_list_size);
             return &seq_read_numItemsDone;
 	}
 	else if (*pos < woal_peer_list_size) {
 	    peer_seq_unlock();
+		PRINTM(MINFO, "peers_seq_start pos =  %d list_size = %d\n",*pos,woal_peer_list_size);
 	    return &seq_read_numItemsDone;
 	}
 	else {
 	    peer_seq_unlock();
+		PRINTM(MINFO, "peers_seq_start DONE!! pos =  %d\n",*pos);
 	    return NULL;
 	}
 }
@@ -638,6 +791,7 @@ peers_seq_show(struct seq_file *s, void *v)
 
 	}
 
+	PRINTM(MINFO, "peers_seq_show RETURNING: v=%x, numDone=%d\n",v,*pnumItemsDone);
 	peer_seq_unlock();
 	return 0;
 }
@@ -656,10 +810,12 @@ peers_seq_next(struct seq_file *s, void *v, loff_t *pos)
 	}
 
 	if (*pnumItemsDone < woal_peer_list_size){
+		PRINTM(MINFO, "peers_seq_next,retrying:v = %x num_done:%d, list size:%d\n",v,*pnumItemsDone, woal_peer_list_size);
 		peer_seq_unlock();
 		return v;
 	}
 
+	PRINTM(MINFO," peers_seq_next: Done printing (%d items),total=%d\n",*pnumItemsDone,woal_peer_list_size);
 	peer_seq_unlock();
 	return NULL;
 }
@@ -667,6 +823,7 @@ peers_seq_next(struct seq_file *s, void *v, loff_t *pos)
 static void
 peers_seq_stop(struct seq_file *s, void *v)
 {
+	PRINTM(MINFO, "peers_seq_stop\n");
 	return;
 }
 
@@ -781,33 +938,16 @@ woal_debug_write_peers(struct file *filp, const char __user *buf,
 
 	kfree(pdata);
 
+    //PRINTM(MINFO, "woal_debug_write_peers count=%d, r=%d\n",count,r);
+
 return count;
 }
 
 int woal_peer_mgmt_frame_callback( t_s8 snr, t_s8 nf, t_s8 sig_str,
 			           mlan_802_11_mac_addr mac)
 {
-	//woal_peer_add_peer(snr, nf, sig_str, mac);
-	return 0;
-}
-
-
-/**
- *  @brief This function adds management frame callback data
- *
- *  @param priv 		A pointer to moal_private
- *  @param snr			Signal to Noise ratio
- *  @param nf			Noise Floor
- *  @param sig_str		Signal strength
- *  @param mac			MAC address
- *
- *  @return   N/A
- */
-void
-woal_peer_mgmt_frame(moal_private * priv, t_s8 snr, t_s8 nf, t_s8 sig_str,
-			           mlan_802_11_mac_addr mac)
-{
 	woal_peer_add_peer(snr, nf, sig_str, mac);
+	return 0;
 }
 
 static int is_mac_addr_same(t_u8 *a1, t_u8 *a2)
@@ -914,108 +1054,29 @@ int woal_peer_mgmt_frame_ioctl(t_u16 mask)
 	return 0;
 }
 
-/******************* log entry *************************/
-/**
- *  @brief Proc read function for log
- *
- *  @param sfp     pointer to seq_file structure
- *  @param data
- *
- *  @return        Number of output data or MLAN_STATUS_FAILURE
- */
-static int woal_log_read(struct seq_file *sfp, void *data)
-{
-    moal_private *priv = (moal_private *)sfp->private;
-    mlan_ds_get_stats stats;
-    ENTER();
-    if (!priv){
-        LEAVE();
-        return -EFAULT;
-    }
-    if (MODULE_GET == 0) {
-        LEAVE();
-        return -EFAULT;
-    }
-	if (GET_BSS_ROLE(priv) != MLAN_BSS_ROLE_STA){
-		MODULE_PUT;
-		LEAVE();
-		return 0;
-	}
-
-    memset(&stats, 0x00, sizeof(stats));
-    if(MLAN_STATUS_SUCCESS != woal_get_stats_info(priv, MOAL_IOCTL_WAIT, &stats)) {
-	    PRINTM(MERROR, "woal_log_read: Get log: Failed to get stats info!");
-	    MODULE_PUT;
-	    LEAVE();
-	    return -EFAULT;
-    }
-
-    seq_printf(sfp, "mcasttxframe = %d\n", stats.mcast_tx_frame);
-    seq_printf(sfp, "failed = %d\n", stats.failed);
-    seq_printf(sfp, "retry = %d\n", stats.retry);
-    seq_printf(sfp, "multiretry = %d\n", stats.multi_retry);
-    seq_printf(sfp, "framedup = %d\n", stats.frame_dup);
-    seq_printf(sfp, "rtssuccess = %d\n", stats.rts_success);
-    seq_printf(sfp, "rtsfailure = %d\n", stats.rts_failure);
-    seq_printf(sfp, "ackfailure = %d\n", stats.ack_failure);
-    seq_printf(sfp, "rxfrag = %d\n", stats.rx_frag);
-    seq_printf(sfp, "mcastrxframe = %d\n", stats.mcast_rx_frame);
-    seq_printf(sfp, "fcserror = %d\n", stats.fcs_error);
-    seq_printf(sfp, "txframe = %d\n", stats.tx_frame);
-    seq_printf(sfp, "wepicverrcnt-1 = %d\n", stats.wep_icv_error[0]);
-    seq_printf(sfp, "wepicverrcnt-2 = %d\n", stats.wep_icv_error[1]);
-    seq_printf(sfp, "wepicverrcnt-3 = %d\n", stats.wep_icv_error[2]);
-    seq_printf(sfp, "wepicverrcnt-4 = %d\n", stats.wep_icv_error[3]);
-    seq_printf(sfp, "beacon_rcnt = %d\n", stats.bcn_rcv_cnt);
-    seq_printf(sfp, "beacon_mcnt = %d\n", stats.bcn_miss_cnt);
-
-    MODULE_PUT;
-    LEAVE();
-    return 0;
-}
-
-/**
- *  @brief Proc read function for log
- *
- *  @param inode     pointer to inode
- *  @param file       file pointer
- *
- *  @return        number of data
- */
-static int woal_log_proc_open(struct inode *inode, struct file *file)
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-    return single_open(file, woal_log_read, PDE_DATA(inode));
-#else
-    return single_open(file, woal_log_read, PDE(inode)->data);
-#endif
-}
-
 /********************************************************
 		Local Functions
 ********************************************************/
 /**
  *  @brief Proc read function
  *
- *  @param sfp     pointer to seq_file structure
+ *  @param sfp 	   pointer to seq_file structure
  *  @param data
  *
- *  @return        Number of output data or MLAN_STATUS_FAILURE
+ *  @return 	   Number of output data or MLAN_STATUS_FAILURE
  */
 static int
 woal_debug_read(struct seq_file *sfp, void *data)
 {
 	int val = 0;
 	unsigned int i;
-
+#ifdef SDIO_MULTI_PORT_TX_AGGR
+	unsigned int j;
+#endif
 	struct debug_data_priv *items_priv =
 		(struct debug_data_priv *)sfp->private;
 	struct debug_data *d = items_priv->items;
 	moal_private *priv = items_priv->priv;
-#ifdef SDIO_MULTI_PORT_TX_AGGR
-	unsigned int j;
-	t_u8 mp_aggr_pkt_limit = 0;
-#endif
 
 	ENTER();
 
@@ -1036,16 +1097,16 @@ woal_debug_read(struct seq_file *sfp, void *data)
 
 	for (i = 0; i < (unsigned int)items_priv->num_of_items; i++) {
 		if (d[i].size == 1)
-			val = *((t_u8 *)d[i].addr);
+			val = *((t_u8 *) d[i].addr);
 		else if (d[i].size == 2)
-			val = *((t_u16 *)d[i].addr);
+			val = *((t_u16 *) d[i].addr);
 		else if (d[i].size == 4)
-			val = *((t_ptr *)d[i].addr);
+			val = *((t_ptr *) d[i].addr);
 		else {
 			unsigned int j;
 			seq_printf(sfp, "%s=", d[i].name);
 			for (j = 0; j < d[i].size; j += 2) {
-				val = *(t_u16 *)(d[i].addr + j);
+				val = *(t_u16 *) (d[i].addr + j);
 				seq_printf(sfp, "0x%x ", val);
 			}
 			seq_printf(sfp, "\n");
@@ -1059,7 +1120,6 @@ woal_debug_read(struct seq_file *sfp, void *data)
 			seq_printf(sfp, "%s=%d\n", d[i].name, val);
 	}
 #ifdef SDIO_MULTI_PORT_TX_AGGR
-	mp_aggr_pkt_limit = info.mp_aggr_pkt_limit;
 	seq_printf(sfp, "last_recv_wr_bitmap=0x%x last_mp_index=%d\n",
 		   info.last_recv_wr_bitmap, info.last_mp_index);
 	for (i = 0; i < SDIO_MP_DBG_NUM; i++) {
@@ -1067,28 +1127,25 @@ woal_debug_read(struct seq_file *sfp, void *data)
 			   "mp_wr_bitmap: 0x%x mp_wr_ports=0x%x len=%d curr_wr_port=0x%x\n",
 			   info.last_mp_wr_bitmap[i], info.last_mp_wr_ports[i],
 			   info.last_mp_wr_len[i], info.last_curr_wr_port[i]);
-		for (j = 0; j < mp_aggr_pkt_limit; j++) {
+		for (j = 0; j < SDIO_MP_AGGR_DEF_PKT_LIMIT; j++) {
 			seq_printf(sfp, "0x%02x ",
-				   info.last_mp_wr_info[i * mp_aggr_pkt_limit +
-							j]);
+				   info.last_mp_wr_info[i *
+							SDIO_MP_AGGR_DEF_PKT_LIMIT
+							+ j]);
 		}
 		seq_printf(sfp, "\n");
 	}
 	seq_printf(sfp, "SDIO MPA Tx: ");
-	for (i = 0; i < mp_aggr_pkt_limit; i++)
+	for (i = 0; i < SDIO_MP_AGGR_DEF_PKT_LIMIT; i++)
 		seq_printf(sfp, "%d ", info.mpa_tx_count[i]);
 	seq_printf(sfp, "\n");
 #endif
 #ifdef SDIO_MULTI_PORT_RX_AGGR
 	seq_printf(sfp, "SDIO MPA Rx: ");
-	for (i = 0; i < mp_aggr_pkt_limit; i++)
+	for (i = 0; i < SDIO_MP_AGGR_DEF_PKT_LIMIT; i++)
 		seq_printf(sfp, "%d ", info.mpa_rx_count[i]);
 	seq_printf(sfp, "\n");
 #endif
-	seq_printf(sfp, "SDIO MP Update: ");
-	for (i = 0; i < (mp_aggr_pkt_limit * 2); i++)
-		seq_printf(sfp, "%d ", info.mp_update[i]);
-	seq_printf(sfp, "\n");
 	seq_printf(sfp, "tcp_ack_drop_cnt=%d\n", priv->tcp_ack_drop_cnt);
 	seq_printf(sfp, "tcp_ack_cnt=%d\n", priv->tcp_ack_cnt);
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 29)
@@ -1133,37 +1190,29 @@ woal_debug_read(struct seq_file *sfp, void *data)
 			seq_printf(sfp, "\n");
 		}
 	}
-	for (i = 0; i < info.ralist_num; i++) {
-		seq_printf(sfp,
-			   "ralist ra: %02x:%02x:%02x:%02x:%02x:%02x tid=%d pkts=%d pause=%d\n",
-			   info.ralist[i].ra[0], info.ralist[i].ra[1],
-			   info.ralist[i].ra[2], info.ralist[i].ra[3],
-			   info.ralist[i].ra[4], info.ralist[i].ra[5],
-			   info.ralist[i].tid, info.ralist[i].total_pkts,
-			   info.ralist[i].tx_pause);
-	}
-
-	for (i = 0; i < info.tdls_peer_num; i++) {
-		unsigned int j;
-		seq_printf(sfp,
-			   "tdls peer: %02x:%02x:%02x:%02x:%02x:%02x snr=%d nf=%d\n",
-			   info.tdls_peer_list[i].mac_addr[0],
-			   info.tdls_peer_list[i].mac_addr[1],
-			   info.tdls_peer_list[i].mac_addr[2],
-			   info.tdls_peer_list[i].mac_addr[3],
-			   info.tdls_peer_list[i].mac_addr[4],
-			   info.tdls_peer_list[i].mac_addr[5],
-			   info.tdls_peer_list[i].snr,
-			   -info.tdls_peer_list[i].nf);
-		seq_printf(sfp, "htcap: ");
-		for (j = 0; j < sizeof(IEEEtypes_HTCap_t); j++)
-			seq_printf(sfp, "%02x ",
-				   info.tdls_peer_list[i].ht_cap[j]);
-		seq_printf(sfp, "\nExtcap: ");
-		for (j = 0; j < sizeof(IEEEtypes_ExtCap_t); j++)
-			seq_printf(sfp, "%02x ",
-				   info.tdls_peer_list[i].ext_cap[j]);
-		seq_printf(sfp, "\n");
+	if (info.tdls_peer_list) {
+		for (i = 0; i < info.tdls_peer_num; i++) {
+			unsigned int j;
+			seq_printf(sfp,
+				   "tdls peer: %02x:%02x:%02x:%02x:%02x:%02x snr=%d nf=%d\n",
+				   info.tdls_peer_list[i].mac_addr[0],
+				   info.tdls_peer_list[i].mac_addr[1],
+				   info.tdls_peer_list[i].mac_addr[2],
+				   info.tdls_peer_list[i].mac_addr[3],
+				   info.tdls_peer_list[i].mac_addr[4],
+				   info.tdls_peer_list[i].mac_addr[5],
+				   info.tdls_peer_list[i].snr,
+				   -info.tdls_peer_list[i].nf);
+			seq_printf(sfp, "htcap: ");
+			for (j = 0; j < sizeof(IEEEtypes_HTCap_t); j++)
+				seq_printf(sfp, "%02x ",
+					   info.tdls_peer_list[i].ht_cap[j]);
+			seq_printf(sfp, "\nExtcap: ");
+			for (j = 0; j < sizeof(IEEEtypes_ExtCap_t); j++)
+				seq_printf(sfp, "%02x ",
+					   info.tdls_peer_list[i].ext_cap[j]);
+			seq_printf(sfp, "\n");
+		}
 	}
 exit:
 	MODULE_PUT;
@@ -1174,12 +1223,12 @@ exit:
 /**
  *  @brief Proc write function
  *
- *  @param f       file pointer
+ *  @param f	   file pointer
  *  @param buf     pointer to data buffer
  *  @param count   data number to write
  *  @param off     Offset
  *
- *  @return        number of data
+ *  @return 	   number of data
  */
 static ssize_t
 woal_debug_write(struct file *f, const char __user * buf, size_t count,
@@ -1199,7 +1248,6 @@ woal_debug_write(struct file *f, const char __user * buf, size_t count,
 #ifdef DEBUG_LEVEL1
 	t_u32 last_drvdbg = drvdbg;
 #endif
-	gfp_t flag;
 
 	ENTER();
 
@@ -1207,13 +1255,14 @@ woal_debug_write(struct file *f, const char __user * buf, size_t count,
 		LEAVE();
 		return MLAN_STATUS_FAILURE;
 	}
-	flag = (in_atomic() || irqs_disabled())? GFP_ATOMIC : GFP_KERNEL;
-	pdata = kzalloc(count + 1, flag);
+
+	pdata = (char *)kmalloc(count + 1, GFP_KERNEL);
 	if (pdata == NULL) {
 		MODULE_PUT;
 		LEAVE();
 		return 0;
 	}
+	memset(pdata, 0, count + 1);
 
 	if (copy_from_user(pdata, buf, count)) {
 		PRINTM(MERROR, "Copy from user failed\n");
@@ -1246,20 +1295,29 @@ woal_debug_write(struct file *f, const char __user * buf, size_t count,
 			p2++;
 			r = woal_string_to_number(p2);
 			if (d[i].size == 1)
-				*((t_u8 *)d[i].addr) = (t_u8)r;
+				*((t_u8 *) d[i].addr) = (t_u8) r;
 			else if (d[i].size == 2)
-				*((t_u16 *)d[i].addr) = (t_u16)r;
+				*((t_u16 *) d[i].addr) = (t_u16) r;
 			else if (d[i].size == 4)
-				*((t_ptr *)d[i].addr) = (t_ptr)r;
+				*((t_ptr *) d[i].addr) = (t_ptr) r;
 			break;
 		} while (MTRUE);
 	}
 	kfree(pdata);
 
 #ifdef DEBUG_LEVEL1
-	if (last_drvdbg != drvdbg)
+	if (last_drvdbg != drvdbg) {
 		woal_set_drvdbg(priv, drvdbg);
 
+	}
+#endif
+#if 0
+	/* Set debug information */
+	if (woal_set_debug_info(priv, MOAL_PROC_WAIT, &info)) {
+		MODULE_PUT;
+		LEAVE();
+		return 0;
+	}
 #endif
 	MODULE_PUT;
 	LEAVE();
@@ -1285,13 +1343,13 @@ static const struct file_operations debug_proc_fops = {
 	.write = woal_debug_write,
 };
 
-static const struct file_operations histogram_proc_fops = {
-	.owner = THIS_MODULE,
-	.open = woal_histogram_proc_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-	.write = woal_histogram_write,
+static struct file_operations hgm_file_ops = {
+	.owner   = THIS_MODULE,
+	.open    = hgm_seq_open,
+	.write   = woal_debug_write_histogram,
+	.read    = seq_read,
+	.llseek  = seq_lseek,
+	.release = seq_release
 };
 
 static struct file_operations peers_file_ops = {
@@ -1303,13 +1361,6 @@ static struct file_operations peers_file_ops = {
 	.release = seq_release
 };
 
-static const struct file_operations log_proc_fops = {
-    .owner      = THIS_MODULE,
-    .open       = woal_log_proc_open,
-    .read       = seq_read,
-    .llseek     = seq_lseek,
-    .release    = single_release,
-};
 
 /********************************************************
 		Global Functions
@@ -1317,14 +1368,15 @@ static const struct file_operations log_proc_fops = {
 /**
  *  @brief Create debug proc file
  *
- *  @param priv    A pointer to a moal_private structure
+ *  @param priv	   A pointer to a moal_private structure
  *
- *  @return        N/A
+ *  @return 	   N/A
  */
 void
-woal_debug_entry(moal_private *priv)
+woal_debug_entry(moal_private * priv)
 {
 	struct proc_dir_entry *r;
+    struct proc_dir_entry *r2;
     struct proc_dir_entry *r3;
 	int i;
 	int handle_items;
@@ -1337,7 +1389,8 @@ woal_debug_entry(moal_private *priv)
 	}
 #ifdef STA_SUPPORT
 	if (GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_STA) {
-		priv->items_priv.items = kmalloc(sizeof(items), GFP_KERNEL);
+		priv->items_priv.items =
+			(struct debug_data *)kmalloc(sizeof(items), GFP_KERNEL);
 		if (!priv->items_priv.items) {
 			PRINTM(MERROR,
 			       "Failed to allocate memory for debug data\n");
@@ -1346,12 +1399,15 @@ woal_debug_entry(moal_private *priv)
 		}
 		memcpy(priv->items_priv.items, items, sizeof(items));
 		priv->items_priv.num_of_items = ARRAY_SIZE(items);
+        priv->items_priv_hist.num_of_items = 0;
         priv->items_priv_peers.num_of_items = 0;
 	}
 #endif
 #ifdef UAP_SUPPORT
 	if (GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_UAP) {
-		priv->items_priv.items = kmalloc(sizeof(uap_items), GFP_KERNEL);
+		priv->items_priv.items =
+			(struct debug_data *)kmalloc(sizeof(uap_items),
+						     GFP_KERNEL);
 		if (!priv->items_priv.items) {
 			PRINTM(MERROR,
 			       "Failed to allocate memory for debug data\n");
@@ -1364,6 +1420,7 @@ woal_debug_entry(moal_private *priv)
 #endif
 
 	priv->items_priv.priv = priv;
+    priv->items_priv_hist.priv = priv;
     priv->items_priv_peers.priv = priv;
 	handle_items = 9;
 #ifdef SDIO_MMC_DEBUG
@@ -1374,7 +1431,7 @@ woal_debug_entry(moal_private *priv)
 #endif
 	for (i = 1; i <= handle_items; i++)
 		priv->items_priv.items[priv->items_priv.num_of_items -
-				       i].addr += (t_ptr)(priv->phandle);
+				       i].addr += (t_ptr) (priv->phandle);
 
 	/* Create proc entry */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
@@ -1393,25 +1450,25 @@ woal_debug_entry(moal_private *priv)
 		LEAVE();
 		return;
 	}
-	if (priv->bss_type == MLAN_BSS_TYPE_STA ||
-	    priv->bss_type == MLAN_BSS_TYPE_UAP) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
-		r = proc_create_data("histogram", 0644, priv->proc_entry,
-				     &histogram_proc_fops, priv);
-		if (r == NULL)
-#else
-		r = create_proc_entry("histogram", 0644, priv->proc_entry);
-		if (r) {
-			r->data = priv;
-			r->proc_fops = &histogram_proc_fops;
-		} else
+
+	/* Initialize hgm data structure */
+	hgm_seq_init_globals();
+
+	/* Create proc entry for driver histogram data */
+    r2 = create_proc_entry("histogram", 0664, priv->proc_entry);
+    if (r2 == NULL) {
+        LEAVE();
+        return;
+    }
+    r2->data = &priv->items_priv_hist;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
+    r2->owner = THIS_MODULE;
 #endif
-		{
-			PRINTM(MMSG, "Fail to create proc histogram entry\n");
-			LEAVE();
-			return;
-		}
-	}
+    r2->proc_fops = &hgm_file_ops;
+    r2->uid = 0;
+    r2->gid = 1008; // wifi group
+    mlan_hist_data_clear();
+
     r3 = create_proc_entry("peers", 0664, priv->proc_entry);
     if (r3 == NULL) {
         LEAVE();
@@ -1430,48 +1487,27 @@ woal_debug_entry(moal_private *priv)
     woal_peer_list_size = 0;
     sema_init(&woal_peer_sem,1);
 
-    if(priv->bss_type == MLAN_BSS_TYPE_STA || priv->bss_type == MLAN_BSS_TYPE_UAP){
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
-        r = proc_create_data("log", 0644, priv->proc_entry, &log_proc_fops, priv);
-        if (r == NULL)
-#else
-        r = create_proc_entry("log", 0644, priv->proc_entry);
-        if (r) {
-            r->data         = priv;
-            r->proc_fops    = &log_proc_fops;
-        } else
-#endif
-        {
-            PRINTM(MMSG,"Fail to create proc log entry\n");
-	LEAVE();
-            return;
-        }
-    }
     LEAVE();
 }
 
 /**
  *  @brief Remove proc file
  *
- *  @param priv  A pointer to a moal_private structure
+ *  @param priv	 A pointer to a moal_private structure
  *
- *  @return      N/A
+ *  @return 	 N/A
  */
 void
-woal_debug_remove(moal_private *priv)
+woal_debug_remove(moal_private * priv)
 {
 	ENTER();
 
 	kfree(priv->items_priv.items);
 	/* Remove proc entry */
 	remove_proc_entry("debug", priv->proc_entry);
-	if (priv->bss_type == MLAN_BSS_TYPE_STA ||
-	    priv->bss_type == MLAN_BSS_TYPE_UAP)
-		remove_proc_entry("histogram", priv->proc_entry);
+	remove_proc_entry("histogram", priv->proc_entry);
 	woal_peer_delete_peer_list();
 	remove_proc_entry("peers", priv->proc_entry);
-    if(priv->bss_type == MLAN_BSS_TYPE_STA || priv->bss_type == MLAN_BSS_TYPE_UAP)
-        remove_proc_entry("log", priv->proc_entry);
 
 	LEAVE();
 }

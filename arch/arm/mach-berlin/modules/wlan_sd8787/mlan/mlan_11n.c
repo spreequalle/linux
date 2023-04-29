@@ -2,20 +2,25 @@
  *
  *  @brief This file contains functions for 11n handling.
  *
- *  Copyright (C) 2008-2011, Marvell International Ltd.
+ *  (C) Copyright 2008-2014 Marvell International Ltd. All Rights Reserved
  *
- *  This software file (the "File") is distributed by Marvell International
- *  Ltd. under the terms of the GNU General Public License Version 2, June 1991
- *  (the "License").  You may use, redistribute and/or modify this File in
- *  accordance with the terms and conditions of the License, a copy of which
- *  is available by writing to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA or on the
- *  worldwide web at http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
+ *  MARVELL CONFIDENTIAL
+ *  The source code contained or described herein and all documents related to
+ *  the source code ("Material") are owned by Marvell International Ltd or its
+ *  suppliers or licensors. Title to the Material remains with Marvell
+ *  International Ltd or its suppliers and licensors. The Material contains
+ *  trade secrets and proprietary and confidential information of Marvell or its
+ *  suppliers and licensors. The Material is protected by worldwide copyright
+ *  and trade secret laws and treaty provisions. No part of the Material may be
+ *  used, copied, reproduced, modified, published, uploaded, posted,
+ *  transmitted, distributed, or disclosed in any way without Marvell's prior
+ *  express written permission.
  *
- *  THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE
- *  IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE
- *  ARE EXPRESSLY DISCLAIMED.  The License provides additional details about
- *  this warranty disclaimer.
+ *  No license under any patent, copyright, trade secret or other intellectual
+ *  property right is granted to or conferred upon you by disclosure or delivery
+ *  of the Materials, either expressly, by implication, inducement, estoppel or
+ *  otherwise. Any license under such intellectual property rights must be
+ *  express and approved by Marvell in writing.
  *
  */
 
@@ -254,6 +259,85 @@ wlan_11n_ioctl_tx_bf_cap(IN pmlan_adapter pmadapter,
 }
 
 /**
+ *  @brief This function will send delba request to
+ *          the peer in the TxBAStreamTbl
+ *
+ *  @param priv     A pointer to mlan_private
+ *
+ *  @return         N/A
+ */
+void
+wlan_11n_send_delba_to_peer(mlan_private * priv, t_u8 * ra)
+{
+
+	TxBAStreamTbl *ptx_tbl;
+
+	ENTER();
+
+	ptx_tbl = (TxBAStreamTbl *) util_peek_list(priv->adapter->pmoal_handle,
+						   &priv->tx_ba_stream_tbl_ptr,
+						   priv->adapter->callbacks.
+						   moal_spin_lock,
+						   priv->adapter->callbacks.
+						   moal_spin_unlock);
+	if (!ptx_tbl) {
+		LEAVE();
+		return;
+	}
+
+	while (ptx_tbl != (TxBAStreamTbl *) & priv->tx_ba_stream_tbl_ptr) {
+		if (!memcmp
+		    (priv->adapter, ptx_tbl->ra, ra, MLAN_MAC_ADDR_LENGTH)) {
+			PRINTM(MIOCTL, "Tx:Send delba to tid=%d, " MACSTR "\n",
+			       ptx_tbl->tid, MAC2STR(ptx_tbl->ra));
+			wlan_send_delba(priv, MNULL, ptx_tbl->tid, ptx_tbl->ra,
+					1);
+		}
+		ptx_tbl = ptx_tbl->pnext;
+	}
+	/* Signal MOAL to trigger mlan_main_process */
+	wlan_recv_event(priv, MLAN_EVENT_ID_DRV_DEFER_HANDLING, MNULL);
+	LEAVE();
+	return;
+}
+
+/**
+ *  @brief Set/Get control to TX AMPDU configuration on infra link
+ *
+ *  @param pmadapter    A pointer to mlan_adapter structure
+ *  @param pioctl_req   A pointer to ioctl request buffer
+ *
+ *  @return             MLAN_STATUS_SUCCESS --success, otherwise fail
+ */
+static mlan_status
+wlan_11n_ioctl_txaggrctrl(IN pmlan_adapter pmadapter,
+			  IN pmlan_ioctl_req pioctl_req)
+{
+	mlan_status ret = MLAN_STATUS_SUCCESS;
+	mlan_ds_11n_cfg *cfg = MNULL;
+	mlan_private *pmpriv = pmadapter->priv[pioctl_req->bss_index];
+
+	ENTER();
+
+	cfg = (mlan_ds_11n_cfg *) pioctl_req->pbuf;
+	if (pioctl_req->action == MLAN_ACT_GET)
+		cfg->param.txaggrctrl = pmpriv->txaggrctrl;
+	else if (pioctl_req->action == MLAN_ACT_SET)
+		pmpriv->txaggrctrl = (t_u8) cfg->param.txaggrctrl;
+
+	if (pmpriv->media_connected == MTRUE) {
+		if (pioctl_req->action == MLAN_ACT_SET
+		    && !pmpriv->txaggrctrl
+		    && pmpriv->adapter->tdls_status != TDLS_NOT_SETUP)
+			wlan_11n_send_delba_to_peer(pmpriv,
+						    pmpriv->curr_bss_params.
+						    bss_descriptor.mac_address);
+	}
+	LEAVE();
+	return ret;
+}
+
+/**
  *  @brief This function will resend addba request to all
  *          the peer in the TxBAStreamTbl
  *
@@ -340,7 +424,7 @@ wlan_11n_ioctl_addba_param(IN pmlan_adapter pmadapter,
  *
  *  @param priv         A pointer to mlan_priv
  *  @param tid          tid
- *  @return 	        N/A
+ *  @return             N/A
  */
 void
 wlan_11n_delba(mlan_private * priv, int tid)
@@ -949,9 +1033,9 @@ wlan_is_txbastreamptr_valid(mlan_private * priv, TxBAStreamTbl * ptxtblptr)
 
 /**
  *  @brief This function will return the pointer to a entry in BA Stream
- * 	        table which matches the ba_status requested
+ *          table which matches the ba_status requested
  *
- *  @param priv    	    A pointer to mlan_private
+ *  @param priv         A pointer to mlan_private
  *  @param ba_status    Current status of the BA stream
  *
  *  @return             A pointer to first entry matching status in BA stream
@@ -1213,6 +1297,7 @@ wlan_show_dot11ndevcap(pmlan_adapter pmadapter, t_u32 cap)
 	       (ISSUPP_SHORTGI20(cap) ? "supported" : "not supported"));
 	PRINTM(MINFO, "GET_HW_SPEC: LDPC coded packet receive %s\n",
 	       (ISSUPP_RXLDPC(cap) ? "supported" : "not supported"));
+
 	PRINTM(MINFO, "GET_HW_SPEC: Number of Delayed Block Ack streams = %d\n",
 	       GET_DELAYEDBACK(cap));
 	PRINTM(MINFO,
@@ -1300,8 +1385,9 @@ wlan_ret_11n_delba(mlan_private * priv, HostCmd_DS_COMMAND * resp)
 		if (ptx_ba_tbl)
 			wlan_send_addba(priv, ptx_ba_tbl->tid, ptx_ba_tbl->ra);
 	} else {		/*
-				 * In case of failure, recreate the deleted stream in
-				 * case we initiated the ADDBA
+				 * In case of failure, recreate
+				 * the deleted stream in case
+				 * we initiated the ADDBA
 				 */
 		if (INITIATOR_BIT(pdel_ba->del_ba_param_set)) {
 			wlan_11n_create_txbastream_tbl(priv,
@@ -1646,7 +1732,7 @@ wlan_ret_reject_addba_req(IN pmlan_private pmpriv,
 /**
  * @brief Get second channel offset
  *
- * @param chan 			  channel num
+ * @param chan            channel num
  * @return                second channel offset
  */
 t_u8
@@ -1681,7 +1767,6 @@ wlan_get_second_channel_offset(int chan)
 	case 161:
 		chan2Offset = SEC_CHAN_BELOW;
 		break;
-	case 140:
 	case 165:
 		/* Special Case: 20Mhz-only Channel */
 		chan2Offset = SEC_CHAN_NONE;
@@ -1768,9 +1853,8 @@ wlan_cmd_append_11n_tlv(IN mlan_private * pmpriv,
 			       sizeof(IEEEtypes_Header_t),
 			       pht_info->header.len);
 
-			if (!ISSUPP_CHANWIDTH40(usr_dot_11n_dev_cap)) {
+			if (!ISSUPP_CHANWIDTH40(usr_dot_11n_dev_cap))
 				RESET_CHANWIDTH40(pht_info->ht_info.field2);
-			}
 
 			*ppbuffer += sizeof(MrvlIETypes_HTInfo_t);
 			ret_len += sizeof(MrvlIETypes_HTInfo_t);
@@ -1916,6 +2000,9 @@ wlan_11n_cfg_ioctl(IN pmlan_adapter pmadapter, IN pmlan_ioctl_req pioctl_req)
 	case MLAN_OID_11N_CFG_TX_BF_CAP:
 		status = wlan_11n_ioctl_tx_bf_cap(pmadapter, pioctl_req);
 		break;
+	case MLAN_OID_11N_CFG_TX_AGGR_CTRL:
+		status = wlan_11n_ioctl_txaggrctrl(pmadapter, pioctl_req);
+		break;
 	default:
 		pioctl_req->status_code = MLAN_ERROR_IOCTL_INVALID;
 		status = MLAN_STATUS_FAILURE;
@@ -1999,7 +2086,7 @@ wlan_11n_deleteall_txbastream_tbl(mlan_private * priv)
  *          table which matches the give RA/TID pair
  *
  *  @param priv    A pointer to mlan_private
- *  @param tid	   TID to find in reordering table
+ *  @param tid     TID to find in reordering table
  *  @param ra      RA to find in reordering table
  *
  *  @return        A pointer to first entry matching RA/TID in BA stream
@@ -2048,7 +2135,7 @@ wlan_11n_get_txbastream_tbl(mlan_private * priv, int tid, t_u8 * ra)
  *
  *  @param priv      A pointer to mlan_private
  *  @param ra        RA to find in reordering table
- *  @param tid	     TID to find in reordering table
+ *  @param tid       TID to find in reordering table
  *  @param ba_status BA stream status to create the stream with
  *
  *  @return          N/A
@@ -2066,10 +2153,14 @@ wlan_11n_create_txbastream_tbl(mlan_private * priv,
 		PRINTM(MDAT_D, "get_txbastream_tbl TID %d\n", tid);
 		DBG_HEXDUMP(MDAT_D, "RA", ra, MLAN_MAC_ADDR_LENGTH);
 
-		pmadapter->callbacks.moal_malloc(pmadapter->pmoal_handle,
-						 sizeof(TxBAStreamTbl),
-						 MLAN_MEM_DEF,
-						 (t_u8 **) & new_node);
+		if (pmadapter->callbacks.
+		    moal_malloc(pmadapter->pmoal_handle, sizeof(TxBAStreamTbl),
+				MLAN_MEM_DEF, (t_u8 **) & new_node)) {
+			PRINTM(MERROR,
+			       "wlan_11n_create_txbastream_tbl Failed to allocate new_node\n");
+			LEAVE();
+			return;
+		}
 		util_init_list((pmlan_linked_list) new_node);
 
 		new_node->tid = tid;
@@ -2090,7 +2181,7 @@ wlan_11n_create_txbastream_tbl(mlan_private * priv,
  *  @brief This function will send a block ack to given tid/ra
  *
  *  @param priv     A pointer to mlan_private
- *  @param tid	    TID to send the ADDBA
+ *  @param tid      TID to send the ADDBA
  *  @param peer_mac MAC address to send the ADDBA
  *
  *  @return         MLAN_STATUS_SUCCESS or MLAN_STATUS_FAILURE
@@ -2179,7 +2270,7 @@ wlan_send_delba(mlan_private * priv, pmlan_ioctl_req pioctl_req, int tid,
 
 /**
  *  @brief This function handles the command response of
- *  		delete a block ack request
+ *          delete a block ack request
  *
  *  @param priv		A pointer to mlan_private structure
  *  @param del_ba	A pointer to command response buffer
