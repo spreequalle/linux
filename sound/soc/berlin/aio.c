@@ -133,3 +133,23 @@ void AIO_SetCtl(UNSG32 id, UNSG32 data_fmt, UNSG32 width_word, UNSG32 width_samp
 	GA_REG_WORD32_WRITE(address, (reg.u32));
 }
 
+void AIO_SetFlush(UNSG32 id, UNSG32 tsd, UNSG32 flush)
+{
+	UNSG32 base, offset, address;
+	T32AUDCH_CTRL reg;
+
+	base = MEMMAP_I2S_REG_BASE;
+	switch (id) {
+	case AIO_SEC:
+		offset = RA_AIO_SEC + RA_SEC_TSD;
+		break;
+	default:
+		offset = RA_AIO_SEC + RA_SEC_TSD;
+		break;
+        }
+
+	address = base + offset + RA_AUDCH_CTRL;
+	GA_REG_WORD32_READ(address, &(reg.u32));
+	reg.uCTRL_FLUSH = CutTo(flush, bAUDCH_CTRL_FLUSH);
+	GA_REG_WORD32_WRITE(address, (reg.u32));
+}

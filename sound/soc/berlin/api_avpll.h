@@ -23,4 +23,8 @@
 
 int AVPLL_Set(int grpId, int chanId, unsigned int avFreq);
 
+double AVPLL_AdjustPPM(double ppm_delta);
+
+void AVPLL_GetPPM(double *ppm_base, double *ppm_now);
+
 #endif

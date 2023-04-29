@@ -56,7 +56,7 @@ typedef struct
 } CLK_FREQ;
 
 //all the VCO freq reqired for video and audio in MHz
-double berlin_vcoFreqs[]=
+double avpll_vcoFreqs[]=
 {
 	1512,   //8 bit HDMI and 12 bit HMDI
 	1620,   //12 bit HDMI
@@ -69,7 +69,7 @@ double berlin_vcoFreqs[]=
 };
 
 //from Section 7 table
-unsigned char berlin_avpllRegFBDIV[]=
+unsigned char avpll_avpllRegFBDIV[]=
 {
 	60,  //VCO_FREQ_1_512G,
 	65,  //VCO_FREQ_1_620G,
@@ -84,7 +84,7 @@ unsigned char berlin_avpllRegFBDIV[]=
 //from Section 7 table, bit18 is sign bit
 //Note that sign bit=0 for negative
 //sign bit=1 for positive
-unsigned int berlin_avpllRegFREQ_OFFSET_C8[]=
+unsigned int avpll_avpllRegFREQ_OFFSET_C8[]=
 {
 	(33554),       //VCO_FREQ_1_512G,
 	((1<<18)|(12905)),//VCO_FREQ_1_620G,
@@ -96,7 +96,7 @@ unsigned int berlin_avpllRegFREQ_OFFSET_C8[]=
 	((1<<18)|(7049)),//VCO_FREQ_2_970G,
 };
 
-unsigned int berlin_avpllRegSPEED[]=
+unsigned int avpll_avpllRegSPEED[]=
 {
 	0x2,    //1.5G<F<=1.7G , for 1.512G
 	0x2,    //1.5G<F<=1.7G , for 1.62G
@@ -114,7 +114,7 @@ unsigned int berlin_avpllRegSPEED[]=
 /*Interpolator current setting for different frequency
  VCO Frequency '  INTPI
 */
-unsigned int berlin_avpllRegINTPI[]=
+unsigned int avpll_avpllRegINTPI[]=
 {
 	0x3,    //for 1.512G
 	0x3,    //for 1.62G
@@ -126,7 +126,7 @@ unsigned int berlin_avpllRegINTPI[]=
 	0xb,    //for 2.97G
 };
 
-unsigned int berlin_avpllRegINTPR[]=
+unsigned int avpll_avpllRegINTPR[]=
 {
 	0x4,    //for 1.512G
 	0x4,    //for 1.62G
@@ -140,13 +140,46 @@ unsigned int berlin_avpllRegINTPR[]=
 
 volatile SIE_avPll regSIE_avPll;
 int vcoFreqIndex = VCO_FREQ_2_160G;
-int berlin_pll_A_VCO_Setting = VCO_FREQ_2_160G;
-int berlin_pll_B_VCO_Setting = VCO_FREQ_1_620G;
+int avpll_pll_A_VCO_Setting = VCO_FREQ_2_160G;
+int avpll_pll_B_VCO_Setting = VCO_FREQ_1_620G;
 static CLK_FREQ clk_freqs_computed[VCO_FREQ_2_970G+1];
 
-void cpu_cycle_count_delay(SIGN32 ns)
+/* PPM Adjustment methods */
+static int avpll_inited = 0;
+static double org_ppm = 0.0;
+static double cur_ppm = 0.0;
+
+#define OFFSET_SIZE    19
+#define ONE_MILLION    1000000.0
+#define OFFSET_MULTIPLIER_REFERENCE            ((double)(1<<22))
+
+static double offset_2_ppm(int offset) {
+	int v = offset & 0x3ffff;
+	if(offset & 0x40000) v = -v;
+	return -((ONE_MILLION * v)/(OFFSET_MULTIPLIER_REFERENCE + v));
+}
+
+// This is used to convert the real_ppm to nominal reference frequency to real base ref frequency.
+// Fx/Fr = (1+ ppm_real) = Fx/f0*f0/Fr = (1+Offset_X/P)(1+ppm0) then Offset_X = P*(ppm_real-ppm0)/(1+ppm0)
+// however the input parameter ppm = ppm0+ ppm_real(delta) so offset_X = P*(ppm -2*ppm0)/(1+ppm0)
+static int HARD_LIMITER_19BITS(int x)
 {
-	unsigned int start,diff, end;
+	int max_limit = (1 << (OFFSET_SIZE - 1)) - 1;
+	int min_limit = ~(max_limit - 1);
+	return clamp_val(x, min_limit, max_limit);
+}
+
+static int ppm_2_offset(double ppm, double ppm0)
+{
+	double c = OFFSET_MULTIPLIER_REFERENCE * (ppm - 2*ppm0) / (ONE_MILLION + ppm0);
+	int offset = (int)c;
+	offset = HARD_LIMITER_19BITS(offset);
+	return (offset < 0) ? ((-offset) | 0x40000) : offset;
+}
+
+static void cpu_cycle_count_delay(SIGN32 ns)
+{
+	unsigned int start, diff, end;
 
 	GA_REG_WORD32_READ(0xF7E82C04, &start);
 
@@ -159,7 +192,7 @@ void cpu_cycle_count_delay(SIGN32 ns)
 	} while(diff < ns/10);
 }
 
-int berlin_gcd(unsigned int m, unsigned int n)
+static int avpll_gcd(unsigned int m, unsigned int n)
 {
 	int rem;
 	while(n!=0) {
@@ -171,7 +204,7 @@ int berlin_gcd(unsigned int m, unsigned int n)
 	return(m);
 }
 
-int berlin_compute_freq_setting(unsigned int vco_freq_index, unsigned int target_freq)
+static int avpll_compute_freq_setting(unsigned int vco_freq_index, unsigned int target_freq)
 {
 	double offset, offset_percent;
 	double divider;
@@ -185,7 +218,7 @@ int berlin_compute_freq_setting(unsigned int vco_freq_index, unsigned int target
 
 	//.5 divider is only used when divider is less than 24
 	//This matches the settings in audio freq table in the IP doc
-	ratio = berlin_vcoFreqs[vco_freq_index]*1000000/target_freq;
+	ratio = avpll_vcoFreqs[vco_freq_index]*1000000/target_freq;
 
 	if(ratio < 24) {
 		//allow 0.5 divider, round to closest 0.5
@@ -201,7 +234,7 @@ int berlin_compute_freq_setting(unsigned int vco_freq_index, unsigned int target
 	clk_freqs_computed[vco_freq_index].post_div=((int)(divider));
 
 	//now figure out the offset
-	offset_percent = (target_freq*divider/1000000 - berlin_vcoFreqs[vco_freq_index])/berlin_vcoFreqs[vco_freq_index];
+	offset_percent = (target_freq*divider/1000000 - avpll_vcoFreqs[vco_freq_index])/avpll_vcoFreqs[vco_freq_index];
 
 	offset = 4194304*offset_percent/(1+offset_percent);
 
@@ -217,8 +250,8 @@ int berlin_compute_freq_setting(unsigned int vco_freq_index, unsigned int target
 		else offset-=0.5;
 
 		clk_freqs_computed[vco_freq_index].freq_offset = (int)(offset);
-		gcd_val= berlin_gcd(berlin_vcoFreqs[vco_freq_index]*1000000, target_freq*divider);
-		vco_ratio = (int)(berlin_vcoFreqs[vco_freq_index]*1000000/gcd_val);
+		gcd_val= avpll_gcd(avpll_vcoFreqs[vco_freq_index]*1000000, target_freq*divider);
+		vco_ratio = (int)(avpll_vcoFreqs[vco_freq_index]*1000000/gcd_val);
 		freq_ratio = (int)(target_freq*divider/gcd_val);
 
 		if((gcd_val/1000)<1000) {
@@ -233,21 +266,21 @@ int berlin_compute_freq_setting(unsigned int vco_freq_index, unsigned int target
 	return 0;
 }
 
-static void berlin_powerDownChannel(SIE_avPll *avPllBase, int chId)
+static void avpll_powerDownChannel(SIE_avPll *avPllBase, int chId)
 {
 	PHY_HOST_Bus_Read32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl1, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl1);
 	((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].uctrl_PU = 0;
 	PHY_HOST_Bus_Write32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl1, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl1);
 }
 
-static void berlin_powerUpChannel(SIE_avPll *avPllBase, int chId)
+static void avpll_powerUpChannel(SIE_avPll *avPllBase, int chId)
 {
 	PHY_HOST_Bus_Read32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl1, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl1);
 	((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].uctrl_PU = 1;
 	PHY_HOST_Bus_Write32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl1, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl1);
 }
 
-void berlin_powerDown(SIE_avPll *avPllBase)
+static void avpll_powerDown(SIE_avPll *avPllBase)
 {
 	int chId;
 
@@ -257,7 +290,7 @@ void berlin_powerDown(SIE_avPll *avPllBase)
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlPLL, regSIE_avPll.u32avPll_ctrlPLL);
 
 	for(chId=1; chId<=7; chId++) {
-		berlin_powerDownChannel(avPllBase, chId);
+		avpll_powerDownChannel(avPllBase, chId);
 	}
 
 	//avPllBase->ie_C8.uctrl_PU = 0;
@@ -266,12 +299,12 @@ void berlin_powerDown(SIE_avPll *avPllBase)
 	PHY_HOST_Bus_Write32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
 }
 
-void berlin_powerUp(SIE_avPll *avPllBase)
+static void avpll_powerUp(SIE_avPll *avPllBase)
 {
 	int chId;
 
 	for(chId=1; chId<=7; chId++) {
-		berlin_powerUpChannel(avPllBase, chId);
+		avpll_powerUpChannel(avPllBase, chId);
 	}
 
 	//avPllBase->ie_C8.uctrl_PU = 1;
@@ -285,7 +318,7 @@ void berlin_powerUp(SIE_avPll *avPllBase)
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlPLL, regSIE_avPll.u32avPll_ctrlPLL);
 }
 
-void berlin_assertPllReset(SIE_avPll *avPllBase)
+static void avpll_assertPllReset(SIE_avPll *avPllBase)
 {
 	//assert reset
 	//avPllBase->uctrlPLL_RESET=1;
@@ -295,7 +328,7 @@ void berlin_assertPllReset(SIE_avPll *avPllBase)
 }
 
 //assert reset for channel1 to 7
-void berlin_assertCxReset(SIE_avPll *avPllBase)
+static void avpll_assertCxReset(SIE_avPll *avPllBase)
 {
 	int chId;
 
@@ -307,7 +340,7 @@ void berlin_assertCxReset(SIE_avPll *avPllBase)
 	}
 }
 
-void berlin_setVDDL_VCOref(SIE_avPll *avPllBase)
+static void avpll_setVDDL_VCOref(SIE_avPll *avPllBase)
 {
 	//T32avPll_ctrlPLL ctrlPLL;
 	//ctrlPLL.u32 = avPllBase->u32avPll_ctrlPLL;
@@ -322,7 +355,7 @@ void berlin_setVDDL_VCOref(SIE_avPll *avPllBase)
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlPLL, regSIE_avPll.u32avPll_ctrlPLL);
 }
 
-void berlin_deassertPllReset(SIE_avPll *avPllBase)
+static void avpll_deassertPllReset(SIE_avPll *avPllBase)
 {
 	volatile int i;
 
@@ -336,7 +369,7 @@ void berlin_deassertPllReset(SIE_avPll *avPllBase)
 }
 
 //assert reset for channel1 to 7
-void berlin_deassertCxReset(SIE_avPll *avPllBase)
+static void avpll_deassertCxReset(SIE_avPll *avPllBase)
 {
 	int chId;
 
@@ -348,7 +381,7 @@ void berlin_deassertCxReset(SIE_avPll *avPllBase)
 	}
 }
 
-void berlin_calibrate(SIE_avPll *avPllBase, double fvco)
+static void avpll_calibrate(SIE_avPll *avPllBase, double fvco)
 {
 	volatile int i=100000;
 	//MV_TimeSpec_t Time_Start, Time_End;
@@ -401,60 +434,60 @@ void berlin_calibrate(SIE_avPll *avPllBase, double fvco)
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlCAL, regSIE_avPll.u32avPll_ctrlCAL);
 }
 
-void berlin_setVCO(SIE_avPll *avPllBase, int vco_freq_index)
+static void avpll_setVCO(SIE_avPll *avPllBase, int vco_freq_index)
 {
 	//first power done PLL and Channels
-	berlin_powerDown(avPllBase);
+	avpll_powerDown(avPllBase);
 
 	//assert resets
-	berlin_assertPllReset(avPllBase);
-	berlin_assertCxReset(avPllBase);
+	avpll_assertPllReset(avPllBase);
+	avpll_assertCxReset(avPllBase);
 
 	//change VDDL and VCO_ref to meet duty cycle
-	berlin_setVDDL_VCOref(avPllBase);
+	avpll_setVDDL_VCOref(avPllBase);
 
 	//power up PLL and channels
-	berlin_powerUp(avPllBase);
+	avpll_powerUp(avPllBase);
 
 	// @yeliu: power down these channels by hardcoded, only for bg2cdp
-	berlin_powerDownChannel(avPllBase, 5);
-	berlin_powerDownChannel(avPllBase, 6);
+	avpll_powerDownChannel(avPllBase, 5);
+	avpll_powerDownChannel(avPllBase, 6);
 
 	//following settings are done under reset to improve long term reliability
-	//avPllBase->uctrlPLL_FBDIV = berlin_avpllRegFBDIV[vco_freq_index];
+	//avPllBase->uctrlPLL_FBDIV = avpll_avpllRegFBDIV[vco_freq_index];
 	PHY_HOST_Bus_Read32(avPllBase->u32avPll_ctrlPLL, regSIE_avPll.u32avPll_ctrlPLL);
-	regSIE_avPll.uctrlPLL_FBDIV = berlin_avpllRegFBDIV[vco_freq_index];
+	regSIE_avPll.uctrlPLL_FBDIV = avpll_avpllRegFBDIV[vco_freq_index];
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlPLL, regSIE_avPll.u32avPll_ctrlPLL);
 
-	//avPllBase->uctrlINTP_INTPI = berlin_avpllRegINTPI[vco_freq_index];
+	//avPllBase->uctrlINTP_INTPI = avpll_avpllRegINTPI[vco_freq_index];
 	PHY_HOST_Bus_Read32(avPllBase->u32avPll_ctrlINTP, regSIE_avPll.u32avPll_ctrlINTP);
-	regSIE_avPll.uctrlINTP_INTPI = berlin_avpllRegINTPI[vco_freq_index];
+	regSIE_avPll.uctrlINTP_INTPI = avpll_avpllRegINTPI[vco_freq_index];
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlINTP, regSIE_avPll.u32avPll_ctrlINTP);
 
-	//avPllBase->uctrlINTP_INTPR = berlin_avpllRegINTPR[vco_freq_index];
+	//avPllBase->uctrlINTP_INTPR = avpll_avpllRegINTPR[vco_freq_index];
 	PHY_HOST_Bus_Read32(avPllBase->u32avPll_ctrlINTP, regSIE_avPll.u32avPll_ctrlINTP);
-	regSIE_avPll.uctrlINTP_INTPR = berlin_avpllRegINTPR[vco_freq_index];
+	regSIE_avPll.uctrlINTP_INTPR = avpll_avpllRegINTPR[vco_freq_index];
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlINTP, regSIE_avPll.u32avPll_ctrlINTP);
 
-	//avPllBase->uctrlPLL_EXT_SPEED = berlin_avpllRegSPEED[vco_freq_index];
+	//avPllBase->uctrlPLL_EXT_SPEED = avpll_avpllRegSPEED[vco_freq_index];
 	PHY_HOST_Bus_Read32(avPllBase->u32avPll_ctrlPLL1, regSIE_avPll.u32avPll_ctrlPLL1);
-	regSIE_avPll.uctrlPLL_EXT_SPEED = berlin_avpllRegSPEED[vco_freq_index];
+	regSIE_avPll.uctrlPLL_EXT_SPEED = avpll_avpllRegSPEED[vco_freq_index];
 	PHY_HOST_Bus_Write32(avPllBase->u32avPll_ctrlPLL1, regSIE_avPll.u32avPll_ctrlPLL1);
 
-	//(avPllBase->ie_C8).uctrl_FREQ_OFFSET = berlin_avpllRegFREQ_OFFSET_C8[vco_freq_index];
+	//(avPllBase->ie_C8).uctrl_FREQ_OFFSET = avpll_avpllRegFREQ_OFFSET_C8[vco_freq_index];
 	PHY_HOST_Bus_Read32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
-	(regSIE_avPll.ie_C8).uctrl_FREQ_OFFSET = berlin_avpllRegFREQ_OFFSET_C8[vco_freq_index];
+	(regSIE_avPll.ie_C8).uctrl_FREQ_OFFSET = avpll_avpllRegFREQ_OFFSET_C8[vco_freq_index];
 	PHY_HOST_Bus_Write32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
 
 	if(avPllBase == AVPLL_A)
-		berlin_pll_A_VCO_Setting = vco_freq_index;
+		avpll_pll_A_VCO_Setting = vco_freq_index;
 	else
-		berlin_pll_B_VCO_Setting = vco_freq_index;
+		avpll_pll_B_VCO_Setting = vco_freq_index;
 
 	//deassert resets
-	berlin_deassertCxReset(avPllBase);
+	avpll_deassertCxReset(avPllBase);
 
-	berlin_deassertPllReset(avPllBase);
+	avpll_deassertPllReset(avPllBase);
 
 	//toggle the offset_rdy bit
 	//(avPllBase->ie_C8).uctrl_FREQ_OFFSET_READY = 1;
@@ -471,10 +504,10 @@ void berlin_setVCO(SIE_avPll *avPllBase, int vco_freq_index)
 	PHY_HOST_Bus_Write32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
 
 	//do calibration
-	berlin_calibrate(avPllBase, berlin_vcoFreqs[vco_freq_index]);
+	avpll_calibrate(avPllBase, avpll_vcoFreqs[vco_freq_index]);
 }
 
-void berlin_setChanOffset(SIE_avPll *avPllBase, int offset, int chId)
+static void avpll_setChanOffset(SIE_avPll *avPllBase, int offset, int chId)
 {
 	unsigned int reg_offset = 0;
 	double ppm_from_offset;
@@ -506,7 +539,7 @@ void berlin_setChanOffset(SIE_avPll *avPllBase, int offset, int chId)
 	PHY_HOST_Bus_Write32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl1, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl1);
 }
 
-void berlin_setDPll(SIE_avPll *avPllBase, int enable, int p_sync1, int p_sync2, int chId)
+static void avpll_setDPll(SIE_avPll *avPllBase, int enable, int p_sync1, int p_sync2, int chId)
 {
 	T32avpllCh_ctrl1 avpll_ch_ctrl1_data;
 	T32avpllCh_ctrl2 avpll_ch_ctrl2_data;
@@ -538,7 +571,7 @@ void berlin_setDPll(SIE_avPll *avPllBase, int enable, int p_sync1, int p_sync2, 
 	}
 }
 
-void berlin_set_Post_Div(SIE_avPll *avPllBase, int div, int chId)
+static void avpll_set_Post_Div(SIE_avPll *avPllBase, int div, int chId)
 {
 	//((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].uctrl_POSTDIV = div;
 	PHY_HOST_Bus_Read32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl);
@@ -546,7 +579,7 @@ void berlin_set_Post_Div(SIE_avPll *avPllBase, int div, int chId)
 	PHY_HOST_Bus_Write32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl);
 }
 
-void berlin_set_Post_0P5_Div(SIE_avPll *avPllBase, int enable, int chId)
+static void avpll_set_Post_0P5_Div(SIE_avPll *avPllBase, int enable, int chId)
 {
 	//((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].uctrl_POSTDIV_0P5 = enable;
 	PHY_HOST_Bus_Read32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl);
@@ -554,14 +587,14 @@ void berlin_set_Post_0P5_Div(SIE_avPll *avPllBase, int enable, int chId)
 	PHY_HOST_Bus_Write32(((SIE_avpllCh *)(&(avPllBase->ie_C1)))[chId-1].u32avpllCh_ctrl, ((SIE_avpllCh *)&(regSIE_avPll.ie_C1))[chId-1].u32avpllCh_ctrl);
 }
 
-int berlin_clockFreq_computed(SIE_avPll *avPllBase, int freqIndex, int chId)
+static int avpll_clockFreq_computed(SIE_avPll *avPllBase, int freqIndex, int chId)
 {
-	int berlin_pll_VCO_Setting;
+	int avpll_pll_VCO_Setting;
 
 	if(avPllBase == AVPLL_A) {
-		berlin_pll_VCO_Setting=berlin_pll_A_VCO_Setting;
+		avpll_pll_VCO_Setting=avpll_pll_A_VCO_Setting;
 	} else {
-		berlin_pll_VCO_Setting=berlin_pll_B_VCO_Setting;
+		avpll_pll_VCO_Setting=avpll_pll_B_VCO_Setting;
 	}
 
 	if(freqIndex > (sizeof(clk_freqs_computed) / sizeof(CLK_FREQ))) {
@@ -572,32 +605,32 @@ int berlin_clockFreq_computed(SIE_avPll *avPllBase, int freqIndex, int chId)
 		return 1;
 	}
 
-	if(berlin_pll_VCO_Setting != clk_freqs_computed[freqIndex].vco_freq_index) {
-		berlin_setVCO(avPllBase, clk_freqs_computed[freqIndex].vco_freq_index);
+	if(avpll_pll_VCO_Setting != clk_freqs_computed[freqIndex].vco_freq_index) {
+		avpll_setVCO(avPllBase, clk_freqs_computed[freqIndex].vco_freq_index);
 	}
 
 	//change offset
-	berlin_setChanOffset(avPllBase, clk_freqs_computed[freqIndex].freq_offset, chId);
+	avpll_setChanOffset(avPllBase, clk_freqs_computed[freqIndex].freq_offset, chId);
 
 	//change p_sync
-	berlin_setDPll(avPllBase, (clk_freqs_computed[freqIndex].p_sync1!=0),
+	avpll_setDPll(avPllBase, (clk_freqs_computed[freqIndex].p_sync1!=0),
 			clk_freqs_computed[freqIndex].p_sync1,
 			clk_freqs_computed[freqIndex].p_sync2, chId);
 
 	//update now div
-	berlin_set_Post_Div(avPllBase, clk_freqs_computed[freqIndex].post_div, chId);
-	berlin_set_Post_0P5_Div(avPllBase, clk_freqs_computed[freqIndex].post_div_0p5, chId);
+	avpll_set_Post_Div(avPllBase, clk_freqs_computed[freqIndex].post_div, chId);
+	avpll_set_Post_0P5_Div(avPllBase, clk_freqs_computed[freqIndex].post_div_0p5, chId);
 
 	return 0;
 }
 
-int berlin_clockFreq(SIE_avPll *avPllBase, int vco_freq_index, unsigned int target_freq, int chId)
+static int avpll_clockFreq(SIE_avPll *avPllBase, int vco_freq_index, unsigned int target_freq, int chId)
 {
-	if(berlin_compute_freq_setting(vco_freq_index, target_freq)) {
+	if(avpll_compute_freq_setting(vco_freq_index, target_freq)) {
 		return 1;
 	} else {
 		//frequency ok, set it
-		berlin_clockFreq_computed(avPllBase, vco_freq_index, chId);
+		avpll_clockFreq_computed(avPllBase, vco_freq_index, chId);
 	}
 
 	return 0;
@@ -606,8 +639,53 @@ int berlin_clockFreq(SIE_avPll *avPllBase, int vco_freq_index, unsigned int targ
 int AVPLL_Set(int grpId, int chanId, unsigned int avFreq)
 {
 	if(grpId == 0)
-		berlin_clockFreq(AVPLL_A, vcoFreqIndex, avFreq, chanId);
+		avpll_clockFreq(AVPLL_A, vcoFreqIndex, avFreq, chanId);
 
 	return 0;
 }
 
+static void avpll_get_ppm(double *ppm_base, double *ppm_now)
+{
+	if(ppm_base) *ppm_base = org_ppm;
+	if(ppm_now) *ppm_now = cur_ppm;
+}
+
+static double avpll_adjust_ppm(double ppm_delta)
+{
+	double ppm0, ppm;
+	SIE_avPll *avPllBase;
+
+	avPllBase = (SIE_avPll *)AVPLL_A;
+	PHY_HOST_Bus_Read32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
+	if (avpll_inited == 0) {
+		ppm0 = offset_2_ppm((regSIE_avPll.ie_C8).uctrl_FREQ_OFFSET);
+		cur_ppm = org_ppm = ppm0;
+		avpll_inited = 1;
+	}
+	else {
+		ppm0 = org_ppm;
+	}
+	cur_ppm += ppm_delta;
+	ppm = cur_ppm;
+
+	(regSIE_avPll.ie_C8).uctrl_FREQ_OFFSET = ppm_2_offset(ppm, org_ppm);
+	PHY_HOST_Bus_Write32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
+	//toggle the offset_rdy bit
+	(regSIE_avPll.ie_C8).uctrl_FREQ_OFFSET_READY = 1;
+	PHY_HOST_Bus_Write32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
+	//add some delay for Fvco=3GHz pulse>172ns, For Fvco=1.5GHz pulse>344ns
+	cpu_cycle_count_delay(1000);
+	(regSIE_avPll.ie_C8).uctrl_FREQ_OFFSET_READY = 0;
+	PHY_HOST_Bus_Write32((avPllBase->ie_C8).u32avpllCh8_ctrl1, (regSIE_avPll.ie_C8).u32avpllCh8_ctrl1);
+	return ppm - ppm0;
+}
+
+double AVPLL_AdjustPPM(double ppm_delta)
+{
+	return avpll_adjust_ppm(ppm_delta);
+}
+
+void AVPLL_GetPPM(double *ppm_base, double *ppm_now)
+{
+	avpll_get_ppm(ppm_base, ppm_now);
+}

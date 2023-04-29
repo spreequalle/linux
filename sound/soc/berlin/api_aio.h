@@ -99,4 +99,15 @@ void AIO_SetAudChEn(UNSG32 id, UNSG32 tsd, UNSG32 enable);
 *******************************************************************************/
 void AIO_SetAudChMute(UNSG32 id, UNSG32 tsd, UNSG32 mute);
 
+/*******************************************************************************
+* Function:    AIO_SetFlush(UNSG32 id, UNSG32 tsd, UNSG32 flush)
+* Description: Enable/Disable Audio Output Channels
+* Inputs:      id           -- audio port
+*              tsd          -- audio channel pair
+*              flush        -- flush control
+* Outputs:     none
+* Return:      none
+*******************************************************************************/
+void AIO_SetFlush(UNSG32 id, UNSG32 tsd, UNSG32 flush);
+
 #endif

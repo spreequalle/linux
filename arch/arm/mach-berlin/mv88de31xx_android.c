@@ -105,7 +105,7 @@ static __initdata struct board_config {
       "16M(kernel)"__RO__ ","                          \
       "60M(recovery),"                                 \
       "80M(backupsys),"                                \
-      "16M(factory_store)" __RO__ ","                  \
+      "16M(factory_store),"                            \
       "400M(rootfs)" __RRO__","                        \
       "300M(cache),"                                   \
       "1024M(userdata),"                               \
@@ -135,7 +135,7 @@ static __initdata struct board_config {
       "48M(recovery),"                                       \
       "96M(backupsys),"                                      \
       "8M(fts)ro,"                                           \
-      "16M(factory_store)" __RO__ ","                        \
+      "16M(factory_store),"                                  \
       "8M(bbt)ro"
       .mtdparts = EUREKA_B2_MTDPARTS("ro"),
       .mtdparts_ro = EUREKA_B2_MTDPARTS("ro"),
@@ -196,47 +196,11 @@ static __initdata struct board_config {
       .mtdparts_ro = SALAMI_PROTO_MTDPARTS("ro","ro"),
       .mtdparts_recovery = SALAMI_PROTO_MTDPARTS("",""),
     },
-    { .name = "lexx-b1",
-      .board_rev = 1,
+    { .name = "lexx-b3",
+      .board_rev = 3,
       .default_root = "/dev/mtdblock:rootfs",
       .reboot_notifier = bcb_fts_reboot_hook,
-
-      /* 512MB SLC, 2K page size, 128K block size */
-      /*
-       * MTD partition name has to be shorter than 14 bytes due to
-       * limitation of Android init.
-       */
-#define LEXX_B1_MTDPARTS(__RO__,__RRO__)             \
-      "mv_nand:"                                       \
-      "128K(block0)ro," /* flash config params */      \
-      "1M(prebootloader)" __RO__ "," /* 8x copies */   \
-      "4M(TZ)" __RO__ ","                              \
-      "4M(TZ-B)" __RO__ ","                            \
-      "1M(postbootloader)" __RO__ ","                  \
-      "1M(postbootloader-B)" __RO__ ","                \
-      "8M(kernel)" __RO__ ","                          \
-      "110M(rootfs)" __RRO__","                        \
-      "332160K(cache),"                                \
-      "40M(userdata),"                                 \
-      "15M(recovery),"                                 \
-      "512K(fts)ro,"                                   \
-      "2M(factory_store)" __RO__ ","                   \
-      "1M@511M(bbt)ro"
-      .mtdparts = LEXX_B1_MTDPARTS("ro",""),
-      .mtdparts_ro = LEXX_B1_MTDPARTS("ro","ro"),
-      .mtdparts_recovery = LEXX_B1_MTDPARTS("",""),
-    },
-    { .name = "lexx-b2",
-      .board_rev = 2,
-      .default_root = "/dev/mtdblock:rootfs",
-      .reboot_notifier = bcb_fts_reboot_hook,
-
-      /* 256MB SLC, 2K page size, 128K block size */
-      /*
-       * MTD partition name has to be shorter than 14 bytes due to
-       * limitation of Android init.
-       */
-#define LEXX_B2_MTDPARTS(__RO__,__RRO__)             \
+#define LEXX_B3_MTDPARTS(__RO__,__RRO__)             \
       "mv_nand:"                                       \
       "128K(block0)ro," /* flash config params */      \
       "1M(prebootloader)" __RO__ "," /* 8x copies */   \
@@ -249,20 +213,11 @@ static __initdata struct board_config {
       "117120K(cache),"                                \
       "15M(recovery),"                                 \
       "512K(fts)ro,"                                   \
-      "2M(factory_store)" ","                   \
+      "2M(factory_store)" ","                          \
       "1M@255M(bbt)ro"
-      .mtdparts = LEXX_B2_MTDPARTS("ro",""),
-      .mtdparts_ro = LEXX_B2_MTDPARTS("ro","ro"),
-      .mtdparts_recovery = LEXX_B2_MTDPARTS("",""),
-    },
-    { .name = "lexx-b3",
-      .board_rev = 3,
-      .default_root = "/dev/mtdblock:rootfs",
-      .reboot_notifier = bcb_fts_reboot_hook,
-      /* lexx-b3 uses same partition map as lexx-b2 */
-      .mtdparts = LEXX_B2_MTDPARTS("ro",""),
-      .mtdparts_ro = LEXX_B2_MTDPARTS("ro","ro"),
-      .mtdparts_recovery = LEXX_B2_MTDPARTS("",""),
+      .mtdparts = LEXX_B3_MTDPARTS("ro",""),
+      .mtdparts_ro = LEXX_B3_MTDPARTS("ro","ro"),
+      .mtdparts_recovery = LEXX_B3_MTDPARTS("",""),
     },
     { .name = "lexx-b4",
       .board_rev = 4,
@@ -286,7 +241,7 @@ static __initdata struct board_config {
       "90M(rootfs)" __RRO__","                            \
       "146944K(cache),"                                   \
       "9728K(recovery),"                                  \
-      "1M(factory_store)" ","                             \
+      "1M(factory_store)" __RO__ ","                      \
       "512K(fts)ro,"                                      \
       "384K(bbt)ro"
       .mtdparts = LEXX_B4_MTDPARTS("ro",""),
@@ -297,19 +252,19 @@ static __initdata struct board_config {
       .board_rev = 1,
       .default_root = "/dev/mtdblock:rootfs",
       .reboot_notifier = bcb_fts_reboot_hook,
-      /* earth-b1 uses same partition map as lexx-b2 */
-      .mtdparts = LEXX_B2_MTDPARTS("ro",""),
-      .mtdparts_ro = LEXX_B2_MTDPARTS("ro","ro"),
-      .mtdparts_recovery = LEXX_B2_MTDPARTS("",""),
+      /* earth-b1 uses same partition map as lexx-b3 */
+      .mtdparts = LEXX_B3_MTDPARTS("ro",""),
+      .mtdparts_ro = LEXX_B3_MTDPARTS("ro","ro"),
+      .mtdparts_recovery = LEXX_B3_MTDPARTS("",""),
     },
     { .name = "earth-b2",
       .board_rev = 2,
       .default_root = "/dev/mtdblock:rootfs",
       .reboot_notifier = bcb_fts_reboot_hook,
-      /* earth-b2 uses same partition map as lexx-b2 */
-      .mtdparts = LEXX_B2_MTDPARTS("ro",""),
-      .mtdparts_ro = LEXX_B2_MTDPARTS("ro","ro"),
-      .mtdparts_recovery = LEXX_B2_MTDPARTS("",""),
+      /* earth-b2 uses same partition map as lexx-b3 */
+      .mtdparts = LEXX_B3_MTDPARTS("ro",""),
+      .mtdparts_ro = LEXX_B3_MTDPARTS("ro","ro"),
+      .mtdparts_recovery = LEXX_B3_MTDPARTS("",""),
     },
     { .name = "earth-b3",
       .board_rev = 3,
@@ -362,7 +317,7 @@ static __initdata struct board_config {
       "90M(rootfs)" __RRO__","                            \
       "146944K(cache),"                                   \
       "9472K(recovery),"                                  \
-      "1M(factory_store)" ","                             \
+      "1M(factory_store)" __RO__ ","                      \
       "512K(fts)ro,"                                      \
       "384K(bbt)ro"
       .mtdparts = EARTH_B4_MTDPARTS("ro",""),
@@ -374,9 +329,9 @@ static __initdata struct board_config {
       .default_root = "/dev/mtdblock:rootfs",
       .reboot_notifier = bcb_fts_reboot_hook,
       /* hendrix-b1 uses same partition map as lexx-b2 */
-      .mtdparts = LEXX_B2_MTDPARTS("ro",""),
-      .mtdparts_ro = LEXX_B2_MTDPARTS("ro","ro"),
-      .mtdparts_recovery = LEXX_B2_MTDPARTS("",""),
+      .mtdparts = LEXX_B3_MTDPARTS("ro",""),
+      .mtdparts_ro = LEXX_B3_MTDPARTS("ro","ro"),
+      .mtdparts_recovery = LEXX_B3_MTDPARTS("",""),
     },
     { .name = "hendrix-b3",
       .board_rev = 3,

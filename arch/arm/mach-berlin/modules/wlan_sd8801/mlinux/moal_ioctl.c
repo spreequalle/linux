@@ -66,6 +66,7 @@ typedef struct _region_code_mapping_t {
 	t_u8 code;
 } region_code_mapping_t;
 
+#define EU_REGION_CODE 0x30
 /** Region code mapping table */
 static region_code_mapping_t region_code_mapping[] = {
 	{"US ", 0x10},		/* US FCC */
@@ -74,7 +75,6 @@ static region_code_mapping_t region_code_mapping[] = {
 	{"EU ", 0x30},		/* ETSI */
 	{"AU ", 0x30},		/* Australia */
 	{"KR ", 0x30},		/* Republic Of Korea */
-	{"FR ", 0x32},		/* France */
 	{"CN ", 0x50},		/* China */
 	{"JP ", 0xFF},		/* Japan special */
 };
@@ -89,6 +89,14 @@ static region_code_mapping_t hw_region_code_mapping[] = {
 	{"FR ", 0x32},		/* France */
 	{"JP ", 0x40},		/* Japan */
 	{"JP ", 0x41},		/* Japan */
+};
+/** Country code for ETSI */
+static t_u8 eu_country_code_table[][COUNTRY_CODE_LEN] = {
+	"AL", "AD", "AT", "AU", "BY", "BE", "BA", "BG", "HR", "CY",
+	"CZ", "DK", "EE", "FI", "FR", "MK", "DE", "GR", "HU", "IS",
+	"IE", "IT", "KR", "LV", "LI", "LT", "LU", "MT", "MD", "MC",
+	"ME", "NL", "NO", "PL", "RO", "RU", "SM", "RS", "SI", "SK",
+	"ES", "SE", "CH", "TR", "UA", "UK", "GB"
 };
 #endif
 
@@ -131,6 +139,15 @@ region_string_2_region_code(char *region_string)
 			    strlen(region_string))) {
 			LEAVE();
 			return region_code_mapping[i].code;
+		}
+	}
+/* If still not found, look for code in EU country code table */
+	for (i = 0; i < ARRAY_SIZE(eu_country_code_table); i++) {
+		if (!memcmp(region_string, eu_country_code_table[i],
+                     COUNTRY_CODE_LEN - 1)) {
+			PRINTM(MIOCTL, "found region code=%d in EU table\n",EU_REGION_CODE);
+			LEAVE();
+			return EU_REGION_CODE;
 		}
 	}
 	/* Default is US */
