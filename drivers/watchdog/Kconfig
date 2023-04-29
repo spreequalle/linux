@@ -213,10 +213,9 @@ config SA1100_WATCHDOG
 
 config DW_WATCHDOG
 	tristate "Synopsys DesignWare watchdog"
-	depends on ARM && HAVE_CLK
 	help
 	  Say Y here if to include support for the Synopsys DesignWare
-	  watchdog timer found in many ARM chips.
+	  watchdog timer found in many chips.
 	  To compile this driver as a module, choose M here: the
 	  module will be called dw_wdt.
 
@@ -364,6 +363,17 @@ config IMX2_WDT
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx2_wdt.
+
+config MV88DE3100_WDT
+	tristate "Mv88de3100+ Watchdog"
+	depends on ARCH_BERLIN
+	help
+	  This is the driver for the hardware watchdog on the Marvell
+	  MV88DE3100 processor. If you wish to have watchdog support
+	  enabled, say Y, otherwise say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mv88de3100_wdt.
 
 # AVR32 Architecture
 

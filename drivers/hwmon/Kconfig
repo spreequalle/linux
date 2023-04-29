@@ -865,6 +865,7 @@ config SENSORS_MCP3021
 	  This driver can also be built as a module.  If so, the module
 	  will be called mcp3021.
 
+
 config SENSORS_NTC_THERMISTOR
 	tristate "NTC thermistor support"
 	help
@@ -1197,6 +1198,12 @@ config SENSORS_TMP421
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called tmp421.
+
+config SENSORS_TSEN_ADC33
+	tristate "TSEN ADC33 sensor"
+	depends on ARCH_BERLIN
+	help
+	  if you say yes here you get support for TSEN ADC33.
 
 config SENSORS_TWL4030_MADC
 	tristate "Texas Instruments TWL4030 MADC Hwmon"

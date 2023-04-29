@@ -657,19 +657,19 @@ static int __init logger_init(void)
 {
 	int ret;
 
-	ret = create_log(LOGGER_LOG_MAIN, 256*1024);
+	ret = create_log(LOGGER_LOG_MAIN, 512*1024);
 	if (unlikely(ret))
 		goto out;
 
-	ret = create_log(LOGGER_LOG_EVENTS, 256*1024);
+	ret = create_log(LOGGER_LOG_EVENTS, 1*1024);
 	if (unlikely(ret))
 		goto out;
 
-	ret = create_log(LOGGER_LOG_RADIO, 256*1024);
+	ret = create_log(LOGGER_LOG_RADIO, 1*1024);
 	if (unlikely(ret))
 		goto out;
 
-	ret = create_log(LOGGER_LOG_SYSTEM, 256*1024);
+	ret = create_log(LOGGER_LOG_SYSTEM, 16*1024);
 	if (unlikely(ret))
 		goto out;
 
