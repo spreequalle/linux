@@ -495,7 +495,7 @@ static int snd_berlin_playback_open(struct snd_pcm_substream *substream)
 	AIO_SetAudChEn(AIO_SEC, AIO_TSD0, AUDCH_CTRL_ENABLE_ENABLE);
 	AIO_SetAudChMute(AIO_SEC, AIO_TSD0, AUDCH_CTRL_MUTE_MUTE_ON);
 
-	snd_printd("%s: finished.\n", __func__);
+	snd_printk("%s: finished.\n", __func__);
 	return 0;
 }
 
@@ -505,7 +505,7 @@ static int snd_berlin_playback_close(struct snd_pcm_substream *substream)
 
 	DhubEnableIntr(0, &AG_dhubHandle, avioDhubChMap_ag_SA0_R_A0, 0);
 	free_irq(vec_num, substream);
-	snd_printd("%s: finished.\n", __func__);
+	snd_printk("%s: finished.\n", __func__);
 	return 0;
 }
 
@@ -829,6 +829,60 @@ static struct snd_pcm_ops snd_berlin_playback_ops = {
 	.ack     = snd_berlin_playback_ack,
 };
 
+static int snd_berlin_rate_offset_control_info(
+	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 1;
+	uinfo->value.integer.min = -500;
+	uinfo->value.integer.max = 500;
+	uinfo->value.integer.step = 1;
+	return 0;
+}
+
+static int double_to_int(double ppm)
+{
+	return ppm >= 0 ? ppm + 0.5: ppm - 0.5;
+}
+
+static int snd_berlin_rate_offset_control_get(
+	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	double ppm_base, ppm_now;
+	AVPLL_GetPPM(&ppm_base, &ppm_now);
+	ucontrol->value.integer.value[0] = double_to_int(ppm_now - ppm_base);
+	return 0;
+}
+
+static int snd_berlin_rate_offset_control_put(
+	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	double ppm_base, ppm_now;
+	int ppm = ucontrol->value.integer.value[0];
+	if ((ppm < -500) || (ppm > 500))
+		return -1;
+	AVPLL_GetPPM(&ppm_base, &ppm_now);
+	int current_ppm = double_to_int(ppm_base - ppm_now);
+	if (ppm != current_ppm) {
+		AVPLL_AdjustPPM(ppm_base - ppm_now + ppm);
+		return 1;
+	}
+	return 0;
+}
+
+static struct snd_kcontrol_new snd_berlin_rate_offset_control = {
+	.iface = SNDRV_CTL_ELEM_IFACE_PCM,
+	.name = "PCM Playback Rate Offset",
+	.index = 0,
+	.device = 0,
+	.subdevice = 0,
+	.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+	.private_value = 0xffff,
+	.info = snd_berlin_rate_offset_control_info,
+	.get = snd_berlin_rate_offset_control_get,
+	.put = snd_berlin_rate_offset_control_put
+};
+
 static int snd_berlin_card_new_pcm(struct snd_berlin_chip *chip)
 {
 	struct snd_pcm *pcm;
@@ -836,6 +890,11 @@ static int snd_berlin_card_new_pcm(struct snd_berlin_chip *chip)
 
 	if ((err =
 	snd_pcm_new(chip->card, "Berlin ALSA PCM", 0, 1, 0, &pcm)) < 0)
+		return err;
+
+	err = snd_ctl_add(chip->card,
+	snd_ctl_new1(&snd_berlin_rate_offset_control, chip));
+	if (err < 0)
 		return err;
 
 	chip->pcm = pcm;
@@ -852,24 +911,6 @@ static int snd_berlin_card_new_pcm(struct snd_berlin_chip *chip)
 static int snd_berlin_hwdep_dummy_op(struct snd_hwdep *hw, struct file *file)
 {
 	return 0;
-}
-
-static int berlin_set_ppm(double ppm)
-{
-	double ppm_base, ppm_now;
-	if ((ppm < -500) || (ppm > 500))
-		return -1;
-	AVPLL_GetPPM(&ppm_base, &ppm_now);
-	AVPLL_AdjustPPM(ppm_base - ppm_now + ppm);
-	return 0;
-}
-
-static double berlin_get_ppm(void)
-{
-	double ppm, ppm_base, ppm_now;
-	AVPLL_GetPPM(&ppm_base, &ppm_now);
-	ppm = ppm_now - ppm_base;
-	return ((int)(ppm >= 0 ? ppm + 0.5: ppm - 0.5));
 }
 
 static int snd_berlin_hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
@@ -890,20 +931,6 @@ static int snd_berlin_hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 				return -EFAULT;
 			atomic_set(&g_output_mode, mode);
 			return 0;
-		}
-		case SNDRV_BERLIN_GET_CLOCK_PPM: {
-			double ppm = berlin_get_ppm();
-			int bytes_not_copied =
-				copy_to_user((void*)arg, &ppm, sizeof(ppm));
-			return bytes_not_copied == 0 ? 0 : -EFAULT;
-		}
-		case SNDRV_BERLIN_SET_CLOCK_PPM : {
-			double ppm;
-			int bytes_not_copied =
-				copy_from_user(&ppm, (void*)arg, sizeof(ppm));
-			if (bytes_not_copied)
-				return -EFAULT;
-			return berlin_set_ppm(ppm);
 		}
 		default:
 			return -EINVAL;
@@ -934,7 +961,6 @@ static int snd_berlin_card_new_hwdep(struct snd_berlin_chip *chip)
 static void snd_berlin_private_free(struct snd_card *card)
 {
 	struct snd_berlin_chip *chip = card->private_data;
-
 	kfree(chip);
 }
 

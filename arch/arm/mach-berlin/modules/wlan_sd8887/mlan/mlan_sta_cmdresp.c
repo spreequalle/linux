@@ -57,7 +57,7 @@ Change log:
  */
 static void
 wlan_process_cmdreps_error_tdls_operation(mlan_private *pmpriv,
-					  HostCmd_DS_COMMAND *resp)
+					  HostCmd_DS_COMMAND *resp, mlan_ioctl_req *pioctl_buf)
 {
 	mlan_adapter *pmadapter = pmpriv->adapter;
 	HostCmd_DS_TDLS_OPER *ptdls_oper_data = &(resp->params.tdls_oper_data);
@@ -71,12 +71,14 @@ wlan_process_cmdreps_error_tdls_operation(mlan_private *pmpriv,
 	sta_ptr = wlan_get_station_entry(pmpriv, ptdls_oper_data->peer_mac);
 	switch (ptdls_oper_data->tdls_action) {
 	case TDLS_CREATE:
-		/* TDLS create command error */
-		PRINTM(MERROR,
-		       "TDLS CREATE operation: command error, reason %d\n",
-		       reason);
-		if (reason != TDLS_LINK_EXISTS && sta_ptr)
+		if (reason != TDLS_LINK_EXISTS && sta_ptr) {
+                  	/* TDLS create command error */
+			PRINTM(MERROR,
+		       		"TDLS CREATE operation: command error, reason %d\n",reason);
 			sta_ptr->status = TDLS_SETUP_FAILURE;
+                }
+		if(reason == TDLS_LINK_EXISTS && pioctl_buf)
+                	pioctl_buf->status_code = MLAN_STATUS_SUCCESS;
 		break;
 	case TDLS_CONFIG:
 		/* TDLS config command error */
@@ -227,7 +229,7 @@ wlan_process_cmdresp_error(mlan_private *pmpriv, HostCmd_DS_COMMAND *resp,
 		}
 		break;
 	case HostCmd_CMD_TDLS_OPERATION:
-		wlan_process_cmdreps_error_tdls_operation(pmpriv, resp);
+		wlan_process_cmdreps_error_tdls_operation(pmpriv, resp, pioctl_buf);
 		break;
 
 	case HostCmd_CMD_802_11_ASSOCIATE:
