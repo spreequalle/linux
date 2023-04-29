@@ -4899,6 +4899,7 @@ woal_set_user_scan_ioctl(moal_private *priv, struct iwreq *wrq)
 		return MLAN_STATUS_FAILURE;
 	}
 	handle->scan_pending_on_block = MTRUE;
+	handle->scan_priv = priv;
 
 	/* Allocate an IOCTL request buffer */
 	req = woal_alloc_mlan_ioctl_req(sizeof(mlan_ds_scan) +
@@ -4928,6 +4929,7 @@ woal_set_user_scan_ioctl(moal_private *priv, struct iwreq *wrq)
 		wireless_send_event(priv->netdev, SIOCGIWSCAN, &wrqu, NULL);
 	}
 	handle->scan_pending_on_block = MFALSE;
+	handle->scan_priv = NULL;
 	MOAL_REL_SEMAPHORE(&handle->async_sem);
 
 done:

@@ -1737,7 +1737,15 @@ woal_cfg80211_del_beacon(struct wiphy *wiphy, struct net_device *dev)
 		LEAVE();
 		return 0;
 	}
+	if (priv->bss_started != MTRUE){
+        	PRINTM(MMSG,"wlan: AP already stopped!");
+        	LEAVE();
+        	return 0;        
+    	}   
 	PRINTM(MMSG, "wlan: Stoping AP\n");
+#ifdef STA_SUPPORT
+    	woal_cancel_scan(priv,MOAL_IOCTL_WAIT);
+#endif	
 	woal_deauth_all_station(priv);
 	/* if the bss is still running, then stop it */
 	if (priv->bss_started == MTRUE) {

@@ -239,9 +239,10 @@
 #define HDMIRX_INTR_VSI_STOP			0x09
 #define HDMIRX_INTR_GMD_PKT			0x0A
 
-#define RA_Vpp_HDMI_ctrl    0x10068
-#define MSK32HDMI_ctrl_DAMP 0x7FF80000
-#define MSK32HDMI_ctrl_EAMP 0x00000FFF
+#define RA_Vpp_HDMI_ctrl			0x10068
+#define MSK32HDMI_ctrl_DAMP			0x7FF80000
+#define MSK32HDMI_ctrl_EAMP			0x00000FFF
+#define MSK32HDMI_ctrl_PD_TX 			0x0000003C
 
 #ifdef BERLIN_BOOTLOGO
 #define MEMMAP_AVIO_BCM_REG_BASE			0xF7B50000
@@ -2716,6 +2717,11 @@ static void amp_power_off_hdmi() {
 	addr = SOC_VPP_BASE + RA_Vpp_HDMI_ctrl + 4;
 	GA_REG_WORD32_READ(addr, &value);
 	value &= (~MSK32HDMI_ctrl_EAMP);
+	GA_REG_WORD32_WRITE(addr, value);
+
+	addr = SOC_VPP_BASE + RA_Vpp_HDMI_ctrl;
+	GA_REG_WORD32_READ(addr, &value);
+	value |= (MSK32HDMI_ctrl_PD_TX);
 	GA_REG_WORD32_WRITE(addr, value);
 }
 

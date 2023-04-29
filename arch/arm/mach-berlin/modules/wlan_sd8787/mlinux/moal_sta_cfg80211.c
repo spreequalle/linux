@@ -2582,83 +2582,47 @@ woal_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *dev,
 {
 	int ret = -ENOENT;
 	moal_private *priv = (moal_private *) woal_get_netdev_priv(dev);
-	mlan_bss_info bss_info;
 	enum ieee80211_band band;
-
 	ChanStatistics_t *pchan_stats = NULL;
 	mlan_scan_resp scan_resp;
-	t_u8 index = 0;
-	int i;
 
 	ENTER();
 	PRINTM(MIOCTL, "dump_survey idx=%d\n", idx);
-	if ((GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_STA) && priv->media_connected
-	    && idx == 0) {
-		memset(&bss_info, 0, sizeof(bss_info));
-		if (MLAN_STATUS_SUCCESS !=
-		    woal_get_bss_info(priv, MOAL_IOCTL_WAIT, &bss_info)) {
-			ret = -EFAULT;
-			goto done;
-		}
-		band = woal_band_cfg_to_ieee_band(bss_info.bss_band);
-		survey->channel =
-			ieee80211_get_channel(wiphy,
-					      ieee80211_channel_to_frequency
-					      (bss_info.bss_chan
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39) || defined(COMPAT_WIRELESS)
-					       , band
-#endif
-					      ));
-
-		if (bss_info.bcn_nf_last) {
-			survey->filled = SURVEY_INFO_NOISE_DBM;
-			survey->noise = bss_info.bcn_nf_last;
-		}
-		ret = 0;
-	} else {
-		memset(&scan_resp, 0, sizeof(scan_resp));
-		if (MLAN_STATUS_SUCCESS != woal_get_scan_table(priv,
-							       MOAL_IOCTL_WAIT,
-							       &scan_resp)) {
-			ret = -EFAULT;
-			goto done;
-		}
-		pchan_stats = (ChanStatistics_t *) scan_resp.pchan_stats;
-		for (i = 0; i < scan_resp.num_in_chan_stats; i++) {
-			if (pchan_stats[i].cca_scan_duration) {
-				if (idx == index) {
-					memset(survey, 0,
-					       sizeof(struct survey_info));
-					band = woal_band_cfg_to_ieee_band
-						(pchan_stats[i].bandconfig);
-					survey->channel =
-						ieee80211_get_channel(wiphy,
-								      ieee80211_channel_to_frequency
-								      (pchan_stats
-								       [i].
-								       chan_num
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39) || defined(COMPAT_WIRELESS)
-								       , band
-#endif
-								      ));
-					survey->filled =
-						SURVEY_INFO_NOISE_DBM |
-						SURVEY_INFO_CHANNEL_TIME |
-						SURVEY_INFO_CHANNEL_TIME_BUSY;
-					survey->noise = pchan_stats[i].noise;
-					survey->channel_time =
-						pchan_stats[i].
-						cca_scan_duration;
-					survey->channel_time_busy =
-						pchan_stats[i].
-						cca_busy_duration;
-					ret = 0;
-					goto done;
-				}
-				index++;
-			}
-		}
+	memset(&scan_resp, 0, sizeof(scan_resp));
+	if (MLAN_STATUS_SUCCESS != woal_get_scan_table(priv,
+		    MOAL_IOCTL_WAIT, &scan_resp)) {
+		ret = -EFAULT;
+		goto done;
 	}
+	pchan_stats = (ChanStatistics_t *) scan_resp.pchan_stats;
+	if (idx >= scan_resp.num_in_chan_stats || idx < 0){
+		ret = -EFAULT;
+		goto done;
+	}
+	if(idx == scan_resp.num_in_chan_stats || !pchan_stats[idx].cca_scan_duration)
+		goto done;
+	ret = 0;
+	memset(survey, 0, sizeof(*survey));
+	band = woal_band_cfg_to_ieee_band(pchan_stats[idx].bandconfig);
+	survey->channel = ieee80211_get_channel(wiphy, ieee80211_channel_to_frequency(pchan_stats[idx].chan_num
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39) || defined(COMPAT_WIRELESS)
+                , band
+#endif
+            ));
+	survey->filled = SURVEY_INFO_NOISE_DBM;
+	survey->noise = pchan_stats[idx].noise;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37) || defined(COMPAT_WIRELESS)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
+	survey->filled |= SURVEY_INFO_TIME | SURVEY_INFO_TIME_BUSY;
+	survey->time = pchan_stats[idx].cca_scan_duration;
+	survey->time_busy = pchan_stats[idx].cca_busy_duration;
+#else
+	survey->filled |= SURVEY_INFO_CHANNEL_TIME | SURVEY_INFO_CHANNEL_TIME_BUSY;
+	survey->channel_time = pchan_stats[idx].cca_scan_duration;
+	survey->channel_time_busy = pchan_stats[idx].cca_busy_duration;
+#endif
+#endif
+
 done:
 	LEAVE();
 	return ret;

@@ -3537,6 +3537,7 @@ woal_request_scan(moal_private *priv,
 		return MLAN_STATUS_FAILURE;
 	}
 	handle->scan_pending_on_block = MTRUE;
+	handle->scan_priv = priv;
 
 	/* Allocate an IOCTL request buffer */
 	ioctl_req = woal_alloc_mlan_ioctl_req(sizeof(mlan_ds_scan));
@@ -4109,6 +4110,7 @@ woal_request_userscan(moal_private *priv,
 		return MLAN_STATUS_FAILURE;
 	}
 	handle->scan_pending_on_block = MTRUE;
+	handle->scan_priv = priv;
 
 	/* Allocate an IOCTL request buffer */
 	ioctl_req =
@@ -4138,6 +4140,7 @@ done:
 
 	if (ret == MLAN_STATUS_FAILURE) {
 		handle->scan_pending_on_block = MFALSE;
+		handle->scan_priv = NULL;
 		MOAL_REL_SEMAPHORE(&handle->async_sem);
 	}
 	LEAVE();
@@ -4287,13 +4290,13 @@ woal_cancel_scan(moal_private *priv, t_u8 wait_option)
 	mlan_ioctl_req *req = NULL;
 	mlan_status ret = MLAN_STATUS_SUCCESS;
 	moal_handle *handle = priv->phandle;
+	moal_private *scan_priv = handle->scan_priv;
 #ifdef STA_CFG80211
 	unsigned long flags;
-	moal_private *scan_priv = handle->scan_priv;
 #endif
 
 	/* If scan is in process, cancel the scan command */
-	if (!handle->scan_pending_on_block)
+	if (!handle->scan_pending_on_block || !scan_priv)
 		return ret;
 	req = woal_alloc_mlan_ioctl_req(sizeof(mlan_ds_scan));
 	if (req == NULL) {
@@ -4303,7 +4306,7 @@ woal_cancel_scan(moal_private *priv, t_u8 wait_option)
 	req->req_id = MLAN_IOCTL_SCAN;
 	req->action = MLAN_ACT_SET;
 	((mlan_ds_scan *)req->pbuf)->sub_command = MLAN_OID_SCAN_CANCEL;
-	ret = woal_request_ioctl(priv, req, wait_option);
+	ret = woal_request_ioctl(scan_priv, req, wait_option);
 	handle->scan_pending_on_block = MFALSE;
 	MOAL_REL_SEMAPHORE(&handle->async_sem);
 #ifdef STA_CFG80211
@@ -4315,10 +4318,10 @@ woal_cancel_scan(moal_private *priv, t_u8 wait_option)
 		else
 		cfg80211_scan_done(handle->scan_request, MFALSE);
 		handle->scan_request = NULL;
-		handle->scan_priv = NULL;
 	}
 	spin_unlock_irqrestore(&handle->scan_req_lock, flags);
 #endif
+	handle->scan_priv = NULL;
 done:
 	if (ret != MLAN_STATUS_PENDING)
 		kfree(req);

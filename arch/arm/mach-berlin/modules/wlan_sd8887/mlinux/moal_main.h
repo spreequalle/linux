@@ -1344,13 +1344,13 @@ struct _moal_handle {
 #ifdef STA_SUPPORT
 	/** Scan pending on blocked flag */
 	t_u8 scan_pending_on_block;
+	/** Scan Private pointer */
+        moal_private *scan_priv;
 	/** Async scan semaphore */
 	struct semaphore async_sem;
 #ifdef STA_CFG80211
 	/** CFG80211 scan request description */
 	struct cfg80211_scan_request *scan_request;
-	/** Scan Private pointer */
-	moal_private *scan_priv;
 #endif
 #endif
 	/** main state */

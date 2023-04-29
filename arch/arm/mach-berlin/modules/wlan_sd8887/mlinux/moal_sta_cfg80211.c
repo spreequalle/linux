@@ -2403,7 +2403,6 @@ woal_cfg80211_scan(struct wiphy *wiphy, struct net_device *dev,
 	}
 	spin_lock_irqsave(&priv->phandle->scan_req_lock, flags);
 	priv->phandle->scan_request = request;
-	priv->phandle->scan_priv = priv;
 	spin_unlock_irqrestore(&priv->phandle->scan_req_lock, flags);
 	memset(&scan_req, 0x00, sizeof(scan_req));
 

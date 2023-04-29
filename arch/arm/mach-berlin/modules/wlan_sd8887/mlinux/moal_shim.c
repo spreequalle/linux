@@ -1022,7 +1022,6 @@ moal_recv_event(IN t_void *pmoal_handle, IN pmlan_event pmevent)
 							   MFALSE);
 						priv->phandle->scan_request =
 							NULL;
-						priv->phandle->scan_priv = NULL;
 					}
 					spin_unlock_irqrestore(&priv->phandle->
 							       scan_req_lock,
@@ -1044,6 +1043,7 @@ moal_recv_event(IN t_void *pmoal_handle, IN pmlan_event pmevent)
 		}
 		if (priv->phandle->scan_pending_on_block == MTRUE) {
 			priv->phandle->scan_pending_on_block = MFALSE;
+			priv->phandle->scan_priv = NULL;
 			MOAL_REL_SEMAPHORE(&priv->phandle->async_sem);
 		}
 		break;
