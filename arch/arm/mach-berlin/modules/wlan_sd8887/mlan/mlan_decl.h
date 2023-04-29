@@ -33,7 +33,7 @@ Change log:
 #define _MLAN_DECL_H_
 
 /** MLAN release version */
-#define MLAN_RELEASE_VERSION		"C071"
+#define MLAN_RELEASE_VERSION		"C084"
 
 /** Re-define generic data types for MLAN/MOAL */
 /** Signed char (1-byte) */
@@ -1088,7 +1088,7 @@ typedef struct _mlan_callbacks {
     /** moal_hist_data_add */
 	t_void (*moal_hist_data_add) (IN t_void *pmoal_handle,
 				      IN t_u32 bss_index,
-				      IN t_s8 rx_rate,
+				      IN t_u8 rx_rate,
 				      IN t_s8 snr, IN t_s8 nflr);
 	t_void (*moal_updata_peer_signal) (IN t_void *pmoal_handle,
 					   IN t_u32 bss_index,
@@ -1107,6 +1107,14 @@ typedef struct _mlan_callbacks {
 #define MLAN_INIT_PARA_ENABLED       1
 /** Parameter disabled, override MLAN default setting */
 #define MLAN_INIT_PARA_DISABLED      2
+
+/** Control bit for stream 2X2 */
+#define FEATURE_CTRL_STREAM_2X2     MBIT(6)
+/** Control bit for DFS support */
+#define FEATURE_CTRL_DFS_SUPPORT    MBIT(7)
+
+/** Default feature control */
+#define FEATURE_CTRL_DEFAULT        0xffffffff
 
 /** mlan_device data structure */
 typedef struct _mlan_device {
@@ -1154,6 +1162,8 @@ typedef struct _mlan_device {
 #endif
     /** FW download CRC check flag */
 	t_u32 fw_crc_check;
+    /** Feature control bitmask */
+	t_u32 feature_control;
     /** enable/disable rx work */
 	t_u8 rx_work;
     /** dev cap mask */

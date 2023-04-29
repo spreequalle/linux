@@ -79,6 +79,31 @@ wlan_uap_bss_ioctl_stop(IN pmlan_adapter pmadapter,
 	return ret;
 }
 
+static t_bool
+wlan_can_radar_det_skip(mlan_private *priv)
+{
+	mlan_private *priv_list[MLAN_MAX_BSS_NUM];
+	mlan_private *pmpriv;
+	mlan_adapter *pmadapter = priv->adapter;
+	t_u8 pcount, i;
+
+	/* In MBSS environment, if one of the BSS is already beaconing and DRCS
+	   is off then 11n_radar detection is not required for subsequent BSSes
+	   since they will follow the primary bss. */
+	if (!priv->adapter->mc_policy &&
+	    (GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_UAP)) {
+		memset(pmadapter, priv_list, 0x00, sizeof(priv_list));
+		pcount = wlan_get_privs_by_cond(pmadapter, wlan_is_intf_active,
+						priv_list);
+		for (i = 0; i < pcount; i++) {
+			pmpriv = priv_list[i];
+			if (GET_BSS_ROLE(pmpriv) == MLAN_BSS_ROLE_UAP)
+				return MTRUE;
+		}
+	}
+	return MFALSE;
+}
+
 /**
  *  @brief Callback to finish BSS IOCTL START
  *  Not to be called directly to initiate bss_start
@@ -105,6 +130,7 @@ wlan_uap_callback_bss_ioctl_start(IN t_void *priv)
 	 * Check if the region and channel requires we check for radar.
 	 */
 	if ((puap_state_chan_cb->band_config & BAND_CONFIG_5GHZ) &&
+	    !wlan_can_radar_det_skip(pmpriv) &&
 	    wlan_11h_radar_detect_required(pmpriv,
 					   puap_state_chan_cb->channel)) {
 
@@ -211,6 +237,8 @@ wlan_uap_bss_ioctl_start(IN pmlan_adapter pmadapter,
 
 	ENTER();
 
+	/* if FW supports ACS+DFS then sequence is different */
+
 	/* First check channel report, defer BSS_START CMD to callback. */
 	/* store params, issue command to get UAP channel, whose CMD_RESP will
 	   callback remainder of bss_start handling */
@@ -261,6 +289,8 @@ wlan_uap_bss_ioctl_reset(IN pmlan_adapter pmadapter,
 	}
 	pmpriv->aggr_prio_tbl[6].ampdu_user =
 		pmpriv->aggr_prio_tbl[7].ampdu_user = BA_STREAM_NOT_ALLOWED;
+	pmpriv->addba_reject[6] =
+		pmpriv->addba_reject[7] = ADDBA_RSP_STATUS_REJECT;
 
 	/* hs_configured, hs_activated are reset by main loop */
 	pmadapter->hs_cfg.conditions = HOST_SLEEP_DEF_COND;
@@ -303,6 +333,41 @@ wlan_uap_bss_ioctl_mac_address(IN pmlan_adapter pmadapter,
 		       MLAN_MAC_ADDR_LENGTH);
 		cmd_action = HostCmd_ACT_GEN_SET;
 	} else
+		cmd_action = HostCmd_ACT_GEN_GET;
+	/* Send request to firmware */
+	ret = wlan_prepare_cmd(pmpriv, HOST_CMD_APCMD_SYS_CONFIGURE,
+			       cmd_action, 0, (t_void *)pioctl_req, MNULL);
+
+	if (ret == MLAN_STATUS_SUCCESS)
+		ret = MLAN_STATUS_PENDING;
+
+	LEAVE();
+	return ret;
+}
+
+/**
+ *  @brief Set/Get MAC address
+ *
+ *  @param pmadapter	A pointer to mlan_adapter structure
+ *  @param pioctl_req	A pointer to ioctl request buffer
+ *
+ *  @return		MLAN_STATUS_PENDING --success, otherwise fail
+ */
+static mlan_status
+wlan_uap_bss_ioctl_uap_wmm_param(IN pmlan_adapter pmadapter,
+				 IN pmlan_ioctl_req pioctl_req)
+{
+	mlan_private *pmpriv = pmadapter->priv[pioctl_req->bss_index];
+	mlan_ds_bss *bss = MNULL;
+	mlan_status ret = MLAN_STATUS_SUCCESS;
+	t_u16 cmd_action = 0;
+
+	ENTER();
+
+	bss = (mlan_ds_bss *)pioctl_req->pbuf;
+	if (pioctl_req->action == MLAN_ACT_SET)
+		cmd_action = HostCmd_ACT_GEN_SET;
+	else
 		cmd_action = HostCmd_ACT_GEN_GET;
 	/* Send request to firmware */
 	ret = wlan_prepare_cmd(pmpriv, HOST_CMD_APCMD_SYS_CONFIGURE,
@@ -1042,6 +1107,7 @@ wlan_uap_callback_11h_channel_check_req(IN t_void *priv)
 	 * check.
 	 */
 	if ((puap_state_chan_cb->band_config & BAND_CONFIG_5GHZ) &&
+	    !wlan_can_radar_det_skip(pmpriv) &&
 	    wlan_11h_radar_detect_required(pmpriv, puap_state_chan_cb->channel)
 	    && !wlan_11h_is_channel_under_nop(pmpriv->adapter,
 					      puap_state_chan_cb->channel)) {
@@ -1139,6 +1205,7 @@ wlan_uap_callback_snmp_mib_11h(IN t_void *priv)
 
 	if (enable_11h) {
 		if ((puap_state_chan_cb->band_config & BAND_CONFIG_5GHZ) &&
+		    !wlan_can_radar_det_skip(pmpriv) &&
 		    wlan_11h_radar_detect_required(pmpriv,
 						   puap_state_chan_cb->
 						   channel)) {
@@ -1375,6 +1442,9 @@ wlan_ops_uap_ioctl(t_void *adapter, pmlan_ioctl_req pioctl_req)
 		else if (bss->sub_command == MLAN_OID_BSS_REMOVE)
 			status = wlan_bss_ioctl_bss_remove(pmadapter,
 							   pioctl_req);
+		else if (bss->sub_command == MLAN_OID_UAP_CFG_WMM_PARAM)
+			status = wlan_uap_bss_ioctl_uap_wmm_param(pmadapter,
+								  pioctl_req);
 		break;
 #if defined(STA_SUPPORT) && defined(UAP_SUPPORT)
 	case MLAN_IOCTL_SCAN:

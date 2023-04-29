@@ -184,6 +184,38 @@ config BERLIN_SDIO_WLAN_8887
 	help
 	  This is the wifi module for Berlin. Please try build it for module only.
 
+config BERLIN_SDIO_BT_8887
+        tristate "SDIO Bluetooth/BLE support for Marvell's 8887 SoC"
+        default m
+	depends on CONFIG_BT
+	depends on CONFIG_BT_RFCOMM
+	depends on CONFIG_BT_RFCOMM_TTY
+	depends on CONFIG_BT_BNEP
+	depends on CONFIG_BT_BNEP_MC_FILTER
+	depends on CONFIG_BT_BNEP_PROTO_FILTER
+	depends on CONFIG_BT_HIDP
+	depends on CONFIG_BT_MRVL
+	depends on CONFIG_HID
+	depends on CONFIG_HIDRAW
+	depends on CONFIG_UHID
+	depends on CONFIG_HID_GENERIC
+        help
+          This is defualt bluetooth module for Berlin based platform.
+
+config BERLIN_SDIO_BT_8887_CHAR_DRV
+        tristate "SDIO Bluetooth/BLE Bluedroid support for Marvell's 8887 SoC"
+        default m
+	depends on !CONFIG_BT
+	depends on !CONFIG_BT_RFCOMM
+	depends on !CONFIG_BT_RFCOMM_TTY
+	depends on !CONFIG_BT_BNEP
+	depends on !CONFIG_BT_BNEP_MC_FILTER
+	depends on !CONFIG_BT_BNEP_PROTO_FILTER
+	depends on !CONFIG_BT_HIDP
+	depends on !CONFIG_BT_MRVL
+        help
+          This is defualt bluetooth module for Berlin based platform using Bluedroid stack.
+
 config BERLIN_FASTLOGO
 	tristate "Support fast logo"
 	default n

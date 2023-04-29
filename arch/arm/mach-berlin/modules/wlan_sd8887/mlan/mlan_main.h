@@ -1939,6 +1939,8 @@ typedef struct _mlan_adapter {
 	ChanStatistics_t *pchan_stats;
     /** Number of records in the chan_stats */
 	t_u32 num_in_chan_stats;
+    /** index of chan stats */
+	t_u32 idx_chan_stats;
 	t_u8 bgscan_reported;
 
     /** Number of records in the scan table */
@@ -2114,11 +2116,18 @@ typedef struct _mlan_adapter {
     /** tdls status */
 	/* TDLS_NOT_SETUP|TDLS_SWITCHING_CHANNEL|TDLS_IN_BASE_CHANNEL|TDLS_IN_SWITCH_CHANNEL */
 	tdlsStatus_e tdls_status;
+    /** Feature control bitmask */
+	t_u32 feature_control;
 
     /** Control coex RX window size configuration */
 	t_u8 coex_rx_winsize;
 	t_bool mc_policy;
 } mlan_adapter, *pmlan_adapter;
+
+/** Check if stream 2X2 enabled */
+#define IS_STREAM_2X2(x)            ((x) & FEATURE_CTRL_STREAM_2X2)
+/** Check if DFS support enabled */
+#define IS_DFS_SUPPORT(x)           ((x) & FEATURE_CTRL_DFS_SUPPORT)
 
 /** Ethernet packet type for EAPOL */
 #define MLAN_ETHER_PKT_TYPE_EAPOL	(0x888E)

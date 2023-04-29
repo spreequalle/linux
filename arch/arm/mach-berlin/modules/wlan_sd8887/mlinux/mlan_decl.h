@@ -27,7 +27,7 @@ Change log:
 #define _MLAN_DECL_H_
 
 /** MLAN release version */
-#define MLAN_RELEASE_VERSION		"C071"
+#define MLAN_RELEASE_VERSION		"C084"
 
 /** Re-define generic data types for MLAN/MOAL */
 /** Signed char (1-byte) */
@@ -1102,6 +1102,14 @@ typedef struct _mlan_callbacks {
 /** Parameter disabled, override MLAN default setting */
 #define MLAN_INIT_PARA_DISABLED      2
 
+/** Control bit for stream 2X2 */
+#define FEATURE_CTRL_STREAM_2X2     MBIT(6)
+/** Control bit for DFS support */
+#define FEATURE_CTRL_DFS_SUPPORT    MBIT(7)
+
+/** Default feature control */
+#define FEATURE_CTRL_DEFAULT        0xffffffff
+
 /** mlan_device data structure */
 typedef struct _mlan_device {
     /** MOAL Handle */
@@ -1148,6 +1156,8 @@ typedef struct _mlan_device {
 #endif
     /** FW download CRC check flag */
 	t_u32 fw_crc_check;
+    /** Feature control bitmask */
+	t_u32 feature_control;
     /** enable/disable rx work */
 	t_u8 rx_work;
     /** dev cap mask */

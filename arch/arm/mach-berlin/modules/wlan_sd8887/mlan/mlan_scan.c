@@ -168,7 +168,7 @@ wlan_update_chan_statistics(mlan_private *pmpriv,
 			    MrvlIEtypes_ChannelStats_t *pchanstats_tlv)
 {
 	mlan_adapter *pmadapter = pmpriv->adapter;
-	t_u8 i, j;
+	t_u8 i;
 	ChanStatistics_t *pchan_stats =
 		(ChanStatistics_t *)((t_u8 *)pchanstats_tlv +
 				     sizeof(MrvlIEtypesHeader_t));
@@ -178,34 +178,32 @@ wlan_update_chan_statistics(mlan_private *pmpriv,
 
 	ENTER();
 
-	for (j = 0; j < num_chan; j++) {
-		for (i = 0; i < pmadapter->num_in_chan_stats; i++) {
-			if (pmadapter->pchan_stats[i].chan_num ==
-			    pchan_stats->chan_num) {
+	for (i = 0; i < num_chan; i++) {
+		if (pmadapter->idx_chan_stats >= pmadapter->num_in_chan_stats) {
+			PRINTM(MERROR,
+			       "Over flow: idx_chan_stats=%d, num_in_chan_stats=%d\n",
+			       pmadapter->idx_chan_stats,
+			       pmadapter->num_in_chan_stats);
+			break;
+		}
 				pchan_stats->total_networks =
-					wlan_le16_to_cpu(pchan_stats->
-							 total_networks);
+			wlan_le16_to_cpu(pchan_stats->total_networks);
 				pchan_stats->cca_scan_duration =
-					wlan_le16_to_cpu(pchan_stats->
-							 cca_scan_duration);
+			wlan_le16_to_cpu(pchan_stats->cca_scan_duration);
 				pchan_stats->cca_busy_duration =
-					wlan_le16_to_cpu(pchan_stats->
-							 cca_busy_duration);
+			wlan_le16_to_cpu(pchan_stats->cca_busy_duration);
 				pchan_stats->bandconfig =
-					radio_type_to_band(pchan_stats->
-							   bandconfig);
+			radio_type_to_band(pchan_stats->bandconfig);
 				PRINTM(MCMND,
 				       "chan=%d, noise=%d, total_network=%d scan_duration=%d, busy_duration=%d\n",
-				       pchan_stats->chan_num,
-				       pchan_stats->noise,
+		       pchan_stats->chan_num, pchan_stats->noise,
 				       pchan_stats->total_networks,
 				       pchan_stats->cca_scan_duration,
 				       pchan_stats->cca_busy_duration);
-				memcpy(pmadapter, &pmadapter->pchan_stats[i],
+		memcpy(pmadapter,
+		       &pmadapter->pchan_stats[pmadapter->idx_chan_stats],
 				       pchan_stats, sizeof(ChanStatistics_t));
-				break;
-			}
-		}
+		pmadapter->idx_chan_stats++;
 		pchan_stats++;
 	}
 	LEAVE();
@@ -2810,15 +2808,19 @@ wlan_scan_process_results(IN mlan_private *pmpriv)
 							      curr_bcn_buf_lock);
 			wlan_save_curr_bcn(pmpriv);
 		} else {
-			// Apend to the end of scan table.
+			// Apend to the end of scan table
+			if (pmpriv->pcurr_bcn_buf && pmpriv->curr_bcn_size) {
 				if (pmadapter->num_in_scan_table <
 				    MRVDRV_MAX_BSSID_LIST)
 					pmadapter->num_in_scan_table++;
 				memcpy(pmadapter,
 				       &pmadapter->pscan_table[pmadapter->
-						       num_in_scan_table - 1],
+							       num_in_scan_table
+							       - 1],
 				       &pmpriv->curr_bss_params.bss_descriptor,
-			       sizeof(pmpriv->curr_bss_params.bss_descriptor));
+				       sizeof(pmpriv->curr_bss_params.
+					      bss_descriptor));
+			}
 		}
 
 	}
@@ -3519,6 +3521,7 @@ wlan_flush_scan_table(IN pmlan_adapter pmadapter)
 
 	for (i = 0; i < pmadapter->num_in_chan_stats; i++)
 		pmadapter->pchan_stats[i].cca_scan_duration = 0;
+	pmadapter->idx_chan_stats = 0;
 
 	LEAVE();
 	return MLAN_STATUS_SUCCESS;
@@ -3626,6 +3629,7 @@ wlan_scan_networks(IN mlan_private *pmpriv,
 		pmadapter->pbcn_buf_end = pmadapter->bcn_buf;
 		for (i = 0; i < pmadapter->num_in_chan_stats; i++)
 			pmadapter->pchan_stats[i].cca_scan_duration = 0;
+		pmadapter->idx_chan_stats = 0;
 	}
 
 	ret = wlan_scan_channel_list(pmpriv,
@@ -5490,6 +5494,9 @@ wlan_save_curr_bcn(IN mlan_private *pmpriv)
 				       pcurr_bss->beacon_buf_size);
 				PRINTM(MINFO, "current beacon saved %d\n",
 				       pmpriv->curr_bcn_size);
+			} else {
+				PRINTM(MERROR,
+				       "Fail to allocate curr_bcn_buf\n");
 			}
 		}
 	}

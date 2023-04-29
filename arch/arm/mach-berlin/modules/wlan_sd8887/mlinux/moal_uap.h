@@ -71,6 +71,12 @@ Change log:
 
 #define UAP_CAC_TIMER_STATUS	17
 
+#define UAP_HT_TX_CFG           19
+
+#define UAP_VHT_CFG             20
+
+#define UAP_HT_STREAM_CFG       21
+
 /** Private command ID to Power Mode */
 #define	UAP_POWER_MODE			(SIOCDEVPRIVATE + 3)
 
@@ -129,6 +135,16 @@ typedef struct _ant_cfg_t {
    /** RX mode configured */
 	int rx_mode;
 } ant_cfg_t;
+
+/** htstream_cfg structure */
+typedef struct _htstream_cfg_t {
+   /** Subcommand */
+	int subcmd;
+   /** Action */
+	int action;
+   /** HT stream configuration */
+	t_u32 stream_cfg;
+} htstream_cfg_t;
 
 /* */
 typedef struct _cac_timer_status {
@@ -297,12 +313,26 @@ typedef struct _fw_info {
 	t_u32 hw_dot_11n_dev_cap;
 } fw_info;
 
+typedef struct _ht_tx_cfg_para_hdr {
+    /** Sub command */
+	t_u32 subcmd;
+    /** Action: Set/Get */
+	t_u32 action;
+} ht_tx_cfg_para_hdr;
+
 typedef struct _tx_bf_cfg_para_hdr {
     /** Sub command */
 	t_u32 subcmd;
     /** Action: Set/Get */
 	t_u32 action;
 } tx_bf_cfg_para_hdr;
+
+typedef struct _vht_cfg_para_hdr {
+    /** Sub command */
+	t_u32 subcmd;
+    /** Action: Set/Get */
+	t_u32 action;
+} vht_cfg_para_hdr;
 
 /** sdcmd52rw parameters */
 typedef struct _sdcmd52_para {
@@ -428,8 +458,11 @@ void woal_set_sys_config_invalid_data(mlan_uap_bss_param *config);
 mlan_status woal_set_get_sys_config(moal_private *priv,
 				    t_u16 action, t_u8 wait_option,
 				    mlan_uap_bss_param *sys_cfg);
+/** Set get AP wmm parameter */
+mlan_status woal_set_get_ap_wmm_para(moal_private *priv, t_u16 action,
+				     wmm_parameter_t *ap_wmm_para);
 int woal_uap_set_ap_cfg(moal_private *priv, t_u8 *data, int len);
-int woal_uap_set_11ac_status(moal_private *priv, t_u8 action);
+int woal_uap_set_11ac_status(moal_private *priv, t_u8 action, t_u8 vht20_40);
 mlan_status woal_uap_set_11n_status(mlan_uap_bss_param *sys_cfg, t_u8 action);
 #ifdef UAP_WEXT
 void woal_ioctl_get_uap_info_resp(moal_private *priv, mlan_ds_get_info *info);

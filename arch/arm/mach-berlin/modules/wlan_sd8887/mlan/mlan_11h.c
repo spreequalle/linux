@@ -1034,7 +1034,7 @@ wlan_11h_is_dfs_slave(mlan_private *priv)
  *
  *  @return             MTRUE or MFALSE
  */
-static t_bool
+t_bool
 wlan_is_intf_active(mlan_private *pmpriv)
 {
 	t_bool ret = MFALSE;
@@ -2229,6 +2229,10 @@ wlan_11h_check_chan_report(mlan_private *priv, t_u8 chan)
 			ret = MLAN_STATUS_FAILURE;
 		}
 	} else {
+		/* When Cache is not valid. This is required during extending
+		   cache validity during bss_stop */
+		pstate_dfs->dfs_check_channel = 0;
+
 		/* TODO: reissue report request if not pending.  BUT HOW to
 		   make the code wait for it??? For now, just fail since we
 		   don't have the info. */
@@ -2538,6 +2542,7 @@ wlan_11h_cmdresp_process(mlan_private *priv, const HostCmd_DS_COMMAND *resp)
 		if (resp->params.chan_rpt_req.millisec_dwell_time == 0) {
 			/* from wlan_11h_ioctl_dfs_cancel_chan_report */
 			priv->adapter->state_dfs.dfs_check_pending = MFALSE;
+			priv->adapter->state_dfs.dfs_check_channel = 0;
 			PRINTM(MINFO, "11h: Cancelling Chan Report \n");
 		} else {
 			PRINTM(MERROR,
@@ -2764,7 +2769,7 @@ wlan_11h_ioctl_dfs_testing(pmlan_adapter pmadapter, pmlan_ioctl_req pioctl_req)
 /**
  *  @brief 802.11h DFS cancel chan report
  *
- *  @param pmadapter    Pointer to mlan_adapter
+ *  @param priv         Pointer to mlan_private
  *  @param pioctl_req   Pointer to mlan_ioctl_req
  *
  *  @return MLAN_STATUS_SUCCESS or MLAN_STATUS_FAILURE

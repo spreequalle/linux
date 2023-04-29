@@ -346,7 +346,7 @@ woal_hist_data_reset(moal_private *priv)
  *  @return   N/A
  */
 static void
-woal_hist_data_set(moal_private *priv, t_s8 rx_rate, t_s8 snr, t_s8 nflr)
+woal_hist_data_set(moal_private *priv, t_u8 rx_rate, t_s8 snr, t_s8 nflr)
 {
 	hgm_data *phist_data = priv->hist_data;
 
@@ -368,7 +368,7 @@ woal_hist_data_set(moal_private *priv, t_s8 rx_rate, t_s8 snr, t_s8 nflr)
  *  @return   N/A
  */
 void
-woal_hist_data_add(moal_private *priv, t_s8 rx_rate, t_s8 snr, t_s8 nflr)
+woal_hist_data_add(moal_private *priv, t_u8 rx_rate, t_s8 snr, t_s8 nflr)
 {
 	hgm_data *phist_data = priv->hist_data;
 	unsigned long curr_size;
@@ -379,6 +379,9 @@ woal_hist_data_add(moal_private *priv, t_s8 rx_rate, t_s8 snr, t_s8 nflr)
 	woal_hist_data_set(priv, rx_rate, snr, nflr);
 }
 
+#define MAX_MCS_NUM_SUPP    16
+#define MAX_MCS_NUM_AC    10
+#define RATE_INDEX_MCS0   12
 /**
  *  @brief Proc read function for histogram
  *
@@ -394,6 +397,11 @@ woal_histogram_read(struct seq_file *sfp, void *data)
 	hgm_data *phist_data = NULL;
 	int i = 0;
 	int value = 0;
+	t_bool sgi_enable = 0;
+	t_u8 bw = 0;
+	t_u8 mcs_index = 0;
+	t_u8 nss = 0;
+
 	ENTER();
 	if (!priv || !priv->hist_data) {
 		LEAVE();
@@ -406,16 +414,49 @@ woal_histogram_read(struct seq_file *sfp, void *data)
 	}
 	seq_printf(sfp, "total samples = %d \n",
 		   atomic_read(&(phist_data->num_samples)));
-	seq_printf(sfp,
-		   "rx rates (in Mbps): 0=1M   1=2M   2=5.5M  3=11M   4=6M  5=9M  6=12M\n");
-	seq_printf(sfp,
-		   "                    7=18M  8=24M  9=36M  10=48M  11=54M   12-27=MCS0-15(BW20) 28-43=MCS0-15(BW40)\n");
-	seq_printf(sfp,
-		   "                    44-53=MCS0-9(VHT:BW20) 54-63=MCS0-9(VHT:BW40) 64-73=MCS0-9(VHT:BW80)\n\n");
+	seq_printf(sfp, "rx rates (in Mbps):\n");
+	seq_printf(sfp, "\t0-3:     B-MCS  0-3\n");
+	seq_printf(sfp, "\t4-11:    G-MCS  0-7\n");
+	seq_printf(sfp, "\t12-27:   N-MCS  0-15(BW20)             28-43:   N-MCS  0-15(BW40)\n");
+	seq_printf(sfp, "\t44-59:   N-MCS  0-15(BW20:SGI)         60-75:   N-MCS  0-15(BW40:SGI)\n");
+	seq_printf(sfp, "\t76-85:   AC-MCS 0-9(VHT:BW20:NSS1)     86-95:   AC-MCS 0-9(VHT:BW20:NSS2)\n");
+	seq_printf(sfp, "\t96-105:  AC-MCS 0-9(VHT:BW40:NSS1)     106-115: AC-MCS 0-9(VHT:BW40:NSS2)\n");
+	seq_printf(sfp, "\t116-125: AC-MCS 0-9(VHT:BW80:NSS1)     126-135: AC-MCS 0-9(VHT:BW80:NSS2)\n");
+	seq_printf(sfp, "\t136-145: AC-MCS 0-9(VHT:BW20:NSS1:SGI) 146-155: AC-MCS 0-9(VHT:BW20:NSS2:SGI)\n");
+	seq_printf(sfp, "\t156-165: AC-MCS 0-9(VHT:BW40:NSS1:SGI) 166-175: AC-MCS 0-9(VHT:BW40:NSS2:SGI)\n");
+	seq_printf(sfp, "\t176-185: AC-MCS 0-9(VHT:BW80:NSS1:SGI) 186-195: AC-MCS 0-9(VHT:BW80:NSS2:SGI)\n\n");
 	for (i = 0; i < RX_RATE_MAX; i++) {
 		value = atomic_read(&(phist_data->rx_rate[i]));
-		if (value)
-			seq_printf(sfp, "rx_rate[%02d] = %d\n", i, value);
+		if (value) {
+			if (i <= 11)
+				seq_printf(sfp, "rx_rate[%03d] = %d\n", i, value);
+			else if (i <= 75) {
+				sgi_enable = (i - 12) / (MAX_MCS_NUM_SUPP * 2);	// 0:LGI,
+										// 1:SGI
+				bw = ((i - 12) % (MAX_MCS_NUM_SUPP * 2)) / MAX_MCS_NUM_SUPP;	// 0:20MHz,
+												// 1:40MHz
+				mcs_index = (i - 12) % MAX_MCS_NUM_SUPP;
+
+				seq_printf(sfp,
+				   "rx_rate[%03d] = %d (MCS:%d HT BW:%dMHz%s)\n",
+				   i, value, mcs_index, (1 << bw) * 20,
+				   sgi_enable ? " SGI" : "");
+			} else if (i <= 195) {
+				sgi_enable = (i - 76) / (MAX_MCS_NUM_AC * 6);	// 0:LGI,
+										// 1:SGI
+				bw = ((i - 76) % (MAX_MCS_NUM_AC * 6)) / (MAX_MCS_NUM_AC * 2);	// 0:20MHz,
+												// 1:40MHz,
+												// 2:80MHz
+				nss = (((i - 76) % (MAX_MCS_NUM_AC * 6)) % (MAX_MCS_NUM_AC * 2)) / MAX_MCS_NUM_AC;	// 0:NSS1,
+															// 1:NSS2
+				mcs_index = (i - 76) % MAX_MCS_NUM_AC;
+				seq_printf(sfp,
+					   "rx_rate[%03d] = %d (MCS:%d VHT BW:%dMHz NSS:%d%s)\n",
+					   i, value, mcs_index, (1 << bw) * 20,
+					   nss + 1,
+					   sgi_enable ? " SGI" : "");
+			}
+		}
 	}
 	for (i = 0; i < SNR_MAX; i++) {
 		value = atomic_read(&(phist_data->snr[i]));
@@ -468,6 +509,88 @@ woal_histogram_write(struct file *f, const char __user * buf, size_t count,
 	moal_private *priv = (moal_private *)sfp->private;
 	woal_hist_data_reset(priv);
 	return count;
+}
+
+/**
+ *  @brief Proc read function for log
+ *
+ *  @param sfp     pointer to seq_file structure
+ *  @param data
+ *
+ *  @return        Number of output data or MLAN_STATUS_FAILURE
+ */
+static int
+woal_log_read(struct seq_file *sfp, void *data)
+{
+#ifdef STA_SUPPORT
+	moal_private *priv = (moal_private *)sfp->private;
+	mlan_ds_get_stats stats;
+	ENTER();
+	if (!priv) {
+		LEAVE();
+		return -EFAULT;
+	}
+	if (MODULE_GET == 0) {
+		LEAVE();
+		return -EFAULT;
+	}
+	if (GET_BSS_ROLE(priv) != MLAN_BSS_ROLE_STA) {
+		MODULE_PUT;
+		LEAVE();
+		return 0;
+	}
+
+	memset(&stats, 0x00, sizeof(stats));
+	if (MLAN_STATUS_SUCCESS !=
+	    woal_get_stats_info(priv, MOAL_IOCTL_WAIT, &stats)) {
+		PRINTM(MERROR,
+		       "woal_log_read: Get log: Failed to get stats info!");
+		MODULE_PUT;
+		LEAVE();
+		return -EFAULT;
+	}
+
+	seq_printf(sfp, "mcasttxframe = %d\n", stats.mcast_tx_frame);
+	seq_printf(sfp, "failed = %d\n", stats.failed);
+	seq_printf(sfp, "retry = %d\n", stats.retry);
+	seq_printf(sfp, "multiretry = %d\n", stats.multi_retry);
+	seq_printf(sfp, "framedup = %d\n", stats.frame_dup);
+	seq_printf(sfp, "rtssuccess = %d\n", stats.rts_success);
+	seq_printf(sfp, "rtsfailure = %d\n", stats.rts_failure);
+	seq_printf(sfp, "ackfailure = %d\n", stats.ack_failure);
+	seq_printf(sfp, "rxfrag = %d\n", stats.rx_frag);
+	seq_printf(sfp, "mcastrxframe = %d\n", stats.mcast_rx_frame);
+	seq_printf(sfp, "fcserror = %d\n", stats.fcs_error);
+	seq_printf(sfp, "txframe = %d\n", stats.tx_frame);
+	seq_printf(sfp, "wepicverrcnt-1 = %d\n", stats.wep_icv_error[0]);
+	seq_printf(sfp, "wepicverrcnt-2 = %d\n", stats.wep_icv_error[1]);
+	seq_printf(sfp, "wepicverrcnt-3 = %d\n", stats.wep_icv_error[2]);
+	seq_printf(sfp, "wepicverrcnt-4 = %d\n", stats.wep_icv_error[3]);
+	seq_printf(sfp, "beacon_rcnt = %d\n", stats.bcn_rcv_cnt);
+	seq_printf(sfp, "beacon_mcnt = %d\n", stats.bcn_miss_cnt);
+
+	MODULE_PUT;
+#endif
+	LEAVE();
+	return 0;
+}
+
+/**
+ *  @brief Proc read function for log
+ *
+ *  @param inode     pointer to inode
+ *  @param file       file pointer
+ *
+ *  @return        number of data
+ */
+static int
+woal_log_proc_open(struct inode *inode, struct file *file)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+	return single_open(file, woal_log_read, PDE_DATA(inode));
+#else
+	return single_open(file, woal_log_read, PDE(inode)->data);
+#endif
 }
 
 /********************************************************
@@ -778,6 +901,14 @@ static const struct file_operations histogram_proc_fops = {
 	.write = woal_histogram_write,
 };
 
+static const struct file_operations log_proc_fops = {
+	.owner = THIS_MODULE,
+	.open = woal_log_proc_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 /********************************************************
 		Global Functions
 ********************************************************/
@@ -876,6 +1007,27 @@ woal_debug_entry(moal_private *priv)
 			return;
 		}
 	}
+
+	if (priv->bss_type == MLAN_BSS_TYPE_STA ||
+	    priv->bss_type == MLAN_BSS_TYPE_UAP) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
+		r = proc_create_data("log", 0644, priv->proc_entry,
+				     &log_proc_fops, priv);
+		if (r == NULL)
+#else
+		r = create_proc_entry("log", 0644, priv->proc_entry);
+		if (r) {
+			r->data = priv;
+			r->proc_fops = &log_proc_fops;
+		} else
+#endif
+		{
+			PRINTM(MMSG, "Fail to create proc log entry\n");
+			LEAVE();
+			return;
+		}
+	}
+
 	LEAVE();
 }
 
@@ -897,6 +1049,9 @@ woal_debug_remove(moal_private *priv)
 	if (priv->bss_type == MLAN_BSS_TYPE_STA ||
 	    priv->bss_type == MLAN_BSS_TYPE_UAP)
 		remove_proc_entry("histogram", priv->proc_entry);
+	if (priv->bss_type == MLAN_BSS_TYPE_STA ||
+	    priv->bss_type == MLAN_BSS_TYPE_UAP)
+		remove_proc_entry("log", priv->proc_entry);
 
 	LEAVE();
 }

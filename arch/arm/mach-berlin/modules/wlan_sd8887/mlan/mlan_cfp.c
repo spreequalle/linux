@@ -933,26 +933,29 @@ wlan_adjust_data_rate(mlan_private *priv, t_u8 rx_rate, t_u8 rate_info)
 {
 	t_u8 rate_index = 0;
 	t_u8 bw = 0;
+	t_u8 nss = 0;
+	t_bool sgi_enable = 0;
 
 #define MAX_MCS_NUM_SUPP    16
 
 #define MAX_MCS_NUM_AC    10
 #define RATE_INDEX_MCS0   12
 	bw = (rate_info & 0xC) >> 2;
+	sgi_enable = (rate_info & 0x10) >> 4;
 	if ((rate_info & 0x3) == 0) {
 		rate_index =
 			(rx_rate >
 			 MLAN_RATE_INDEX_OFDM0) ? rx_rate - 1 : rx_rate;
 	} else if ((rate_info & 0x03) == 1) {
-		if (bw == 0)	// BW 20
-			rate_index = RATE_INDEX_MCS0 + rx_rate;
-		else if (bw == 1)
-			rate_index =
-				RATE_INDEX_MCS0 + rx_rate + MAX_MCS_NUM_SUPP;
+		rate_index = RATE_INDEX_MCS0 +
+			MAX_MCS_NUM_SUPP * 2 * sgi_enable +
+			MAX_MCS_NUM_SUPP * bw + rx_rate;
 	} else if ((rate_info & 0x3) == 2) {
-		rate_index =
-			RATE_INDEX_MCS0 + MAX_MCS_NUM_SUPP * 2 +
-			bw * MAX_MCS_NUM_AC + rx_rate;
+		nss = rx_rate >> 4;	// 0:NSS1, 1:NSS2
+		rate_index = RATE_INDEX_MCS0 + MAX_MCS_NUM_SUPP * 4 +
+			MAX_MCS_NUM_AC * 6 * sgi_enable +
+			MAX_MCS_NUM_AC * 2 * bw + MAX_MCS_NUM_AC * nss +
+			(rx_rate & 0x0f);
 	}
 	return rate_index;
 }

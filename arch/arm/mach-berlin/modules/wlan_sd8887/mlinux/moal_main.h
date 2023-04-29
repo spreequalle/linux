@@ -649,6 +649,11 @@ out:
 
 #define MAX_RX_PENDING_THRHLD	50
 
+/** high rx pending packets */
+#define HIGH_RX_PENDING         100
+/** low rx pending packets */
+#define LOW_RX_PENDING          80
+
 /** MAX Tx Pending count */
 #define MAX_TX_PENDING      100
 
@@ -864,7 +869,7 @@ struct tdls_peer {
 
 /** Number of samples in histogram (/proc/mwlan/mlan0/histogram).*/
 #define HIST_MAX_SAMPLES   1048576
-#define RX_RATE_MAX			74
+#define RX_RATE_MAX			196
 
 /** SRN MAX  */
 #define SNR_MAX				256
@@ -2161,7 +2166,7 @@ mlan_status woal_rx_pkt_coalesce_cfg(moal_private *priv, t_u16 *enable,
 #endif
 mlan_status woal_set_low_pwr_mode(moal_handle *handle, t_u8 wait_option);
 void woal_hist_data_reset(moal_private *priv);
-void woal_hist_data_add(moal_private *priv, t_s8 rx_rate, t_s8 snr, t_s8 nflr);
+void woal_hist_data_add(moal_private *priv, t_u8 rx_rate, t_s8 snr, t_s8 nflr);
 mlan_status woal_set_hotspotcfg(moal_private *priv, t_u8 wait_option,
 				t_u32 hotspotcfg);
 #endif /* _MOAL_MAIN_H */
