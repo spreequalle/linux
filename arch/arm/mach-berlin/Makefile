@@ -19,6 +19,7 @@ obj-$(CONFIG_BERLIN_PXA3XX_NFC) += modules/nfc/
 obj-$(CONFIG_BERLIN_SDIO_WLAN_8787) += modules/wlan_sd8787/
 obj-$(CONFIG_BERLIN_SDIO_WLAN_8797) += modules/wlan_sd8797/
 obj-$(CONFIG_BERLIN_SDIO_WLAN_8801) += modules/wlan_sd8801/
+obj-$(CONFIG_BERLIN_SDIO_WLAN_8887) += modules/wlan_sd8887/
 #obj-$(CONFIG_BERLIN_PE) += modules/amp/
 #obj-$(CONFIG_BERLIN_FASTLOGO) += modules/fastlogo/
 obj-$(CONFIG_BERLIN_GPU) += modules/gpu/

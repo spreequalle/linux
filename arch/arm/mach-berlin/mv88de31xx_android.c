@@ -293,6 +293,15 @@ static __initdata struct board_config {
       .mtdparts_ro = LEXX_B4_MTDPARTS("ro","ro"),
       .mtdparts_recovery = LEXX_B4_MTDPARTS("",""),
     },
+    { .name = "earth-b1",
+      .board_rev = 1,
+      .default_root = "/dev/mtdblock:rootfs",
+      .reboot_notifier = bcb_fts_reboot_hook,
+      /* earth-b1 uses same partition map as lexx-b2 */
+      .mtdparts = LEXX_B2_MTDPARTS("ro",""),
+      .mtdparts_ro = LEXX_B2_MTDPARTS("ro","ro"),
+      .mtdparts_recovery = LEXX_B2_MTDPARTS("",""),
+    },
 #endif /* CONFIG_BERLIN2CD */
 };
 
