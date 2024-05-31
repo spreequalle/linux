@@ -1,6 +1,6 @@
 /*
  *
- *  $Id$
+ *  $Id: pvrusb2-ctrl.h,v 1.1.1.1 2007-05-25 06:50:08 bruce Exp $
  *
  *  Copyright (C) 2005 Mike Isely <isely@pobox.com>
  *

@@ -1,10 +1,14 @@
-/* $Id: fasttimer.c,v 1.11 2005/01/04 11:15:46 starvik Exp $
+/* $Id: fasttimer.c,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $
  * linux/arch/cris/kernel/fasttimer.c
  *
  * Fast timers for ETRAX FS
  * This may be useful in other OS than Linux so use 2 space indentation...
  *
  * $Log: fasttimer.c,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:20  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  * Revision 1.11  2005/01/04 11:15:46  starvik
  * Don't share timer IRQ.
  *

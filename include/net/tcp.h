@@ -230,6 +230,8 @@ extern int sysctl_tcp_mtu_probing;
 extern int sysctl_tcp_base_mss;
 extern int sysctl_tcp_workaround_signed_windows;
 extern int sysctl_tcp_slow_start_after_idle;
+//Albert add for spi feature
+extern int sysctl_spi_enable;
 
 extern atomic_t tcp_memory_allocated;
 extern atomic_t tcp_sockets_allocated;

@@ -74,6 +74,8 @@ static int ip_conntrack_vmalloc __read_mostly;
 
 static unsigned int ip_conntrack_next_id;
 static unsigned int ip_conntrack_expect_next_id;
+extern char wan_name[IFNAMSIZ];
+
 #ifdef CONFIG_IP_NF_CONNTRACK_EVENTS
 ATOMIC_NOTIFIER_HEAD(ip_conntrack_chain);
 ATOMIC_NOTIFIER_HEAD(ip_conntrack_expect_chain);
@@ -146,10 +148,22 @@ static unsigned int ip_conntrack_hash_rnd;
 static u_int32_t __hash_conntrack(const struct ip_conntrack_tuple *tuple,
 			    unsigned int size, unsigned int rnd)
 {
+#if defined (CONFIG_NAT_FCONE) /* Full Cone */
+        return (jhash_3words(tuple->dst.ip,
+                             (tuple->dst.protonum),
+                             (tuple->dst.u.all),
+                             ip_conntrack_hash_rnd) % ip_conntrack_htable_size);
+#elif defined (CONFIG_NAT_RCONE) /* Restricted Cone */
+        return (jhash_3words(tuple->src.ip,
+                             (tuple->dst.ip ^ tuple->dst.protonum),
+                             (tuple->dst.u.all),
+                             ip_conntrack_hash_rnd) % ip_conntrack_htable_size);
+#else /* CONFIG_NAT_LINUX */
 	return (jhash_3words((__force u32)tuple->src.ip,
 			     ((__force u32)tuple->dst.ip ^ tuple->dst.protonum),
 			     (tuple->src.u.all | (tuple->dst.u.all << 16)),
 			     rnd) % size);
+#endif
 }
 
 static u_int32_t
@@ -384,6 +398,57 @@ __ip_conntrack_find(const struct ip_conntrack_tuple *tuple,
 
 	return NULL;
 }
+
+/* Added by Steven Liu */
+#if defined (CONFIG_NAT_FCONE) || defined (CONFIG_NAT_RCONE)
+static inline int ip_ct_cone_tuple_equal(const struct ip_conntrack_tuple *t1,
+                                    const struct ip_conntrack_tuple *t2)
+{
+#if defined (CONFIG_NAT_FCONE)    /* Full Cone */
+        return ip_ct_tuple_dst_equal(t1, t2);
+#elif defined (CONFIG_NAT_RCONE)  /* Restricted Cone */
+        return ip_ct_tuple_dst_equal(t1, t2) && (t1->src.ip == t2->src.ip);
+#endif
+}
+
+
+static struct ip_conntrack_tuple_hash *
+__ip_cone_conntrack_find(const struct ip_conntrack_tuple *tuple,
+        const struct ip_conntrack *ignored_conntrack)
+{
+    struct ip_conntrack_tuple_hash *h;
+    unsigned int hash = hash_conntrack(tuple);
+
+    list_for_each_entry(h, &ip_conntrack_hash[hash], list) {
+	if (tuplehash_to_ctrack(h) != ignored_conntrack &&
+		ip_ct_cone_tuple_equal(tuple, &h->tuple)) {
+	    CONNTRACK_STAT_INC(found);
+	    return h;
+	}
+	CONNTRACK_STAT_INC(searched);
+    }
+
+    return NULL;
+}
+
+/* Find a connection corresponding to a tuple. */
+struct ip_conntrack_tuple_hash *
+ip_cone_conntrack_find_get(const struct ip_conntrack_tuple *tuple,
+        const struct ip_conntrack *ignored_conntrack)
+{
+    struct ip_conntrack_tuple_hash *h;
+
+    read_lock_bh(&ip_conntrack_lock);
+    h = __ip_cone_conntrack_find(tuple, ignored_conntrack);
+    if (h)
+	atomic_inc(&tuplehash_to_ctrack(h)->ct_general.use);
+    read_unlock_bh(&ip_conntrack_lock);
+
+    return h;
+}
+
+#endif
+
 
 /* Find a connection corresponding to a tuple. */
 struct ip_conntrack_tuple_hash *
@@ -747,6 +812,7 @@ resolve_normal_ct(struct sk_buff *skb,
 	struct ip_conntrack_tuple tuple;
 	struct ip_conntrack_tuple_hash *h;
 	struct ip_conntrack *ct;
+	struct iphdr *iph=(struct iphdr *)skb->nh.raw;
 
 	IP_NF_ASSERT((skb->nh.iph->frag_off & htons(IP_OFFSET)) == 0);
 
@@ -755,7 +821,70 @@ resolve_normal_ct(struct sk_buff *skb,
 		return NULL;
 
 	/* look for tuple match */
+#if defined (CONFIG_NAT_FCONE) || defined (CONFIG_NAT_RCONE)
+
+        /*
+         * Based on NAT treatments of UDP in RFC3489:
+         *
+         * 1)Full Cone: A full cone NAT is one where all requests from the
+         * same internal IP address and port are mapped to the same external
+         * IP address and port.  Furthermore, any external host can send a
+         * packet to the internal host, by sending a packet to the mapped
+         * external address.
+         *
+         * 2)Restricted Cone: A restricted cone NAT is one where all requests
+         * from the same internal IP address and port are mapped to the same
+         * external IP address and port.  Unlike a full cone NAT, an external
+         * host (with IP address X) can send a packet to the internal host
+         * only if the internal host had previously sent a packet to IP
+         * address X.
+	 *
+         * 3)Port Restricted Cone: A port restricted cone NAT is like a
+         * restricted cone NAT, but the restriction includes port numbers.
+         * Specifically, an external host can send a packet, with source IP
+         * address X and source port P, to the internal host only if the
+         * internal host had previously sent a packet to IP address X and
+         * port P.
+         *
+         * 4)Symmetric: A symmetric NAT is one where all requests from the
+         * same internal IP address and port, to a specific destination IP
+         * address and port, are mapped to the same external IP address and
+         * port.  If the same host sends a packet with the same source
+         * address and port, but to a different destination, a different
+         * mapping is used.  Furthermore, only the external host that
+         * receives a packet can send a UDP packet back to the internal host.
+         *
+         *
+         * Original Linux NAT type is hybrid 'port restricted cone' and
+         * 'symmetric'. XBOX certificate recommands NAT type is 'fully cone'
+         * or 'restricted cone', so i patch the linux kernel to support
+         * this feature
+	 * Tradition scenario from LAN->WAN:
+         *
+         *        (LAN)     (WAN)
+         * Client------>AP---------> Server
+         * -------------> (I)
+         *              -------------->(II)
+         *              <--------------(III)
+         * <------------- (IV)
+         *
+         *
+         * (CASE I/II/IV) Compared Tuple=src_ip/port & dst_ip/port & proto
+         * (CASE III)  Compared Tuple:
+         *             Fully cone=dst_ip/port & proto
+         *             Restricted Cone=dst_ip/port & proto & src_ip
+         *
+         */
+	if( (skb->dev!=NULL) && /* CASE III */
+		(strcmp(skb->dev->name, wan_name)==0) &&
+		(iph->protocol==IPPROTO_UDP)) {
+	    h = ip_cone_conntrack_find_get(&tuple, NULL);
+	}else{ /* CASE I.II.IV */
+	    h = ip_conntrack_find_get(&tuple, NULL);
+	}
+#else //CONFIG_NAT_LINUX
 	h = ip_conntrack_find_get(&tuple, NULL);
+#endif
 	if (!h) {
 		h = init_conntrack(&tuple, proto, skb);
 		if (!h)

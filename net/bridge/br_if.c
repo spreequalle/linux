@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_if.c,v 1.7 2001/12/24 00:59:55 davem Exp $
+ *	$Id: br_if.c,v 1.2 2008-08-15 07:51:04 winfred Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -38,14 +38,18 @@ static int port_cost(struct net_device *dev)
 	struct ethtool_cmd ecmd = { ETHTOOL_GSET };
 	struct ifreq ifr;
 	mm_segment_t old_fs;
-	int err;
+	int err = 0;
 
 	strncpy(ifr.ifr_name, dev->name, IFNAMSIZ);
 	ifr.ifr_data = (void __user *) &ecmd;
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
+#ifdef CONFIG_ETHTOOL
 	err = dev_ethtool(&ifr);
+#else
+	ecmd.speed = SPEED_100; //winfred: default 100Mbps
+#endif
 	set_fs(old_fs);
 
 	if (!err) {

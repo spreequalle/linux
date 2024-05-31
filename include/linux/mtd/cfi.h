@@ -1,7 +1,7 @@
 
 /* Common Flash Interface structures
  * See http://support.intel.com/design/flash/technote/index.htm
- * $Id: cfi.h,v 1.57 2005/11/15 23:28:17 tpoynor Exp $
+ * $Id: cfi.h,v 1.3 2009-01-16 07:28:30 steven Exp $
  */
 
 #ifndef __MTD_CFI_H__
@@ -200,6 +200,27 @@ struct cfi_pri_amdstd {
 } __attribute__((packed));
 
 /* Vendor-Specific PRI for Atmel chips (command set 0x0002) */
+
+/* Vendor-Specific PRI for SST Extended Command Set (0x0701) */
+
+struct cfi_pri_sststd {
+	uint8_t  pri[3];
+	uint8_t  MajorVersion;
+	uint8_t  MinorVersion;
+	uint8_t  SiliconRevision; /* bits 1-0: Address Sensitive Unlock */
+	uint8_t  EraseSuspend;
+	uint8_t  BlkProt;
+	uint8_t  TmpBlkUnprotect;
+	uint8_t  BlkProtUnprot;
+	uint8_t  SimultaneousOps;
+	uint8_t  BurstMode;
+	uint8_t  PageMode;
+	uint8_t  VppMin;
+	uint8_t  VppMax;
+	uint8_t  TopBottom;
+} __attribute__((packed));
+
+/* Vendor-Specific PRI for SST chips (command set 0x0701) */
 
 struct cfi_pri_atmel {
 	uint8_t pri[3];
@@ -477,7 +498,9 @@ struct cfi_fixup {
 
 #define CFI_MFR_AMD 0x0001
 #define CFI_MFR_ATMEL 0x001F
+#define CFI_MFR_SAMSUNG 0x00EC
 #define CFI_MFR_ST  0x0020 	/* STMicroelectronics */
+#define CFI_MFR_SST 0x00BF
 
 void cfi_fixup(struct mtd_info *mtd, struct cfi_fixup* fixups);
 

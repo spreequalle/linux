@@ -204,8 +204,14 @@ int do_truncate(struct dentry *dentry, loff_t length, unsigned int time_attrs,
 	if (length < 0)
 		return -EINVAL;
 
+	 
+
 	newattrs.ia_size = length;
+	
+
 	newattrs.ia_valid = ATTR_SIZE | time_attrs;
+
+	
 	if (filp) {
 		newattrs.ia_file = filp;
 		newattrs.ia_valid |= ATTR_FILE;
@@ -1060,6 +1066,7 @@ asmlinkage long sys_close(unsigned int fd)
 	rcu_assign_pointer(fdt->fd[fd], NULL);
 	FD_CLR(fd, fdt->close_on_exec);
 	__put_unused_fd(files, fd);
+
 	spin_unlock(&files->file_lock);
 	retval = filp_close(filp, files);
 

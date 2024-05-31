@@ -5,7 +5,7 @@
  *
  * This code is GPL
  *
- * $Id: mtdpart.c,v 1.55 2005/11/07 11:14:20 gleixner Exp $
+ * $Id: mtdpart.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  *
  * 	02-21-2002	Thomas Gleixner <gleixner@autronix.de>
  *			added support for read_oob, write_oob

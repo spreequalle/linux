@@ -1,4 +1,4 @@
-/* $Id: rtc.h,v 1.2 1996/08/21 23:17:39 ecd Exp $
+/* $Id: rtc.h,v 1.1.1.1 2007-05-25 06:50:13 bruce Exp $
  *
  * rtc.h: Definitions for access to the Mostek real time clock
  *

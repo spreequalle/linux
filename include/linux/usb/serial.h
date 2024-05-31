@@ -66,6 +66,7 @@ struct usb_serial_port {
 	spinlock_t		lock;
 	struct mutex            mutex;
 	unsigned char		number;
+	int			bulk_in_polling;
 
 	unsigned char *		interrupt_in_buffer;
 	struct urb *		interrupt_in_urb;

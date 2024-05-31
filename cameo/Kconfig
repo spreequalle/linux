@@ -1,0 +1,100 @@
+menu "Cameo Model Selection"
+
+config SUPPORT_CAMEO_SDK
+bool "Support Cameo Modification"
+
+config SUPPORT_CONTROL_GPIO9
+bool "Support users can control GPIO9 in UARTF_SHARE_MODE. Currently GPIO9 is always on by default."
+
+config SUPPORT_TURN_POWER_LED_ON
+bool "Support to turn the power led on while DUT is loading the kernel"
+
+config POWER_LED_GPIO1
+int 'GPIO1 for power led control'
+depends on SUPPORT_TURN_POWER_LED_ON
+default 9
+	help
+		This value is to indicate that which GPIO is used for the power led
+
+config POWER_LED_GPIO2
+int 'GPIO2 for power led control'
+depends on SUPPORT_TURN_POWER_LED_ON
+default 8
+	help
+		This value is to indicate that which GPIO is used for the power led
+
+config SUPPORT_CONTROL_RESET_LED
+bool "Support users can control flushing LED while pressing the reset button for reboot or restore to default"
+
+config RESET_BTN_GPIO
+int 'GPIO for reset button'
+depends on SUPPORT_CONTROL_RESET_LED
+default 10
+	help
+		This value is to indicate that which GPIO is used for the reset button
+
+config SUPPORT_CONTROL_WLAN_LED_BY_STRENGTH
+bool "Support flushing the wireless led by signal strength"
+
+config SUPPORT_SILEX_SHAREPORT
+bool "Support Silex shareport"
+
+config SILEX_DEFAULT_MACHTYPE
+string 'Allow users to set the Model Name which will show on the shareport utility'
+depends on SUPPORT_SILEX_SHAREPORT
+	help
+		This value is to allow users to set the Model Name which will show on the shareport utility
+
+config CFG_PART_SIZE
+hex 'MTD CFG (DataBase) Partition Size (Unit:Bytes)'
+default 0x20000
+	help
+	  This value is related to #define CFG_CONFIG_SIZE 0x30000 in rt2880.h in loader.
+
+config SUPPORT_LANG_PART
+bool "Add a extra Flash Partition for storing multiple language package"
+
+config LANG_PART_SIZE
+hex 'MTD Language Partition Size (Unit:Bytes)'
+depends on SUPPORT_LANG_PART
+default 0x40000
+	help
+	  This value is related to #define CFG_CONFIG_SIZE 0x70000 (0x30000 + 0x40000) in rt2880.h in loader.
+
+config SUPPORT_POT_PART
+bool "Add a extra Flash Partition for storing POT values"
+
+config POT_PART_SIZE
+hex 'POT Partition Size (Unit:Bytes)'
+depends on SUPPORT_POT_PART
+default 0x10000
+	help
+	  This value is related to POT partition size.
+
+config SUPPORT_CHECKSUM_PART
+bool "Add a extra Flash Partition for storing image's checksum"
+
+config CHECKSUM_PART_SIZE
+hex 'MTD CheckSum Size (Unit:Bytes)'
+depends on SUPPORT_CHECKSUM_PART
+default 0x10000
+	help
+	  This value is related to #define CHECKSUM_PART_SIZE in rt2880.h in loader.
+
+config SUPPORT_INTELLON_POWER_SAVING
+bool "To detect if there is a wireless client connects to DUT or not for Intellon Power Saving purpose"
+
+choice
+
+prompt "Choose Vendor"
+config  DLINK
+bool "D-LINK Models"
+select DLINK_MODEL
+endchoice
+
+source "cameo/dlink/Kconfig"
+
+config CAMEO_MODEL_NAME
+	string
+	default "DHP_W306AV" if DHP_W306AV
+endmenu

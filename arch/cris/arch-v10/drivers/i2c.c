@@ -12,6 +12,10 @@
 *!                                 don't use PB_I2C if DS1302 uses same bits,
 *!                                 use PB.
 *! $Log: i2c.c,v $
+*! Revision 1.1.1.1  2007-05-25 06:50:20  bruce
+*! linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+*! initial version. 
+*!
 *! Revision 1.13  2005/03/07 13:13:07  starvik
 *! Added spinlocks to protect states etc
 *!
@@ -84,7 +88,7 @@
 *! (C) Copyright 1999-2002 Axis Communications AB, LUND, SWEDEN
 *!
 *!***************************************************************************/
-/* $Id: i2c.c,v 1.13 2005/03/07 13:13:07 starvik Exp $ */
+/* $Id: i2c.c,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $ */
 
 /****************** INCLUDE FILES SECTION ***********************************/
 

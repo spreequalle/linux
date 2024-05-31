@@ -4,7 +4,7 @@
  *	Authors:
  *	Pedro Roque		<roque@di.fc.ul.pt>
  *
- *	$Id: ipv6.h,v 1.1 2002/05/20 15:13:07 jgrimm Exp $
+ *	$Id: ipv6.h,v 1.1.1.1 2007-05-25 06:50:11 bruce Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU General Public License
@@ -261,8 +261,10 @@ struct ipv6_txoptions *ipv6_fixup_options(struct ipv6_txoptions *opt_space,
 
 extern int ipv6_opt_accepted(struct sock *sk, struct sk_buff *skb);
 
-extern int ip6_frag_nqueues;
-extern atomic_t ip6_frag_mem;
+//extern int ip6_frag_nqueues;
+//extern atomic_t ip6_frag_mem;
+int ip6_frag_nqueues(void);
+int ip6_frag_mem(void);
 
 #define IPV6_FRAG_TIMEOUT	(60*HZ)		/* 60 seconds */
 
@@ -382,11 +384,38 @@ static inline int ipv6_prefix_equal(const struct in6_addr *a1,
 				   prefixlen);
 }
 
+struct inet_frag_queue;
+int ip6_frag_equal(struct inet_frag_queue *q1, struct inet_frag_queue *q2);
+
+
+enum ip6_defrag_users {
+	IP6_DEFRAG_LOCAL_DELIVER,
+	IP6_DEFRAG_CONNTRACK_IN,
+	IP6_DEFRAG_CONNTRACK_OUT,
+};
+
+struct ip6_create_arg {
+   __be32 id;
+   u32 user;
+   struct in6_addr *src;
+   struct in6_addr *dst;
+};
+
+void ip6_frag_init(struct inet_frag_queue *q, void *a);
+int ip6_frag_match(struct inet_frag_queue *q, void *a);
+
 static inline int ipv6_addr_any(const struct in6_addr *a)
 {
 	return ((a->s6_addr32[0] | a->s6_addr32[1] | 
 		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
 }
+
+static inline int ipv6_addr_loopback(const struct in6_addr *a)
+{
+	return ((a->s6_addr32[0] | a->s6_addr32[1] |
+		 a->s6_addr32[2] | (a->s6_addr32[3] ^ htonl(1))) == 0);
+}
+
 
 /*
  * find the first different bit between two addresses
@@ -521,8 +550,8 @@ extern int 			ipv6_ext_hdr(u8 nexthdr);
 
 extern int ipv6_find_tlv(struct sk_buff *skb, int offset, int type);
 
-extern struct ipv6_txoptions *	ipv6_invert_rthdr(struct sock *sk,
-						  struct ipv6_rt_hdr *hdr);
+/*extern struct ipv6_txoptions *	ipv6_invert_rthdr(struct sock *sk,
+						  struct ipv6_rt_hdr *hdr);*/
 
 
 /*
@@ -574,10 +603,12 @@ extern int inet6_hash_connect(struct inet_timewait_death_row *death_row,
 /*
  * reassembly.c
  */
-extern int sysctl_ip6frag_high_thresh;
-extern int sysctl_ip6frag_low_thresh;
-extern int sysctl_ip6frag_time;
-extern int sysctl_ip6frag_secret_interval;
+//extern int sysctl_ip6frag_high_thresh;
+//extern int sysctl_ip6frag_low_thresh;
+//extern int sysctl_ip6frag_time;
+//extern int sysctl_ip6frag_secret_interval;
+struct inet_frags_ctl;
+extern struct inet_frags_ctl ip6_frags_ctl;
 
 extern const struct proto_ops inet6_stream_ops;
 extern const struct proto_ops inet6_dgram_ops;

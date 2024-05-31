@@ -1,5 +1,5 @@
 /*
- * $Id: power.c,v 1.10 2001/09/25 09:17:15 vojtech Exp $
+ * $Id: power.c,v 1.1.1.1 2007-05-25 06:50:05 bruce Exp $
  *
  *  Copyright (c) 2001 "Crazy" James Simmons
  *

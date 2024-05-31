@@ -671,6 +671,7 @@ EXPORT_SYMBOL(nr_node_ids);
 /*
  * Figure out the number of possible node ids.
  */
+#ifdef CONFIG_ARCH_POPULATES_NODE_MAP
 static void __init setup_nr_node_ids(void)
 {
 	unsigned int node;
@@ -682,6 +683,7 @@ static void __init setup_nr_node_ids(void)
 }
 #else
 static void __init setup_nr_node_ids(void) {}
+#endif
 #endif
 
 #ifdef CONFIG_NUMA

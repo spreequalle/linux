@@ -1,4 +1,4 @@
-/*  $Id: process.c,v 1.161 2002/01/23 11:27:32 davem Exp $
+/*  $Id: process.c,v 1.1.1.1 2007-05-25 06:50:19 bruce Exp $
  *  linux/arch/sparc/kernel/process.c
  *
  *  Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

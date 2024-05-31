@@ -1,5 +1,5 @@
 /*
- * $Id: au88x0_game.c,v 1.9 2003/09/22 03:51:28 mjander Exp $
+ * $Id: au88x0_game.c,v 1.1.1.1 2007-05-25 06:50:11 bruce Exp $
  *
  *  Manuel Jander.
  *

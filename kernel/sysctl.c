@@ -684,6 +684,7 @@ static ctl_table vm_table[] = {
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec_userhz_jiffies,
 	},
+#ifdef CONFIG_PDFLUSH
 	{
 		.ctl_name	= VM_NR_PDFLUSH_THREADS,
 		.procname	= "nr_pdflush_threads",
@@ -692,6 +693,7 @@ static ctl_table vm_table[] = {
 		.mode		= 0444 /* read-only*/,
 		.proc_handler	= &proc_dointvec,
 	},
+#endif
 	{
 		.ctl_name	= VM_SWAPPINESS,
 		.procname	= "swappiness",
@@ -931,6 +933,7 @@ static ctl_table fs_table[] = {
 		.extra1		= &minolduid,
 		.extra2		= &maxolduid,
 	},
+#ifdef CONFIG_FILE_LOCKING
 	{
 		.ctl_name	= FS_LEASES,
 		.procname	= "leases-enable",
@@ -939,6 +942,7 @@ static ctl_table fs_table[] = {
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,
 	},
+#endif
 #ifdef CONFIG_DNOTIFY
 	{
 		.ctl_name	= FS_DIR_NOTIFY,
@@ -950,6 +954,7 @@ static ctl_table fs_table[] = {
 	},
 #endif
 #ifdef CONFIG_MMU
+#ifdef CONFIG_FILE_LOCKING
 	{
 		.ctl_name	= FS_LEASE_TIME,
 		.procname	= "lease-break-time",
@@ -958,6 +963,8 @@ static ctl_table fs_table[] = {
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,
 	},
+#endif
+#ifdef CONFIG_AIO
 	{
 		.ctl_name	= FS_AIO_NR,
 		.procname	= "aio-nr",
@@ -974,6 +981,7 @@ static ctl_table fs_table[] = {
 		.mode		= 0644,
 		.proc_handler	= &proc_doulongvec_minmax,
 	},
+#endif
 #ifdef CONFIG_INOTIFY_USER
 	{
 		.ctl_name	= FS_INOTIFY,

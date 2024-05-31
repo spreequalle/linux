@@ -306,7 +306,7 @@ config RELAY
 
 config BLK_DEV_INITRD
 	bool "Initial RAM filesystem and RAM disk (initramfs/initrd) support"
-	depends on BROKEN || !FRV
+	depends on (BROKEN || !FRV) && RT2880_ROOTFS_IN_RAM
 	help
 	  The initial RAM filesystem is a ramfs which is loaded by the
 	  boot loader (loadlin or lilo) and that is mounted as root
@@ -413,15 +413,33 @@ config HOTPLUG
 	  disabling this option for embedded systems that do not use modules, a
 	  dynamic /dev tree, or dynamic device discovery.  Just say Y.
 
+config PRINTK_FUNC
+	default y
+	bool "Enable printk function in the kernel" if EMBEDDED
+	help
+	  This option controls whether the printk function is compiled
+	  into the kernel or not. Removing it eliminates a small amount of
+	  code size from the kernel, which is OK if it is not being used.
+	  See CONFIG_PRINTK to disable the function calls to printk(),
+	  which is where the big win comes in reducing kernel size.
+
 config PRINTK
 	default y
-	bool "Enable support for printk" if EMBEDDED
+	bool "Enable support for printk message" if EMBEDDED
+	depends on PRINTK_FUNC
 	help
 	  This option enables normal printk support. Removing it
 	  eliminates most of the message strings from the kernel image
 	  and makes the kernel more or less silent. As this makes it
-	  very difficult to diagnose system problems, saying N here is
-	  strongly discouraged.
+	  very difficult to diagnose system problems, saying N here on
+	  non-embedded systems is strongly discouraged.
+
+	  With this set to 'N', if the printk function is still enabled,
+	  (see CONFIG_PRINTK_FUNC) you can enable printk messages from
+	  a single file, by putting "#define DO_PRINTK 1" at the top of
+	  the file.  This must appear before any #include lines.
+	  This makes it possible to have fine-grained control over
+	  which printk messages to include in the kernel.
 
 config BUG
 	bool "BUG() support" if EMBEDDED
@@ -491,6 +509,158 @@ config VM_EVENT_COUNTERS
 	  This option allows the disabling of the VM event counters
 	  on EMBEDDED systems.  /proc/vmstat will only show page counts
 	  if VM event counters are disabled.
+
+menuconfig TINY
+	bool "Configure tiny kernel features"
+	help
+	  This option allows certain base kernel options and settings
+          to be disabled or tweaked. This is for specialized
+          environments which can tolerate a "non-standard" tiny kernel.
+          Only use this if you really know what you are doing.
+
+config NET_SMALL
+	default n
+	bool "Enable various size reductions for networking" if TINY
+	help
+	  This reduces the size of miscellaneous networking data structures.
+	  Currently a placeholder.
+
+config LINUXTINY_DO_UNINLINE
+	bool "un-inline several functions for smaller kernel size" if TINY
+	default n
+	help
+	  Un-inline some function for smaller kernel size.
+
+config PANIC
+	default y
+	bool "Enable panic reporting code" if TINY
+	help
+	  Disabling this completely removes panic handling code.
+	  Warning: this can result in data loss if a panic condition
+	  occurs, as the kernel may ignore the condition entirely.<F11>jj
+
+config FULL_PANIC
+	depends PANIC
+	default y
+	bool "Full panic reporting data" if TINY
+	help
+	  This includes text descriptions of panics in addition to stack dumps.
+	  Disabling compiles out the explanations for panics, saving
+	  string space. Use with caution.
+
+config MEMPOOL
+	default y
+	bool "Use mempool allocator" if TINY
+	help
+	  The mempool allocator attempts keep a reserve pool of
+	  various objects available for use in low-memory situations.
+	  Disabling this feature may make more memory available and
+	  will somewhat decrease code size, but with a higher risk of
+	  deadlock under some loads.
+
+config AIO
+	default y
+	bool "Enable AIO support" if TINY
+	help
+	  This option enables POSIX async IO which may be used by
+	  some high performance threaded applications. Disabling
+	  this option saves about 5k.
+
+config XATTR
+	default y
+	bool "Enable filesystem extended attribute support" if TINY
+	help
+	  This enables the filesystem extended attribute syscalls.
+
+config FILE_LOCKING
+	default y
+	bool "Enable POSIX file locking API" if TINY
+	help
+	  This enables standard file locking support.
+
+config ETHTOOL
+	depends NET
+	default y
+	bool "Enable ethtool support" if TINY
+	help
+	  Disabling this option removes support for configuring
+	  ethernet device features via ethtool. Saves about 6k.
+
+config INETPEER
+	default y
+	bool "Enable INET peer information storage" if TINY
+	help
+	  This allows storing various information about network peers.
+	  Disabling saves about 2k.
+
+config NET_SK_FILTER
+	default y
+	depends NET
+	bool "Enable network socket filter" if TINY
+	help
+	  This enables the basic kernel level socket filtering, not to
+	  be confused with netfilter. Required by PPP.
+
+config NET_DEV_MULTICAST
+	default y
+	depends NET
+	bool "Enable device multicast support" if TINY
+	help
+	  This enables the core device multicast list management code.
+
+config IGMP
+	depends NET
+	default y
+	bool "Enable IGMP support" if TINY && !IP_MULTICAST
+	help
+	  This includes support for the Internet group management
+	  protocol, used for multicast.
+
+config MAX_SWAPFILES_SHIFT
+	int "Number of swap files log2 (0 => 1, 5 => 32)" if TINY
+	range 0 5
+	default 5
+	help
+	  Select the maximum number of swapfiles (5 for default).
+
+config NR_LDISCS
+	int "Number of tty line disciplines (1~16)" if TINY
+	range 1 16
+	default 16
+	help
+	  Select the maximum number of tty line disciplines. Embedded systems
+	  can probably get by with only a few of these.
+
+config MAX_USER_RT_PRIO
+	int "Number of realtime priority levels (5~100)" if TINY
+	range 5 100
+	default 100
+	help
+	  This option allows reducing the size of the O(1) scheduler arrays.
+
+menuconfig TINY_EXPERIMENTAL
+	bool "Configure experimental tiny kernel features"
+	help
+	  This option allows certain base kernel options and settings
+          to be disabled or tweaked. This is for specialized
+          environments which can tolerate a "non-standard" tiny kernel.
+          Only use this if you really know what you are doing.
+
+config PDFLUSH
+	default y
+	bool "Enable pdflush daemon" if TINY_EXPERIMENTAL
+	help
+	  Enable kernel pdflush daemon.
+
+config BINFMT_ELF_AOUT
+	bool "ELF binaries with a.out linkage" if TINY_EXPERIMENTAL
+	depends on BINFMT_ELF
+	default y
+	help
+	  The kernel may support ELF executables which use an a.out format
+	  interpreter (dynamic linker) and/or a.out shared libraries, in
+	  addition to the usual ELF-ELF setups. You shouldn't need this.
+
 
 endmenu		# General setup
 

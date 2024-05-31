@@ -7,7 +7,7 @@
  *
  * For licensing information, see the file 'LICENCE' in this directory.
  *
- * $Id: compr_rtime.c,v 1.14 2004/06/23 16:34:40 havasi Exp $
+ * $Id: compr_rtime.c,v 1.1.1.1 2007-05-25 06:50:15 bruce Exp $
  *
  *
  * Very simple lz77-ish encoder.

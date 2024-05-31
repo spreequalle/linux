@@ -2,7 +2,7 @@
  *  UDPLITEv6   An implementation of the UDP-Lite protocol over IPv6.
  *              See also net/ipv4/udplite.c
  *
- *  Version:    $Id: udplite.c,v 1.9 2006/10/19 08:28:10 gerrit Exp $
+ *  Version:    $Id: udplite.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *  Authors:    Gerrit Renker       <gerrit@erg.abdn.ac.uk>
  *

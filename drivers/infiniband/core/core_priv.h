@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id: core_priv.h 1349 2004-12-16 21:09:43Z roland $
+ * $Id: core_priv.h,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
  */
 
 #ifndef _CORE_PRIV_H

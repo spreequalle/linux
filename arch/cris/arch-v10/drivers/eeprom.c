@@ -20,6 +20,10 @@
 *!                                  in the spin-lock.
 *!
 *!  $Log: eeprom.c,v $
+*!  Revision 1.1.1.1  2007-05-25 06:50:20  bruce
+*!  linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+*!  initial version. 
+*!
 *!  Revision 1.12  2005/06/19 17:06:46  starvik
 *!  Merge of Linux 2.6.12.
 *!

@@ -1,7 +1,7 @@
 #
 # linux/drivers/maps/Makefile
 #
-# $Id: Makefile.common,v 1.34 2005/11/07 11:14:26 gleixner Exp $
+# $Id: Makefile,v 1.4 2007-10-26 07:34:55 steven Exp $
 
 ifeq ($(CONFIG_MTD_COMPLEX_MAPPINGS),y)
 obj-$(CONFIG_MTD)		+= map_funcs.o
@@ -72,3 +72,6 @@ obj-$(CONFIG_MTD_PLATRAM)	+= plat-ram.o
 obj-$(CONFIG_MTD_OMAP_NOR)	+= omap_nor.o
 obj-$(CONFIG_MTD_MTX1)		+= mtx-1_flash.o
 obj-$(CONFIG_MTD_TQM834x)	+= tqm834x.o
+obj-$(CONFIG_MTD_RALINK)        += ralink-flash.o
+
+EXTRA_CFLAGS += -D$(CONFIG_CAMEO_MODEL_NAME)

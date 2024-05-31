@@ -158,6 +158,27 @@ libs-$(CONFIG_SIBYTE_CFE)	+= arch/mips/sibyte/cfe/
 #
 
 #
+# Ralink RT2880 board
+#
+core-$(CONFIG_RALINK_RT2880)	+= arch/mips/rt2880/
+cflags-$(CONFIG_RALINK_RT2880)	+= -Iinclude/asm-mips/rt2880
+load-$(CONFIG_RALINK_RT2880)	+= 0x88000000
+
+#
+# Ralink RT2883 board
+#
+core-$(CONFIG_RALINK_RT2883)	+= arch/mips/rt2880/
+cflags-$(CONFIG_RALINK_RT2883)	+= -Iinclude/asm-mips/rt2880
+load-$(CONFIG_RALINK_RT2883)	+= 0x80000000
+
+#
+# Ralink RT3052 board
+#
+core-$(CONFIG_RALINK_RT3052)	+= arch/mips/rt2880/
+cflags-$(CONFIG_RALINK_RT3052)	+= -Iinclude/asm-mips/rt2880
+load-$(CONFIG_RALINK_RT3052)	+= 0x80000000
+
+#
 # Acer PICA 61, Mips Magnum 4000 and Olivetti M700.
 #
 core-$(CONFIG_MACH_JAZZ)	+= arch/mips/jazz/
@@ -668,6 +689,18 @@ endif
 #
 vmlinux.32: vmlinux
 	$(OBJCOPY) -O $(32bit-bfd) $(OBJCOPYFLAGS) $< $@
+
+ifdef CONFIG_RALINK_RT2880
+#error zImage rImage
+zImage rImage: vmlinux $(TOPDIR)/.config
+	$(Q)$(MAKE) $(build)=arch/mips/rt2880/boot $@
+endif
+
+ifdef CONFIG_RALINK_RT3052
+#error zImage rImage
+zImage rImage: vmlinux $(TOPDIR)/.config
+	$(Q)$(MAKE) $(build)=arch/mips/rt2880/boot $@
+endif
 
 #
 # The 64-bit ELF tools are pretty broken so at this time we generate 64-bit

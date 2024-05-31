@@ -18,6 +18,10 @@ static char rcsid[] =
  *	Using tabstop = 4.
  * 
  * $Log: pc300_drv.c,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:02  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  * Revision 3.23  2002/03/20 13:58:40  henrique
  * Fixed ortographic mistakes
  *

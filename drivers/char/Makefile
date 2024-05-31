@@ -9,6 +9,11 @@ FONTMAPFILE = cp437.uni
 
 obj-y	 += mem.o random.o tty_io.o n_tty.o tty_ioctl.o
 
+obj-$(CONFIG_RALINK_GPIO)	+= ralink_gpio.o
+obj-$(CONFIG_RALINK_GDMA)	+= ralink_gdma.o 
+obj-$(CONFIG_RALINK_SPI) 	+= spi_drv.o 
+obj-$(CONFIG_RALINK_I2C) 	+= i2c_drv.o
+
 obj-$(CONFIG_LEGACY_PTYS)	+= pty.o
 obj-$(CONFIG_UNIX98_PTYS)	+= pty.o
 obj-y				+= misc.o
@@ -32,6 +37,7 @@ obj-$(CONFIG_A2232)		+= ser_a2232.o generic_serial.o
 obj-$(CONFIG_ATARI_DSP56K)	+= dsp56k.o
 obj-$(CONFIG_MOXA_SMARTIO)	+= mxser.o
 obj-$(CONFIG_MOXA_SMARTIO_NEW)	+= mxser_new.o
+obj-$(CONFIG_SIBYTE_SB1250_DUART) += sb1250_duart.o
 obj-$(CONFIG_COMPUTONE)		+= ip2/
 obj-$(CONFIG_RISCOM8)		+= riscom8.o
 obj-$(CONFIG_ISI)		+= isicom.o
@@ -55,6 +61,7 @@ obj-$(CONFIG_VIOCONS)		+= viocons.o
 obj-$(CONFIG_VIOTAPE)		+= viotape.o
 obj-$(CONFIG_HVCS)		+= hvcs.o
 obj-$(CONFIG_SGI_MBCS)		+= mbcs.o
+obj-$(CONFIG_SERIAL_DEC)	+= decserial.o
 obj-$(CONFIG_BRIQ_PANEL)	+= briq_panel.o
 
 obj-$(CONFIG_PRINTER)		+= lp.o
@@ -83,6 +90,7 @@ obj-$(CONFIG_I8K)		+= i8k.o
 obj-$(CONFIG_DS1620)		+= ds1620.o
 obj-$(CONFIG_HW_RANDOM)		+= hw_random/
 obj-$(CONFIG_COBALT_LCD)	+= lcd.o
+obj-$(CONFIG_AU1000_GPIO)	+= au1000_gpio.o
 obj-$(CONFIG_PPDEV)		+= ppdev.o
 obj-$(CONFIG_NWBUTTON)		+= nwbutton.o
 obj-$(CONFIG_NWFLASH)		+= nwflash.o
@@ -103,6 +111,9 @@ obj-$(CONFIG_IPMI_HANDLER)	+= ipmi/
 
 obj-$(CONFIG_HANGCHECK_TIMER)	+= hangcheck-timer.o
 obj-$(CONFIG_TCG_TPM)		+= tpm/
+
+obj-$(CONFIG_RALINK_PCM)	+= pcm/
+obj-$(CONFIG_RALINK_I2S)	+= i2s/
 
 # Files generated that shall be removed upon make clean
 clean-files := consolemap_deftbl.c defkeymap.c

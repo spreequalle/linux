@@ -3,7 +3,7 @@
  *
  *  Copyright (C) 2001 Russell King
  *
- *  $Id: cpu-sa1110.c,v 1.9 2002/07/06 16:53:18 rmk Exp $
+ *  $Id: cpu-sa1110.c,v 1.1.1.1 2007-05-25 06:50:19 bruce Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as

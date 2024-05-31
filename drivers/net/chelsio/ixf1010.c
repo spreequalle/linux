@@ -1,4 +1,4 @@
-/* $Date: 2005/11/12 02:13:49 $ $RCSfile: ixf1010.c,v $ $Revision: 1.36 $ */
+/* $Date: 2007-05-25 06:50:02 $ $RCSfile: ixf1010.c,v $ $Revision: 1.1.1.1 $ */
 #include "gmac.h"
 #include "elmer0.h"
 

@@ -1,4 +1,4 @@
-/* $Id: system.h,v 1.69 2002/02/09 19:49:31 davem Exp $ */
+/* $Id: system.h,v 1.1.1.1 2007-05-25 06:50:14 bruce Exp $ */
 #ifndef __SPARC64_SYSTEM_H
 #define __SPARC64_SYSTEM_H
 

@@ -6,6 +6,7 @@
 #include <linux/delay.h>
 #include <linux/string.h>
 #include <linux/syscalls.h>
+#include <linux/vmalloc.h>
 
 static __initdata char *message;
 static void __init error(char *x)
@@ -441,6 +442,104 @@ static void __init flush_window(void)
 	outcnt = 0;
 }
 
+#define _LZMA_IN_CB
+#define _LZMA_OUT_READ
+#include <linux/LzmaDecode.h>
+#include "MyLzmaDecode.c"
+
+static int read_byte(void *object, const unsigned char **buffer, SizeT *bufferSize)
+{
+	static unsigned char val;
+	*bufferSize = 1;
+	val = get_byte();
+	*buffer = &val;
+	return LZMA_RESULT_OK;
+}
+                                        
+static int __init lzma_unzip(void)
+{
+	unsigned int i;
+	CLzmaDecoderState state;
+	unsigned char* outputbuffer;
+	unsigned int uncompressedSize = 0;
+	unsigned char* p;
+	unsigned int kBlockSize =  0x10000;
+	unsigned int nowPos = 0;
+	unsigned int outsizeProcessed = 0;
+	int res;
+	ILzmaInCallback callback;
+
+	callback.Read = read_byte;
+
+	// lzma args
+	i = get_byte();
+	state.Properties.lc = i % 9, i = i / 9;
+	state.Properties.lp = i % 5, state.Properties.pb = i / 5;
+
+	// read dictionary size
+	p = (char*)&state.Properties.DictionarySize;
+	for (i = 0; i < 4; i++) 
+		*p++ = get_byte();
+
+	// get uncompressedSize
+	p= (char*)&uncompressedSize;	
+	for (i = 0; i < 4; i++) 
+		*p++ = get_byte();
+
+	// skip big file
+	for (i = 0; i < 4; i++) 
+		get_byte();
+
+	printk(KERN_NOTICE "initramfs: LZMA lc=%d,lp=%d,pb=%d,dictSize=%d,origSize=%d\n",
+			state.Properties.lc,state.Properties.lp,state.Properties.pb,state.Properties.DictionarySize, uncompressedSize);
+	outputbuffer = kmalloc(kBlockSize, GFP_KERNEL); 	
+	if (outputbuffer == 0) {
+		printk(KERN_ERR "initramfs: Couldn't allocate lzma output buffer\n");
+		return -1;
+	}
+
+	state.Probs =  (CProb*) kmalloc(LzmaGetNumProbs(&state.Properties)*sizeof(CProb), GFP_KERNEL);
+	if (state.Probs == 0) {
+		printk(KERN_ERR "initramfs: Couldn't allocate lzma workspace\n");
+		return -1;
+	}
+
+	state.Dictionary = vmalloc(state.Properties.DictionarySize);
+	if (state.Dictionary == 0) {
+		printk(KERN_ERR "initramfs: Couldn't allocate lzma dictionary\n");
+		return -1;
+	}
+
+	printk(KERN_NOTICE "LZMA initramfs by Ming-Ching Tiew <mctiew@yahoo.com>");
+
+	LzmaDecoderInit(&state);
+
+	for (nowPos =0; nowPos < uncompressedSize ; ) {
+		UInt32 blockSize = uncompressedSize - nowPos;
+		if (blockSize > kBlockSize)
+			blockSize = kBlockSize;
+		res = MyLzmaDecode(&state, &callback, outputbuffer, blockSize, &outsizeProcessed);
+		if (res != 0) {
+			panic( KERN_ERR "initramfs: Lzma decode failure\n");
+			return -1;
+		}
+		if (outsizeProcessed == 0) {
+			uncompressedSize = nowPos;
+			printk(KERN_NOTICE "initramfs: nowPos=%d, uncompressedSize=%d\n",
+					nowPos, uncompressedSize ); 
+			break;
+		}
+		flush_buffer(outputbuffer, outsizeProcessed);
+		nowPos += outsizeProcessed;
+		printk(".");
+	}
+
+	vfree(state.Dictionary);
+	kfree(outputbuffer);
+	kfree(state.Probs);
+	return 0;
+}
+
 static char * __init unpack_to_rootfs(char *buf, unsigned len, int check_only)
 {
 	int written;
@@ -475,11 +574,19 @@ static char * __init unpack_to_rootfs(char *buf, unsigned len, int check_only)
 		inptr = 0;
 		outcnt = 0;		/* bytes in output buffer */
 		bytes_out = 0;
-		crc = (ulg)0xffffffffL; /* shift register contents */
-		makecrc();
-		gunzip();
-		if (state != Reset)
-			error("junk in gzipped archive");
+		if (inbuf[0] < 9 * 5 * 5 && buf[9] == 0 && buf[10] == 0
+				&& buf[11] == 0 && buf[12] == 0) {
+			printk("detected lzma initramfs\n");
+			printk(KERN_NOTICE "detected lzma initramfs\n");
+			lzma_unzip();
+		}
+		else {
+			crc = (ulg)0xffffffffL; /* shift register contents */
+			makecrc();
+			gunzip();
+			if (state != Reset)
+				error("junk in gzipped archive");
+		}
 		this_header = saved_offset + inptr;
 		buf += inptr;
 		len -= inptr;

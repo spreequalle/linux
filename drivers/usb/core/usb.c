@@ -997,5 +997,5 @@ EXPORT_SYMBOL(usb_buffer_map_sg);
 EXPORT_SYMBOL(usb_buffer_dmasync_sg);
 #endif
 EXPORT_SYMBOL(usb_buffer_unmap_sg);
-
+EXPORT_SYMBOL(usb_alloc_dev);
 MODULE_LICENSE("GPL");

@@ -5,7 +5,7 @@
  *	Authors:
  *	Pedro Roque		<roque@di.fc.ul.pt>
  *
- *	$Id: tcp_ipv6.c,v 1.144 2002/02/01 22:01:04 davem Exp $
+ *	$Id: tcp_ipv6.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *	Based on:
  *	linux/net/ipv4/tcp.c
@@ -480,14 +480,14 @@ static int tcp_v6_send_synack(struct sock *sk, struct request_sock *req,
 
 	if (dst == NULL) {
 		opt = np->opt;
-		if (opt == NULL &&
+/*		if (opt == NULL &&
 		    np->rxopt.bits.osrcrt == 2 &&
 		    treq->pktopts) {
 			struct sk_buff *pktopts = treq->pktopts;
 			struct inet6_skb_parm *rxopt = IP6CB(pktopts);
 			if (rxopt->srcrt)
 				opt = ipv6_invert_rthdr(sk, (struct ipv6_rt_hdr*)(pktopts->nh.raw + rxopt->srcrt));
-		}
+		}*/
 
 		if (opt && opt->srcrt) {
 			struct rt0_hdr *rt0 = (struct rt0_hdr *) opt->srcrt;
@@ -1385,12 +1385,12 @@ static struct sock * tcp_v6_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 	if (sk_acceptq_is_full(sk))
 		goto out_overflow;
 
-	if (np->rxopt.bits.osrcrt == 2 &&
+/*	if (np->rxopt.bits.osrcrt == 2 &&
 	    opt == NULL && treq->pktopts) {
 		struct inet6_skb_parm *rxopt = IP6CB(treq->pktopts);
 		if (rxopt->srcrt)
 			opt = ipv6_invert_rthdr(sk, (struct ipv6_rt_hdr *)(treq->pktopts->nh.raw + rxopt->srcrt));
-	}
+	}*/
 
 	if (dst == NULL) {
 		struct in6_addr *final_p = NULL, final;

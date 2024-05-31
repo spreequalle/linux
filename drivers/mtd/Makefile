@@ -1,7 +1,7 @@
 #
 # Makefile for the memory technology device drivers.
 #
-# $Id: Makefile.common,v 1.7 2005/07/11 10:39:27 gleixner Exp $
+# $Id: Makefile,v 1.2 2008-10-21 07:29:34 winfred Exp $
 
 # Core functionality.
 mtd-y				:= mtdcore.o
@@ -27,4 +27,4 @@ obj-$(CONFIG_SSFDC)		+= ssfdc.o
 nftl-objs		:= nftlcore.o nftlmount.o
 inftl-objs		:= inftlcore.o inftlmount.o
 
-obj-y		+= chips/ maps/ devices/ nand/ onenand/
+obj-y		+= chips/ maps/ devices/ nand/ onenand/ ralink/

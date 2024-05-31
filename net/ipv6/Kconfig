@@ -57,6 +57,16 @@ config IPV6_ROUTE_INFO
 
 	  If unsure, say N.
 
+config IPV6_OPTIMISTIC_DAD
+	bool "IPv6: Enable RFC 4429 Optimistic DAD (EXPERIMENTAL)"
+	depends on IPV6 && EXPERIMENTAL
+	---help---
+		This is experimental support for optimistic Duplicate
+		Address Detection.  It allows for autoconfigured addresses
+		to be used more quickly.
+
+		If unsure, say N.
+
 config INET6_AH
 	tristate "IPv6: AH transformation"
 	depends on IPV6
@@ -157,6 +167,7 @@ config IPV6_SIT
 	tristate "IPv6: IPv6-in-IPv4 tunnel (SIT driver)"
 	depends on IPV6
 	select INET_TUNNEL
+	select IPV6_NDISC_NODETYPE
 	default y
 	---help---
 	  Tunneling means encapsulating data of one protocol type within
@@ -165,7 +176,29 @@ config IPV6_SIT
 	  into IPv4 packets. This is useful if you want to connect two IPv6
 	  networks over an IPv4-only path.
 
-	  Saying M here will produce a module called sit.ko. If unsure, say Y.
+	  Saying M here will produce a module called sit. If unsure, say Y.
+
+config IPV6_SIT_6RD
+	bool "IPv6: IPv6 Rapid Development (6RD) (EXPERIMENTAL)"
+	depends on IPV6_SIT && EXPERIMENTAL
+	default n
+	---help---
+	  IPv6 Rapid Deployment (6rd; draft-ietf-softwire-ipv6-6rd) builds upon
+	  mechanisms of 6to4 (RFC3056) to enable a service provider to rapidly
+	  deploy IPv6 unicast service to IPv4 sites to which it provides
+	  customer premise equipment.  Like 6to4, it utilizes stateless IPv6 in
+	  IPv4 encapsulation in order to transit IPv4-only network
+	  infrastructure.  Unlike 6to4, a 6rd service provider uses an IPv6
+	  prefix of its own in place of the fixed 6to4 prefix.
+
+	  With this option enabled, the SIT driver offers 6rd functionality by
+	  providing additional ioctl API to configure the IPv6 Prefix for in
+	  stead of static 2002::/16 for 6to4.
+
+	  If unsure, say N.
+
+config IPV6_NDISC_NODETYPE
+	bool
 
 config IPV6_TUNNEL
 	tristate "IPv6: IPv6-in-IPv6 tunnel"
@@ -197,3 +230,16 @@ config IPV6_SUBTREES
 
 	  If unsure, say N.
 
+config IPV6_MROUTE
+	bool "IPv6: multicast routing (EXPERIMENTAL)"
+	depends on IPV6 && EXPERIMENTAL
+	---help---
+		Experimental support for IPv6 multicast forwarding.
+		If unsure, say N.
+
+config IPV6_PIMSM_V2
+       bool "IPv6: PIM-SM version 2 support (EXPERIMENTAL)"
+       depends on IPV6_MROUTE
+       ---help---
+         Support for IPv6 PIM multicast routing protocol PIM-SMv2.
+         If unsure, say N.

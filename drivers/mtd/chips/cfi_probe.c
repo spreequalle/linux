@@ -1,7 +1,7 @@
 /*
    Common Flash Interface probe code.
    (C) 2000 Red Hat. GPL'd.
-   $Id: cfi_probe.c,v 1.86 2005/11/29 14:48:31 gleixner Exp $
+   $Id: cfi_probe.c,v 1.3 2008-10-07 09:20:03 steven Exp $
 */
 
 #include <linux/module.h>
@@ -30,6 +30,9 @@ static int cfi_probe_chip(struct map_info *map, __u32 base,
 static int cfi_chip_setup(struct map_info *map, struct cfi_private *cfi);
 
 struct mtd_info *cfi_probe(struct map_info *map);
+
+int cfi_isSST(struct map_info *map,struct cfi_private *cfi, __u32 base);
+static int isSST;
 
 #ifdef CONFIG_MTD_XIP
 
@@ -66,6 +69,8 @@ do { \
 #define xip_disable_qry(base, map, cfi) do { } while (0)
 
 #endif
+
+
 
 /* check for QRY.
    in: interleave,type,mode
@@ -119,7 +124,21 @@ static int __xipram cfi_probe_chip(struct map_info *map, __u32 base,
 	xip_disable();
 	cfi_send_gen_cmd(0xF0, 0, base, map, cfi, cfi->device_type, NULL);
 	cfi_send_gen_cmd(0xFF, 0, base, map, cfi, cfi->device_type, NULL);
-	cfi_send_gen_cmd(0x98, 0x55, base, map, cfi, cfi->device_type, NULL);
+
+
+	/* SST Flash on board ? */
+	isSST=cfi_isSST(map,cfi,base);
+
+	if(isSST)
+        {
+                cfi_send_gen_cmd(0xAA, 0x5555, base, map, cfi, cfi->device_type, NULL);
+                cfi_send_gen_cmd(0x55, 0x2AAA, base, map, cfi, cfi->device_type, NULL);
+                cfi_send_gen_cmd(0x98, 0x5555, base, map, cfi, cfi->device_type, NULL);
+        }
+	else
+	{
+		cfi_send_gen_cmd(0x98, 0x55, base, map, cfi, cfi->device_type, NULL);
+	}
 
 	if (!qry_present(map,base,cfi)) {
 		xip_enable(base, map, cfi);
@@ -246,6 +265,12 @@ static int __xipram cfi_chip_setup(struct map_info *map,
 	cfi->cfiq->A_ADR = le16_to_cpu(cfi->cfiq->A_ADR);
 	cfi->cfiq->InterfaceDesc = le16_to_cpu(cfi->cfiq->InterfaceDesc);
 	cfi->cfiq->MaxBufWriteSize = le16_to_cpu(cfi->cfiq->MaxBufWriteSize);
+
+	// for SST,the NumEraseRegion 2 explain to Block Information,
+        // NumEraseRegion 1 explain to sector
+        if(isSST){
+                cfi->cfiq->NumEraseRegions = 1;
+        }
 
 #ifdef DEBUG_CFI
 	/* Dump the information therein */

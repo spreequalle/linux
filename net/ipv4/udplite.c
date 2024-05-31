@@ -1,7 +1,7 @@
 /*
  *  UDPLITE     An implementation of the UDP-Lite protocol (RFC 3828).
  *
- *  Version:    $Id: udplite.c,v 1.25 2006/10/19 07:22:36 gerrit Exp $
+ *  Version:    $Id: udplite.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *  Authors:    Gerrit Renker       <gerrit@erg.abdn.ac.uk>
  *

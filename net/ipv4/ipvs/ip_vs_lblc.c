@@ -1,7 +1,7 @@
 /*
  * IPVS:        Locality-Based Least-Connection scheduling module
  *
- * Version:     $Id: ip_vs_lblc.c,v 1.10 2002/09/15 08:14:08 wensong Exp $
+ * Version:     $Id: ip_vs_lblc.c,v 1.1.1.1 2007-05-25 06:50:00 bruce Exp $
  *
  * Authors:     Wensong Zhang <wensong@gnuchina.org>
  *

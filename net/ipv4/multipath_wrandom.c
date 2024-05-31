@@ -2,7 +2,7 @@
  *              Weighted random policy for multipath.
  *
  *
- * Version:	$Id: multipath_wrandom.c,v 1.1.2.3 2004/09/22 07:51:40 elueck Exp $
+ * Version:	$Id: multipath_wrandom.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  * Authors:	Einar Lueck <elueck@de.ibm.com><lkml@einar-lueck.de>
  *

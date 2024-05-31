@@ -47,6 +47,8 @@
 #include <linux/netdevice.h>
 #include <linux/socket.h>
 #include <linux/mm.h>
+#include <linux/ip.h>
+#include <linux/in.h>
 
 #include <net/netfilter/nf_conntrack.h>
 #include <net/netfilter/nf_conntrack_l3proto.h>
@@ -87,6 +89,10 @@ EXPORT_SYMBOL_GPL(nf_conntrack_untracked);
 
 unsigned int nf_ct_log_invalid __read_mostly;
 LIST_HEAD(unconfirmed);
+#if defined (CONFIG_NAT_FCONE) || defined (CONFIG_NAT_RCONE)
+extern char wan_name[IFNAMSIZ];
+#endif
+
 static int nf_conntrack_vmalloc __read_mostly;
 
 static unsigned int nf_conntrack_next_id;
@@ -128,10 +134,23 @@ static u_int32_t __hash_conntrack(const struct nf_conntrack_tuple *tuple,
 				  unsigned int size, unsigned int rnd)
 {
 	unsigned int a, b;
+
+#if defined (CONFIG_NAT_FCONE) /* Full Cone */
+	a = jhash((void *)tuple->dst.u3.all, sizeof(tuple->dst.u3.all),
+		   tuple->dst.u.all); // dst ip, dst port
+	b = jhash((void *)tuple->dst.u3.all, sizeof(tuple->dst.u3.all),
+		   tuple->dst.protonum); //dst ip, & dst ip protocol
+#elif defined (CONFIG_NAT_RCONE) /* Restricted Cone */
+	a = jhash((void *)tuple->src.u3.all, sizeof(tuple->src.u3.all), //src ip
+		   (tuple->src.l3num << 16) | tuple->dst.protonum);
+	b = jhash((void *)tuple->dst.u3.all, sizeof(tuple->dst.u3.all), //dst ip & dst port
+		  (tuple->dst.u.all << 16) | tuple->dst.protonum);
+#else /* CONFIG_NAT_LINUX */
 	a = jhash((void *)tuple->src.u3.all, sizeof(tuple->src.u3.all),
 		  ((tuple->src.l3num) << 16) | tuple->dst.protonum);
 	b = jhash((void *)tuple->dst.u3.all, sizeof(tuple->dst.u3.all),
 			(tuple->src.u.all << 16) | tuple->dst.u.all);
+#endif
 
 	return jhash_2words(a, b, rnd) % size;
 }
@@ -356,6 +375,14 @@ destroy_conntrack(struct nf_conntrack *nfct)
 	 * too. */
 	nf_ct_remove_expectations(ct);
 
+	#if defined(CONFIG_NETFILTER_XT_MATCH_LAYER7) || defined(CONFIG_NETFILTER_XT_MATCH_LAYER7_MODULE)
+	if(ct->layer7.app_proto)
+		kfree(ct->layer7.app_proto);
+	if(ct->layer7.app_data)
+	kfree(ct->layer7.app_data);
+	#endif
+
+
 	/* We overload first tuple to link into unconfirmed list. */
 	if (!nf_ct_is_confirmed(ct)) {
 		BUG_ON(list_empty(&ct->tuplehash[IP_CT_DIR_ORIGINAL].list));
@@ -404,6 +431,65 @@ __nf_conntrack_find(const struct nf_conntrack_tuple *tuple,
 	return NULL;
 }
 EXPORT_SYMBOL_GPL(__nf_conntrack_find);
+
+/* Added by Steven Liu */
+#if defined (CONFIG_NAT_FCONE) || defined (CONFIG_NAT_RCONE)
+static inline int nf_ct_cone_tuple_equal(const struct nf_conntrack_tuple *t1,
+                                    const struct nf_conntrack_tuple *t2)
+{
+#if defined (CONFIG_NAT_FCONE)    /* Full Cone */
+        return nf_ct_tuple_dst_equal(t1, t2);
+#elif defined (CONFIG_NAT_RCONE)  /* Restricted Cone */
+        return (nf_ct_tuple_dst_equal(t1, t2) && 
+	        t1->src.u3.all[0] == t2->src.u3.all[0] &&
+                t1->src.u3.all[1] == t2->src.u3.all[1] && 
+		t1->src.u3.all[2] == t2->src.u3.all[2] &&
+                t1->src.u3.all[3] == t2->src.u3.all[3] &&
+		t1->src.l3num == t2->src.l3num &&
+		t1->dst.protonum == t2->dst.protonum);
+#endif
+}
+
+
+static struct nf_conntrack_tuple_hash *
+__nf_cone_conntrack_find(const struct nf_conntrack_tuple *tuple,
+        const struct nf_conn *ignored_conntrack)
+{
+    struct nf_conntrack_tuple_hash *h;
+    unsigned int hash = hash_conntrack(tuple);
+
+    list_for_each_entry(h, &nf_conntrack_hash[hash], list) {
+        if (nf_ct_tuplehash_to_ctrack(h) != ignored_conntrack &&
+                nf_ct_cone_tuple_equal(tuple, &h->tuple)) {
+            NF_CT_STAT_INC(found);
+            return h;
+        }
+        NF_CT_STAT_INC(searched);
+    }
+
+    return NULL;
+	
+}
+
+
+/* Find a connection corresponding to a tuple. */
+struct nf_conntrack_tuple_hash *
+nf_cone_conntrack_find_get(const struct nf_conntrack_tuple *tuple,
+        const struct nf_conn *ignored_conntrack)
+{
+    struct nf_conntrack_tuple_hash *h;
+
+    read_lock_bh(&nf_conntrack_lock);
+    h = __nf_cone_conntrack_find(tuple, ignored_conntrack);
+    if (h)
+        atomic_inc(&nf_ct_tuplehash_to_ctrack(h)->ct_general.use);
+    read_unlock_bh(&nf_conntrack_lock);
+
+    return h;
+}
+EXPORT_SYMBOL_GPL(nf_cone_conntrack_find_get);
+
+#endif
 
 /* Find a connection corresponding to a tuple. */
 struct nf_conntrack_tuple_hash *
@@ -776,7 +862,74 @@ resolve_normal_ct(struct sk_buff *skb,
 	}
 
 	/* look for tuple match */
-	h = nf_conntrack_find_get(&tuple, NULL);
+#if defined (CONFIG_NAT_FCONE) || defined (CONFIG_NAT_RCONE)
+	struct iphdr *iph=(struct iphdr *)skb->nh.raw;
+
+        /*
+         * Based on NAT treatments of UDP in RFC3489:
+         *
+         * 1)Full Cone: A full cone NAT is one where all requests from the
+         * same internal IP address and port are mapped to the same external
+         * IP address and port.  Furthermore, any external host can send a
+         * packet to the internal host, by sending a packet to the mapped
+         * external address.
+         *
+         * 2)Restricted Cone: A restricted cone NAT is one where all requests
+         * from the same internal IP address and port are mapped to the same
+         * external IP address and port.  Unlike a full cone NAT, an external
+         * host (with IP address X) can send a packet to the internal host
+         * only if the internal host had previously sent a packet to IP
+         * address X.
+         *
+         * 3)Port Restricted Cone: A port restricted cone NAT is like a
+         * restricted cone NAT, but the restriction includes port numbers.
+         * Specifically, an external host can send a packet, with source IP
+         * address X and source port P, to the internal host only if the
+         * internal host had previously sent a packet to IP address X and
+         * port P.
+         *
+         * 4)Symmetric: A symmetric NAT is one where all requests from the
+         * same internal IP address and port, to a specific destination IP
+         * address and port, are mapped to the same external IP address and
+         * port.  If the same host sends a packet with the same source
+         * address and port, but to a different destination, a different
+         * mapping is used.  Furthermore, only the external host that
+         * receives a packet can send a UDP packet back to the internal host.
+         *
+         *
+	 *
+         *
+         * Original Linux NAT type is hybrid 'port restricted cone' and
+         * 'symmetric'. XBOX certificate recommands NAT type is 'fully cone'
+         * or 'restricted cone', so i patch the linux kernel to support
+         * this feature
+         * Tradition scenario from LAN->WAN:
+         *
+         *        (LAN)     (WAN)
+         * Client------>AP---------> Server
+         * -------------> (I)
+         *              -------------->(II)
+         *              <--------------(III)
+         * <------------- (IV)
+         *
+         *
+         * (CASE I/II/IV) Compared Tuple=src_ip/port & dst_ip/port & proto
+         * (CASE III)  Compared Tuple:
+         *             Fully cone=dst_ip/port & proto
+         *             Restricted Cone=dst_ip/port & proto & src_ip
+         *
+         */
+	if( (skb->dev!=NULL) && (iph!=NULL) && /* CASE III */
+		(strcmp(skb->dev->name, wan_name)==0) &&
+		(iph->protocol==IPPROTO_UDP)) {
+	    h = nf_cone_conntrack_find_get(&tuple, NULL);
+        }else{ /* CASE I.II.IV */
+            h = nf_conntrack_find_get(&tuple, NULL);
+        }
+#else //CONFIG_NAT_LINUX
+        h = nf_conntrack_find_get(&tuple, NULL);
+#endif
+
 	if (!h) {
 		h = init_conntrack(&tuple, l3proto, l4proto, skb, dataoff);
 		if (!h)
@@ -874,6 +1027,26 @@ nf_conntrack_in(int pf, unsigned int hooknum, struct sk_buff **pskb)
 		NF_CT_STAT_INC_ATOMIC(invalid);
 		return -ret;
 	}
+
+	
+#if defined(CONFIG_RA_SW_NAT) || defined(CONFIG_RA_SW_NAT_MODULE)
+#include "../nat/sw_nat/ra_nat.h"
+	if (nfct_help(ct)->helper) {
+            if( (skb_headroom(*pskb) >=4)  && (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_NUM) ) {
+                FOE_HASH_NUM(*pskb) |= FOE_CONNTRACKING_FLAGS;
+            }
+	}
+#elif  defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
+#include "../nat/hw_nat/ra_nat.h"
+	if (nfct_help(ct)->helper) {
+            if( (skb_headroom(*pskb) >=4)  &&
+                    ((FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_PCI) ||
+                     (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_WLAN) ||
+                     (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_GE))){
+                    FOE_ALG_RXIF(*pskb)=1;
+	    }
+	}
+#endif
 
 	if (set_reply && !test_and_set_bit(IPS_SEEN_REPLY_BIT, &ct->status))
 		nf_conntrack_event_cache(IPCT_STATUS, *pskb);

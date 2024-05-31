@@ -1,5 +1,5 @@
 /*
- * $Id: db9.c,v 1.13 2002/04/07 20:13:37 vojtech Exp $
+ * $Id: db9.c,v 1.1.1.1 2007-05-25 06:50:05 bruce Exp $
  *
  *  Copyright (c) 1999-2001 Vojtech Pavlik
  *

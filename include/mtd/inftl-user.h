@@ -1,5 +1,5 @@
 /*
- * $Id: inftl-user.h,v 1.2 2005/11/07 11:14:56 gleixner Exp $
+ * $Id: inftl-user.h,v 1.1.1.1 2007-05-25 06:50:12 bruce Exp $
  *
  * Parts of INFTL headers shared with userspace
  *

@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  $Id: sa1100.c,v 1.50 2002/07/29 14:41:04 rmk Exp $
+ *  $Id: sa1100.c,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
  *
  */
 
@@ -891,7 +891,7 @@ static int __init sa1100_serial_init(void)
 {
 	int ret;
 
-	printk(KERN_INFO "Serial: SA11x0 driver $Revision: 1.50 $\n");
+	printk(KERN_INFO "Serial: SA11x0 driver $Revision: 1.1.1.1 $\n");
 
 	sa1100_init_ports();
 
@@ -914,6 +914,6 @@ module_init(sa1100_serial_init);
 module_exit(sa1100_serial_exit);
 
 MODULE_AUTHOR("Deep Blue Solutions Ltd");
-MODULE_DESCRIPTION("SA1100 generic serial port driver $Revision: 1.50 $");
+MODULE_DESCRIPTION("SA1100 generic serial port driver $Revision: 1.1.1.1 $");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS_CHARDEV_MAJOR(SERIAL_SA1100_MAJOR);

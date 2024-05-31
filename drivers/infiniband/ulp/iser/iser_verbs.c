@@ -30,7 +30,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id: iser_verbs.c 7051 2006-05-10 12:29:11Z ogerlitz $
+ * $Id: iser_verbs.c,v 1.1.1.1 2007-05-25 06:50:04 bruce Exp $
  */
 #include <asm/io.h>
 #include <linux/kernel.h>

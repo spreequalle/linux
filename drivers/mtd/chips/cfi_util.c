@@ -7,7 +7,7 @@
  *
  * This code is covered by the GPL.
  *
- * $Id: cfi_util.c,v 1.10 2005/11/07 11:14:23 gleixner Exp $
+ * $Id: cfi_util.c,v 1.2 2007-06-05 07:15:54 steven Exp $
  *
  */
 
@@ -27,13 +27,33 @@
 #include <linux/mtd/cfi.h>
 #include <linux/mtd/compatmac.h>
 
+
+int cfi_isSST(struct map_info *map,struct cfi_private *cfi, __u32 base)
+{
+	int man_id;
+
+        cfi_send_gen_cmd(0xAA, 0x5555, base, map, cfi, cfi->device_type, NULL);
+        cfi_send_gen_cmd(0x55, 0x2AAA, base, map, cfi, cfi->device_type, NULL);
+        cfi_send_gen_cmd(0x90, 0x5555, base, map, cfi, cfi->device_type, NULL);
+        man_id = cfi_read_query(map, base);
+
+        /* SST manufacture id = 0xBF */
+        if(man_id==CFI_MFR_SST){
+                return 1;
+        }else{
+                return 0;
+        }
+
+}
+
+
 struct cfi_extquery *
 __xipram cfi_read_pri(struct map_info *map, __u16 adr, __u16 size, const char* name)
 {
 	struct cfi_private *cfi = map->fldrv_priv;
 	__u32 base = 0; // cfi->chips[0].start;
 	int ofs_factor = cfi->interleave * cfi->device_type;
-	int i;
+	int i, isSST;
 	struct cfi_extquery *extp = NULL;
 
 	printk(" %s Extended Query Table at 0x%4.4X\n", name, adr);
@@ -50,8 +70,18 @@ __xipram cfi_read_pri(struct map_info *map, __u16 adr, __u16 size, const char* n
 	local_irq_disable();
 #endif
 
-	/* Switch it into Query Mode */
-	cfi_send_gen_cmd(0x98, 0x55, base, map, cfi, cfi->device_type, NULL);
+	isSST=cfi_isSST(map,cfi,base);
+
+        if(isSST)
+        {
+                cfi_send_gen_cmd(0xAA, 0x5555, base, map, cfi, cfi->device_type, NULL);
+                cfi_send_gen_cmd(0x55, 0x2AAA, base, map, cfi, cfi->device_type, NULL);
+                cfi_send_gen_cmd(0x98, 0x5555, base, map, cfi, cfi->device_type, NULL);
+        }
+	else 
+	{
+		cfi_send_gen_cmd(0x98, 0x55, base, map, cfi, cfi->device_type, NULL);
+	}
 
 	/* Read in the Extended Query Table */
 	for (i=0; i<size; i++) {
@@ -100,11 +130,13 @@ int cfi_varsize_frob(struct mtd_info *mtd, varsize_frob_t frob,
 	int i, first;
 	struct mtd_erase_region_info *regions = mtd->eraseregions;
 
-	if (ofs > mtd->size)
+	if (ofs > mtd->size){
 		return -EINVAL;
+	}
 
-	if ((len + ofs) > mtd->size)
+	if ((len + ofs) > mtd->size){
 		return -EINVAL;
+	}
 
 	/* Check that both start and end of the requested erase are
 	 * aligned with the erasesize at the appropriate addresses.
@@ -128,8 +160,9 @@ int cfi_varsize_frob(struct mtd_info *mtd, varsize_frob_t frob,
 	   effect here.
 	*/
 
-	if (ofs & (regions[i].erasesize-1))
+	if (ofs & (regions[i].erasesize-1)){
 		return -EINVAL;
+	}
 
 	/* Remember the erase region we start on */
 	first = i;
@@ -146,8 +179,9 @@ int cfi_varsize_frob(struct mtd_info *mtd, varsize_frob_t frob,
 	*/
 	i--;
 
-	if ((ofs + len) & (regions[i].erasesize-1))
+	if ((ofs + len) & (regions[i].erasesize-1)){
 		return -EINVAL;
+	}
 
 	chipnum = ofs >> cfi->chipshift;
 	adr = ofs - (chipnum << cfi->chipshift);
@@ -159,8 +193,9 @@ int cfi_varsize_frob(struct mtd_info *mtd, varsize_frob_t frob,
 
 		ret = (*frob)(map, &cfi->chips[chipnum], adr, size, thunk);
 
-		if (ret)
+		if (ret){
 			return ret;
+		}
 
 		adr += size;
 		ofs += size;

@@ -44,7 +44,9 @@
 #include <asm/page.h>
 
 static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs);
+#ifdef CONFIG_BINFMT_ELF_AOUT
 static int load_elf_library(struct file *);
+#endif
 static unsigned long elf_map (struct file *, unsigned long, struct elf_phdr *, int, int);
 
 /*
@@ -74,7 +76,11 @@ static int elf_core_dump(long signr, struct pt_regs *regs, struct file *file);
 static struct linux_binfmt elf_format = {
 		.module		= THIS_MODULE,
 		.load_binary	= load_elf_binary,
+#ifdef CONFIG_BINFMT_ELF_AOUT
 		.load_shlib	= load_elf_library,
+#else
+		.load_shlib	= NULL,
+#endif
 		.core_dump	= elf_core_dump,
 		.min_coredump	= ELF_EXEC_PAGESIZE,
 		.hasvdso	= 1
@@ -451,6 +457,7 @@ out:
 	return error;
 }
 
+#ifdef CONFIG_BINFMT_ELF_AOUT
 static unsigned long load_aout_interp(struct exec *interp_ex,
 		struct file *interpreter)
 {
@@ -496,6 +503,7 @@ static unsigned long load_aout_interp(struct exec *interp_ex,
 out:
 	return elf_entry;
 }
+#endif
 
 /*
  * These are the functions used to load ELF style executables and shared
@@ -503,7 +511,9 @@ out:
  */
 
 #define INTERPRETER_NONE 0
+#ifdef CONFIG_BINFMT_ELF_AOUT
 #define INTERPRETER_AOUT 1
+#endif
 #define INTERPRETER_ELF 2
 
 #ifndef STACK_RND_MASK
@@ -543,7 +553,9 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 	unsigned long elf_entry, interp_load_addr = 0;
 	unsigned long start_code, end_code, start_data, end_data;
 	unsigned long reloc_func_desc = 0;
+#ifdef CONFIG_BINFMT_ELF_AOUT
 	char passed_fileno[6];
+#endif
 	struct files_struct *files;
 	int executable_stack = EXSTACK_DEFAULT;
 	unsigned long def_flags = 0;
@@ -720,12 +732,14 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 
 	/* Some simple consistency checks for the interpreter */
 	if (elf_interpreter) {
+#ifdef CONFIG_BINFMT_ELF_AOUT
 		interpreter_type = INTERPRETER_ELF | INTERPRETER_AOUT;
 
 		/* Now figure out which format our binary is */
 		if ((N_MAGIC(loc->interp_ex) != OMAGIC) &&
 		    (N_MAGIC(loc->interp_ex) != ZMAGIC) &&
 		    (N_MAGIC(loc->interp_ex) != QMAGIC))
+#endif
 			interpreter_type = INTERPRETER_ELF;
 
 		if (memcmp(loc->interp_elf_ex.e_ident, ELFMAG, SELFMAG) != 0)
@@ -735,6 +749,7 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 		if (!interpreter_type)
 			goto out_free_dentry;
 
+#ifdef CONFIG_BINFMT_ELF_AOUT
 		/* Make sure only one type was selected */
 		if ((interpreter_type & INTERPRETER_ELF) &&
 		     interpreter_type != INTERPRETER_ELF) {
@@ -742,6 +757,7 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 			// printk(KERN_WARNING "ELF: Ambiguous type, using ELF\n");
 			interpreter_type = INTERPRETER_ELF;
 		}
+#endif
 		/* Verify the interpreter has a valid arch */
 		if ((interpreter_type == INTERPRETER_ELF) &&
 		    !elf_check_arch(&loc->interp_elf_ex))
@@ -753,6 +769,7 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 
 	/* OK, we are done with that, now set up the arg stuff,
 	   and then start this sucker up */
+#ifdef CONFIG_BINFMT_ELF_AOUT
 	if ((!bprm->sh_bang) && (interpreter_type == INTERPRETER_AOUT)) {
 		char *passed_p = passed_fileno;
 		sprintf(passed_fileno, "%d", elf_exec_fileno);
@@ -764,6 +781,7 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 			bprm->argc++;
 		}
 	}
+#endif
 
 	/* Flush all traces of the currently running executable */
 	retval = flush_old_exec(bprm);
@@ -941,10 +959,12 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 	}
 
 	if (elf_interpreter) {
+#ifdef CONFIG_BINFMT_ELF_AOUT
 		if (interpreter_type == INTERPRETER_AOUT)
 			elf_entry = load_aout_interp(&loc->interp_ex,
 						     interpreter);
 		else
+#endif
 			elf_entry = load_elf_interp(&loc->interp_elf_ex,
 						    interpreter,
 						    &interp_load_addr);
@@ -970,7 +990,9 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 
 	kfree(elf_phdata);
 
+#ifdef CONFIG_BINFMT_ELF_AOUT
 	if (interpreter_type != INTERPRETER_AOUT)
+#endif
 		sys_close(elf_exec_fileno);
 
 	set_binfmt(&elf_format);
@@ -985,12 +1007,16 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 
 	compute_creds(bprm);
 	current->flags &= ~PF_FORKNOEXEC;
+#ifdef CONFIG_BINFMT_ELF_AOUT
 	create_elf_tables(bprm, &loc->elf_ex,
 			  (interpreter_type == INTERPRETER_AOUT),
 			  load_addr, interp_load_addr);
 	/* N.B. passed_fileno might not be initialized? */
 	if (interpreter_type == INTERPRETER_AOUT)
 		current->mm->arg_start += strlen(passed_fileno) + 1;
+#else
+	create_elf_tables(bprm, &loc->elf_ex, 0, load_addr, interp_load_addr);
+#endif
 	current->mm->end_code = end_code;
 	current->mm->start_code = start_code;
 	current->mm->start_data = start_data;
@@ -1052,6 +1078,7 @@ out_free_ph:
 	goto out;
 }
 
+#ifdef CONFIG_BINFMT_ELF_AOUT
 /* This is really simpleminded and specialized - we are loading an
    a.out library that is given an ELF header. */
 static int load_elf_library(struct file *file)
@@ -1135,6 +1162,7 @@ out_free_ph:
 out:
 	return error;
 }
+#endif
 
 /*
  * Note that some platforms still use traditional core dumps and not

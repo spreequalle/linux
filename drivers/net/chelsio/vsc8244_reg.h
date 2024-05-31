@@ -1,4 +1,4 @@
-/* $Date: 2005/11/23 16:28:53 $ $RCSfile: vsc8244_reg.h,v $ $Revision: 1.1 $ */
+/* $Date: 2007-05-25 06:50:02 $ $RCSfile: vsc8244_reg.h,v $ $Revision: 1.1.1.1 $ */
 #ifndef CHELSIO_MV8E1XXX_H
 #define CHELSIO_MV8E1XXX_H
 

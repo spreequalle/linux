@@ -2,7 +2,11 @@
 #define __LINUX_MROUTE_H
 
 #include <linux/sockios.h>
+#include <linux/types.h>
+#ifdef __KERNEL__
 #include <linux/in.h>
+#endif
+#include <linux/pim.h>
 
 /*
  *	Based on the MROUTING 3.5 defines primarily to keep
@@ -131,7 +135,11 @@ struct igmpmsg
 extern int ip_mroute_setsockopt(struct sock *, int, char __user *, int);
 extern int ip_mroute_getsockopt(struct sock *, int, char __user *, int __user *);
 extern int ipmr_ioctl(struct sock *sk, int cmd, void __user *arg);
+#ifdef CONFIG_IGMP
 extern void ip_mr_init(void);
+#else
+static inline void ip_mr_init(void) {}
+#endif
 
 
 struct vif_device
@@ -199,25 +207,25 @@ struct mfc_cache
 
 #ifdef __KERNEL__
 
-#define PIM_V1_VERSION		__constant_htonl(0x10000000)
-#define PIM_V1_REGISTER		1
-
-#define PIM_VERSION		2
-#define PIM_REGISTER		1
-
-#define PIM_NULL_REGISTER	__constant_htonl(0x40000000)
-
-/* PIMv2 register message header layout (ietf-draft-idmr-pimvsm-v2-00.ps */
-
-struct pimreghdr
-{
-	__u8	type;
-	__u8	reserved;
-	__be16	csum;
-	__be32	flags;
-};
-
-extern int pim_rcv_v1(struct sk_buff *);
+//#define PIM_V1_VERSION		__constant_htonl(0x10000000)
+//#define PIM_V1_REGISTER		1
+//
+//#define PIM_VERSION		2
+//#define PIM_REGISTER		1
+//
+//#define PIM_NULL_REGISTER	__constant_htonl(0x40000000)
+//
+///* PIMv2 register message header layout (ietf-draft-idmr-pimvsm-v2-00.ps */
+//
+//struct pimreghdr
+//{
+//	__u8	type;
+//	__u8	reserved;
+//	__be16	csum;
+//	__be32	flags;
+//};
+//
+//extern int pim_rcv_v1(struct sk_buff *);
 
 struct rtmsg;
 extern int ipmr_get_route(struct sk_buff *skb, struct rtmsg *rtm, int nowait);

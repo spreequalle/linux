@@ -96,6 +96,129 @@ config EQUALIZER
 	  To compile this driver as a module, choose M here: the module
 	  will be called eql.  If unsure, say N.
 
+config IMQ
+	tristate "IMQ (intermediate queueing device) support"
+	depends on NETDEVICES && NETFILTER
+	---help---
+	  The IMQ device(s) is used as placeholder for QoS queueing
+	  disciplines. Every packet entering/leaving the IP stack can be
+	  directed through the IMQ device where it's enqueued/dequeued to the
+	  attached qdisc. This allows you to treat network devices as classes
+	  and distribute bandwidth among them. Iptables is used to specify
+	  through which IMQ device, if any, packets travel.
+
+	  More information at: http://www.linuximq.net/
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called imq.  If unsure, say N.
+
+choice
+	prompt "IMQ behavior (PRE/POSTROUTING)"
+	depends on IMQ
+	default IMQ_BEHAVIOR_BA
+	help
+
+		This settings defines how IMQ behaves in respect to its
+		hooking in PREROUTING and POSTROUTING.
+
+		IMQ can work in any of the following ways:
+
+		    PREROUTING   |      POSTROUTING
+		-----------------|-------------------
+		#1  After NAT    |      After NAT
+		#2  After NAT    |      Before NAT
+		#3  Before NAT   |      After NAT
+		#4  Before NAT   |      Before NAT
+
+		The default behavior is to hook before NAT on PREROUTING
+		and after NAT on POSTROUTING (#3).
+
+		This settings are specially usefull when trying to use IMQ
+		to shape NATed clients.
+
+		More information can be found at: www.linuximq.net
+
+		If not sure leave the default settings alone.
+
+config IMQ_BEHAVIOR_AA
+	bool "IMQ AA"
+	help
+		This settings defines how IMQ behaves in respect to its
+		hooking in PREROUTING and POSTROUTING.
+
+		Choosing this option will make IMQ hook like this:
+
+		PREROUTING:   After NAT
+		POSTROUTING:  After NAT
+
+		More information can be found at: www.linuximq.net
+
+		If not sure leave the default settings alone.
+
+config IMQ_BEHAVIOR_AB
+	bool "IMQ AB"
+	help
+		This settings defines how IMQ behaves in respect to its
+		hooking in PREROUTING and POSTROUTING.
+
+		Choosing this option will make IMQ hook like this:
+
+		PREROUTING:   After NAT
+		POSTROUTING:  Before NAT
+
+		More information can be found at: www.linuximq.net
+
+		If not sure leave the default settings alone.
+
+config IMQ_BEHAVIOR_BA
+	bool "IMQ BA"
+	help
+		This settings defines how IMQ behaves in respect to its
+		hooking in PREROUTING and POSTROUTING.
+
+		Choosing this option will make IMQ hook like this:
+
+		PREROUTING:   Before NAT
+		POSTROUTING:  After NAT
+
+		More information can be found at: www.linuximq.net
+
+		If not sure leave the default settings alone.
+
+config IMQ_BEHAVIOR_BB
+	bool "IMQ BB"
+	help
+		This settings defines how IMQ behaves in respect to its
+		hooking in PREROUTING and POSTROUTING.
+
+		Choosing this option will make IMQ hook like this:
+
+		PREROUTING:   Before NAT
+		POSTROUTING:  Before NAT
+
+		More information can be found at: www.linuximq.net
+
+		If not sure leave the default settings alone.
+
+endchoice
+
+config IMQ_NUM_DEVS
+
+	int "Number of IMQ devices"
+	range 2 8
+	depends on IMQ
+	default "2"
+	help
+
+		This settings defines how many IMQ devices will be
+		created.
+
+		The default value is 2.
+
+		More information can be found at: www.linuximq.net
+
+		If not sure leave the default settings alone.
+
 config TUN
 	tristate "Universal TUN/TAP device driver support"
 	select CRC32
@@ -442,6 +565,14 @@ config MIPS_JAZZ_SONIC
 	  This is the driver for the onboard card of MIPS Magnum 4000,
 	  Acer PICA, Olivetti M700-10 and a few other identical OEM systems.
 
+config GALILEO_64240_ETH
+	tristate "Galileo GT64240 Ethernet support"
+	depends on NET_ETHERNET && MOMENCO_OCELOT_G
+	select MII
+	help
+	  This is the driver for the ethernet interfaces integrated into
+	  the Galileo (now Marvell) GT64240 chipset.
+
 config MIPS_AU1X00_ENET
 	bool "MIPS AU1000 Ethernet support"
 	depends on NET_ETHERNET && SOC_AU1X00
@@ -450,10 +581,6 @@ config MIPS_AU1X00_ENET
 	help
 	  If you have an Alchemy Semi AU1X00 based system
 	  say Y.  Otherwise, say N.
-
-config NET_SB1250_MAC
-	tristate "SB1250 Ethernet support"
-	depends on NET_ETHERNET && SIBYTE_SB1xxx_SOC
 
 config SGI_IOC3_ETH
 	bool "SGI IOC3 Ethernet"
@@ -465,29 +592,9 @@ config SGI_IOC3_ETH
 	  the Ethernet-HOWTO, available from
 	  <http://www.tldp.org/docs.html#howto>.
 
-config SGI_IOC3_ETH_HW_RX_CSUM
-	bool "Receive hardware checksums"
-	depends on SGI_IOC3_ETH && INET
-	default y
-	help
-	  The SGI IOC3 network adapter supports TCP and UDP checksums in
-	  hardware to offload processing of these checksums from the CPU.  At
-	  the moment only acceleration of IPv4 is supported.  This option
-	  enables offloading for checksums on receive.  If unsure, say Y.
-
-config SGI_IOC3_ETH_HW_TX_CSUM
-	bool "Transmit hardware checksums"
-	depends on SGI_IOC3_ETH && INET
-	default y
-	help
-	  The SGI IOC3 network adapter supports TCP and UDP checksums in
-	  hardware to offload processing of these checksums from the CPU.  At
-	  the moment only acceleration of IPv4 is supported.  This option
-	  enables offloading for checksums on transmit.  If unsure, say Y.
-
 config MIPS_SIM_NET
 	tristate "MIPS simulator Network device (EXPERIMENTAL)"
-	depends on MIPS_SIM && EXPERIMENTAL
+	depends on NET_ETHERNET && MIPS_SIM && EXPERIMENTAL
 	help
 	  The MIPSNET device is a simple Ethernet network device which is
 	  emulated by the MIPS Simulator.
@@ -1988,6 +2095,11 @@ config E1000_DISABLE_PACKET_SPLIT
 
 	  If in doubt, say N.
 
+config E1000E
+	tristate "Intel(R) PRO/1000 PT Gigabit Ethernet support"
+	depends on PCI
+	depends on PCIEPORTBUS
+
 source "drivers/net/ixp2000/Kconfig"
 
 config MYRI_SBUS
@@ -2062,6 +2174,10 @@ config R8169_NAPI
 	  information.
 
 	  If in doubt, say N.
+
+config NET_SB1250_MAC
+	tristate "SB1250 Ethernet support"
+	depends on SIBYTE_SB1xxx_SOC
 
 config R8169_VLAN
 	bool "VLAN support"
@@ -2305,8 +2421,22 @@ config MV643XX_ETH
 	select MII
 	help
 	  This driver supports the gigabit Ethernet on the Marvell MV643XX
-	  chipset which is used in the Momenco Ocelot C and Jaguar ATX and
-	  Pegasos II, amongst other PPC and MIPS boards.
+	  chipset which is used in the Momenco Ocelot C Ocelot, Jaguar ATX
+	  and Pegasos II, amongst other PPC and MIPS boards.
+
+config BIG_SUR_FE
+	bool "PMC-Sierra TITAN Fast Ethernet Support"
+	depends on NET_ETHERNET && PMC_BIG_SUR
+	help
+	  This enables support for the the integrated ethernet of
+	  PMC-Sierra's Big Sur SoC.
+
+config TITAN_GE
+	bool "PMC-Sierra TITAN Gigabit Ethernet Support"
+	depends on PMC_YOSEMITE
+	help
+	  This enables support for the the integrated ethernet of
+	  PMC-Sierra's Titan SoC.
 
 config QLA3XXX
 	tristate "QLogic QLA3XXX Network Driver Support"
@@ -2805,6 +2935,15 @@ config PPPOE
 	  which contains instruction on how to use this driver (under 
 	  the heading "Kernel mode PPPoE").
 
+config PPTP
+	tristate "PPTP (Point-to-Point Tunneling Protocol) (EXPERIMENTAL)"
+	depends on EXPERIMENTAL && PPP && SUPPORT_CAMEO_SDK
+	help
+	  Support for Microsoft Point-to-Point Tunneling Protocol.
+
+	  See http://accel-pptp.sourceforge.net/ for information on 
+	  configuring PPTP clients and servers to utilize this driver.
+
 config PPPOATM
 	tristate "PPP over ATM"
 	depends on ATM && PPP
@@ -2943,3 +3082,4 @@ config NET_POLL_CONTROLLER
 	def_bool NETPOLL
 
 endmenu
+

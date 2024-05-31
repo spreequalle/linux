@@ -51,6 +51,16 @@ extern const struct in6_addr in6addr_any;
 extern const struct in6_addr in6addr_loopback;
 #define IN6ADDR_LOOPBACK_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 } } }
 
+#ifdef __KERNEL__
+extern const struct in6_addr in6addr_linklocal_allnodes;
+#define IN6ADDR_LINKLOCAL_ALLNODES_INIT        \
+               { { { 0xff,2,0,0,0,0,0,0,0,0,0,0,0,0,0,1 } } }
+extern const struct in6_addr in6addr_linklocal_allrouters;
+#define IN6ADDR_LINKLOCAL_ALLROUTERS_INIT \
+               { { { 0xff,2,0,0,0,0,0,0,0,0,0,0,0,0,0,2 } } }
+#endif 
+
+
 struct sockaddr_in6 {
 	unsigned short int	sin6_family;    /* AF_INET6 */
 	__be16			sin6_port;      /* Transport layer port # */
@@ -179,6 +189,7 @@ struct in6_flowlabel_req
 #define IPV6_PMTUDISC_DONT		0
 #define IPV6_PMTUDISC_WANT		1
 #define IPV6_PMTUDISC_DO		2
+#define IPV6_PMTUDISC_PROBE		3
 
 /* Flowlabel */
 #define IPV6_FLOWLABEL_MGR	32

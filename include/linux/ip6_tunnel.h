@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: ip6_tunnel.h,v 1.1.1.1 2007-05-25 06:50:12 bruce Exp $
  */
 
 #ifndef _IP6_TUNNEL_H

@@ -8,7 +8,7 @@
  *		as published by the Free Software Foundation; either version
  *		2 of the License, or (at your option) any later version.
  *
- * Version:	$Id: af_unix.c,v 1.133 2002/02/08 03:57:19 davem Exp $
+ * Version:	$Id: af_unix.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  * Fixes:
  *		Linus Torvalds	:	Assorted bug cures.

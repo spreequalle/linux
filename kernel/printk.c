@@ -16,6 +16,11 @@
  *	01Mar01 Andrew Morton <andrewm@uow.edu.au>
  */
 
+/*
+ * have kernel.h produce real declarations, depending on configuration
+ */
+#define DO_PRINTK 1
+
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/tty.h>
@@ -115,7 +120,7 @@ static int preferred_console = -1;
 /* Flag: console code may call schedule() */
 static int console_may_schedule;
 
-#ifdef CONFIG_PRINTK
+#ifdef CONFIG_PRINTK_FUNC
 
 static char __log_buf[__LOG_BUF_LEN];
 static char *log_buf = __log_buf;
@@ -639,14 +644,9 @@ EXPORT_SYMBOL(vprintk);
 
 #else
 
-asmlinkage long sys_syslog(int type, char __user *buf, int len)
-{
-	return -ENOSYS;
-}
-
-static void call_console_drivers(unsigned long start, unsigned long end)
-{
-}
+asmlinkage long sys_syslog(int type, char __user *buf, int len) { return 0; }
+int do_syslog(int type, char __user *buf, int len) { return 0; }
+static void call_console_drivers(unsigned long start, unsigned long end) {}
 
 #endif
 

@@ -5,7 +5,7 @@
  *
  *		IPv4 Forwarding Information Base: semantics.
  *
- * Version:	$Id: fib_semantics.c,v 1.19 2002/01/12 07:54:56 davem Exp $
+ * Version:	$Id: fib_semantics.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  * Authors:	Alexey Kuznetsov, <kuznet@ms2.inr.ac.ru>
  *

@@ -935,6 +935,7 @@ extern int usb_disabled(void);
 #define URB_NO_INTERRUPT	0x0080	/* HINT: no non-error interrupt
 					 * needed */
 
+#define URB_LOW_PRI_PORT	0x0100
 struct usb_iso_packet_descriptor {
 	unsigned int offset;
 	unsigned int length;		/* expected length */

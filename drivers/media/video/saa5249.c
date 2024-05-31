@@ -15,7 +15,7 @@
  *
  *	Copyright (c) 1998 Richard Guenther <richard.guenther@student.uni-tuebingen.de>
  *
- * $Id: saa5249.c,v 1.1 1998/03/30 22:23:23 alan Exp $
+ * $Id: saa5249.c,v 1.1.1.1 2007-05-25 06:50:08 bruce Exp $
  *
  *	Derived From
  *

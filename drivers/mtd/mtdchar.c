@@ -1,5 +1,5 @@
 /*
- * $Id: mtdchar.c,v 1.76 2005/11/07 11:14:20 gleixner Exp $
+ * $Id: mtdchar.c,v 1.2 2008-05-18 14:31:38 steven Exp $
  *
  * Character-device access to raw MTD devices.
  *
@@ -253,7 +253,7 @@ static ssize_t mtd_write(struct file *file, const char __user *buf, size_t count
 	int ret=0;
 	int len;
 
-	DEBUG(MTD_DEBUG_LEVEL0,"MTD_write\n");
+	//DEBUG(MTD_DEBUG_LEVEL0,"MTD_write\n");
 
 	if (*ppos == mtd->size)
 		return -ENOSPC;
@@ -283,6 +283,8 @@ static ssize_t mtd_write(struct file *file, const char __user *buf, size_t count
 			kfree(kbuf);
 			return -EFAULT;
 		}
+
+		DEBUG(MTD_DEBUG_LEVEL0, "MTD_write: \"%s\" at 0x%lx\n", mtd->name, *ppos);
 
 		switch (mfi->mode) {
 		case MTD_MODE_OTP_FACTORY:

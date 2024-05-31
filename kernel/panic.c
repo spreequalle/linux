@@ -39,14 +39,15 @@ static int __init panic_setup(char *str)
 }
 __setup("panic=", panic_setup);
 
+/* Returns how long it waited in ms */
+long (*panic_blink)(long time);
+EXPORT_SYMBOL(panic_blink);
+
+#ifdef CONFIG_PANIC
 static long no_blink(long time)
 {
 	return 0;
 }
-
-/* Returns how long it waited in ms */
-long (*panic_blink)(long time);
-EXPORT_SYMBOL(panic_blink);
 
 /**
  *	panic - halt the system
@@ -57,11 +58,16 @@ EXPORT_SYMBOL(panic_blink);
  *	This function never returns.
  */
  
+#ifdef CONFIG_FULL_PANIC
 NORET_TYPE void panic(const char * fmt, ...)
 {
-	long i;
 	static char buf[1024];
 	va_list args;
+#else
+NORET_TYPE void tiny_panic(int a, ...)
+{
+#endif
+	long i;
 #if defined(CONFIG_S390)
         unsigned long caller = (unsigned long) __builtin_return_address(0);
 #endif
@@ -74,10 +80,14 @@ NORET_TYPE void panic(const char * fmt, ...)
 	preempt_disable();
 
 	bust_spinlocks(1);
+#ifdef CONFIG_FULL_PANIC
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
+#else
+	printk(KERN_EMERG "Kernel panic - not syncing\n");
+#endif
 	bust_spinlocks(0);
 
 	/*
@@ -96,7 +106,11 @@ NORET_TYPE void panic(const char * fmt, ...)
 	smp_send_stop();
 #endif
 
+#ifdef CONFIG_FULL_PANIC
 	atomic_notifier_call_chain(&panic_notifier_list, 0, buf);
+#else
+	atomic_notifier_call_chain(&panic_notifier_list, 0, "");
+#endif
 
 	if (!panic_blink)
 		panic_blink = no_blink;
@@ -139,7 +153,12 @@ NORET_TYPE void panic(const char * fmt, ...)
 	}
 }
 
+#ifdef CONFIG_FULL_PANIC
 EXPORT_SYMBOL(panic);
+#else
+EXPORT_SYMBOL(tiny_panic);
+#endif
+#endif /* CONFIG_PANIC */
 
 /**
  *	print_tainted - return a string to represent the kernel taint state.

@@ -336,7 +336,9 @@ int ct_sip_get_info(struct nf_conn *ct,
 
 	while (dptr <= limit) {
 		if ((strncmp(dptr, hnfo->lname, hnfo->lnlen) != 0) &&
-		    (strncmp(dptr, hnfo->sname, hnfo->snlen) != 0)) {
+//		    (strncmp(dptr, hnfo->sname, hnfo->snlen) != 0)) {
+                    (hnfo->sname == NULL ||
+                     strncmp(dptr, hnfo->sname, hnfo->snlen) != 0)) {
 			dptr++;
 			continue;
 		}
@@ -442,6 +444,9 @@ static int sip_help(struct sk_buff **pskb,
 
 	/* RTP info only in some SDP pkts */
 	if (memcmp(dptr, "INVITE", sizeof("INVITE") - 1) != 0 &&
+	    memcmp(dptr, "UPDATE", sizeof("UPDATE") - 1) != 0 &&
+	    memcmp(dptr, "SIP/2.0 180", sizeof("SIP/2.0 180") - 1) != 0 &&
+            memcmp(dptr, "SIP/2.0 183", sizeof("SIP/2.0 183") - 1) != 0 &&
 	    memcmp(dptr, "SIP/2.0 200", sizeof("SIP/2.0 200") - 1) != 0) {
 		goto out;
 	}

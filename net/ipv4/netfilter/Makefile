@@ -41,6 +41,12 @@ obj-$(CONFIG_IP_NF_CONNTRACK_NETLINK) += ip_conntrack_netlink.o
 obj-$(CONFIG_IP_NF_CT_PROTO_SCTP) += ip_conntrack_proto_sctp.o
 
 # connection tracking helpers
+
+# rtsp protocol support
+obj-$(CONFIG_IP_NF_RTSP) += ip_conntrack_rtsp.o
+obj-$(CONFIG_IP_NF_NAT_RTSP) += ip_nat_rtsp.o
+
+obj-$(CONFIG_IP_NF_QUAKE3) += ip_conntrack_quake3.o
 obj-$(CONFIG_IP_NF_H323) += ip_conntrack_h323.o
 obj-$(CONFIG_IP_NF_PPTP) += ip_conntrack_pptp.o
 obj-$(CONFIG_IP_NF_AMANDA) += ip_conntrack_amanda.o
@@ -57,6 +63,7 @@ obj-$(CONFIG_IP_NF_NAT_AMANDA) += ip_nat_amanda.o
 obj-$(CONFIG_IP_NF_NAT_TFTP) += ip_nat_tftp.o
 obj-$(CONFIG_IP_NF_NAT_FTP) += ip_nat_ftp.o
 obj-$(CONFIG_IP_NF_NAT_IRC) += ip_nat_irc.o
+obj-$(CONFIG_IP_NF_NAT_QUAKE3) += ip_nat_quake3.o
 obj-$(CONFIG_IP_NF_NAT_SIP) += ip_nat_sip.o
 
 # NAT helpers (nf_conntrack)
@@ -64,6 +71,7 @@ obj-$(CONFIG_NF_NAT_AMANDA) += nf_nat_amanda.o
 obj-$(CONFIG_NF_NAT_FTP) += nf_nat_ftp.o
 obj-$(CONFIG_NF_NAT_H323) += nf_nat_h323.o
 obj-$(CONFIG_NF_NAT_IRC) += nf_nat_irc.o
+obj-$(CONFIG_NF_NAT_RTSP) += nf_nat_rtsp.o
 obj-$(CONFIG_NF_NAT_PPTP) += nf_nat_pptp.o
 obj-$(CONFIG_NF_NAT_SIP) += nf_nat_sip.o
 obj-$(CONFIG_NF_NAT_SNMP_BASIC) += nf_nat_snmp_basic.o
@@ -91,6 +99,14 @@ obj-$(CONFIG_IP_NF_MATCH_ECN) += ipt_ecn.o
 obj-$(CONFIG_IP_NF_MATCH_AH) += ipt_ah.o
 obj-$(CONFIG_IP_NF_MATCH_TTL) += ipt_ttl.o
 obj-$(CONFIG_IP_NF_MATCH_ADDRTYPE) += ipt_addrtype.o
+ifeq ($(CONFIG_SUPPORT_CAMEO_SDK),y)
+obj-$(CONFIG_IP_NF_MATCH_TIME) += ipt_time.o
+obj-$(CONFIG_IP_NF_MATCH_MPORT) += ipt_mport.o
+endif
+
+ifeq ($(CONFIG_SUPPORT_CAMEO_SDK),y)
+obj-$(CONFIG_IP_NF_MATCH_URLFILTER) += ipt_urlfilter.o
+endif
 
 # targets
 obj-$(CONFIG_IP_NF_TARGET_REJECT) += ipt_REJECT.o
@@ -105,6 +121,12 @@ obj-$(CONFIG_IP_NF_TARGET_LOG) += ipt_LOG.o
 obj-$(CONFIG_IP_NF_TARGET_ULOG) += ipt_ULOG.o
 obj-$(CONFIG_IP_NF_TARGET_CLUSTERIP) += ipt_CLUSTERIP.o
 obj-$(CONFIG_IP_NF_TARGET_TTL) += ipt_TTL.o
+
+ifeq ($(CONFIG_SUPPORT_CAMEO_SDK),y)
+obj-$(CONFIG_IP_NF_TARGET_PORTTRIGGER) += ipt_PORTTRIGGER.o
+obj-$(CONFIG_IP_NF_TARGET_NATTYPE) += ipt_NATTYPE.o
+obj-$(CONFIG_IP_NF_TARGET_TRIGGER) += ipt_TRIGGER.o
+endif
 
 # generic ARP tables
 obj-$(CONFIG_IP_NF_ARPTABLES) += arp_tables.o

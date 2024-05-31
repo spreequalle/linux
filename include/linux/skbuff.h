@@ -259,7 +259,11 @@ struct sk_buff {
 	  	unsigned char 	*raw;
 	} mac;
 
+	union {
 	struct  dst_entry	*dst;
+		struct  rtable		*rtable;
+	};
+
 	struct	sec_path	*sp;
 
 	/*
@@ -304,6 +308,9 @@ struct sk_buff {
 	__u16			tc_verd;	/* traffic control verdict */
 #endif
 #endif
+#ifdef CONFIG_IPV6_NDISC_NODETYPE
+	__u8			ndisc_nodetype:2;
+#endif
 #ifdef CONFIG_NET_DMA
 	dma_cookie_t		dma_cookie;
 #endif
@@ -329,6 +336,26 @@ struct sk_buff {
 #include <linux/slab.h>
 
 #include <asm/system.h>
+
+static inline struct dst_entry *skb_dst(const struct sk_buff *skb)
+{
+        return skb->dst;
+}
+ 
+static inline void skb_dst_set(struct sk_buff *skb, struct dst_entry *dst)
+{
+        skb->dst = dst;
+}
+ 
+static inline struct rtable *skb_rtable(const struct sk_buff *skb)
+{
+        return skb->rtable;
+}
+
+static inline struct rt6_info *skb_r6table(const struct sk_buff *skb)
+{
+	return (struct rt6_info *)skb_dst(skb);
+}
 
 extern void kfree_skb(struct sk_buff *skb);
 extern void	       __kfree_skb(struct sk_buff *skb);
@@ -962,6 +989,49 @@ static inline void skb_reserve(struct sk_buff *skb, int len)
 	skb->tail += len;
 }
 
+static inline unsigned char *skb_transport_header(const struct sk_buff *skb)
+{
+	return skb->h.raw;
+}
+
+static inline void skb_reset_transport_header(struct sk_buff *skb)
+{
+	skb->h.raw = skb->data;
+}
+
+static inline void skb_set_transport_header(struct sk_buff *skb,
+											const int offset)
+{
+	skb->h.raw = skb->data + offset;
+}
+
+static inline int skb_transport_offset(const struct sk_buff *skb)
+{
+	return skb->h.raw - skb->data;
+}
+
+
+static inline unsigned char *skb_network_header(const struct sk_buff *skb)
+{
+	return skb->nh.raw;
+}
+
+static inline void skb_reset_network_header(struct sk_buff *skb)
+{
+	skb->nh.raw = skb->data;
+}
+
+static inline void skb_set_network_header(struct sk_buff *skb, const int offset)
+{
+	skb->nh.raw = skb->data + offset;
+}
+
+static inline int skb_network_offset(const struct sk_buff *skb)
+{
+	return skb->nh.raw - skb->data;
+}
+
+
 /*
  * CPUs often take a performance hit when accessing unaligned memory
  * locations. The actual performance hit varies, it can be small if the
@@ -1349,6 +1419,35 @@ static inline void *skb_header_pointer(const struct sk_buff *skb, int offset,
 		return NULL;
 
 	return buffer;
+}
+
+static inline void skb_copy_from_linear_data(const struct sk_buff *skb,
+					     void *to,
+					     const unsigned int len)
+{
+	memcpy(to, skb->data, len);
+}
+
+static inline void skb_copy_from_linear_data_offset(const struct sk_buff *skb,
+						    const int offset, void *to,
+						    const unsigned int len)
+{
+	memcpy(to, skb->data + offset, len);
+}
+
+static inline void skb_copy_to_linear_data(struct sk_buff *skb,
+					   const void *from,
+					   const unsigned int len)
+{
+	memcpy(skb->data, from, len);
+}
+
+static inline void skb_copy_to_linear_data_offset(struct sk_buff *skb,
+						  const int offset,
+						  const void *from,
+						  const unsigned int len)
+{
+	memcpy(skb->data + offset, from, len);
 }
 
 extern void skb_init(void);

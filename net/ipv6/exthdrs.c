@@ -7,7 +7,7 @@
  *	Andi Kleen		<ak@muc.de>
  *	Alexey Kuznetsov	<kuznet@ms2.inr.ac.ru>
  *
- *	$Id: exthdrs.c,v 1.13 2001/06/19 15:58:56 davem Exp $
+ *	$Id: exthdrs.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU General Public License
@@ -368,21 +368,12 @@ static int ipv6_rthdr_rcv(struct sk_buff **skbp)
 	struct rt0_hdr *rthdr;
 	int accept_source_route = ipv6_devconf.accept_source_route;
 
-	if (accept_source_route < 0 ||
-	    ((idev = in6_dev_get(skb->dev)) == NULL)) {
-		kfree_skb(skb);
-		return -1;
-	}
-	if (idev->cnf.accept_source_route < 0) {
+	idev = in6_dev_get(skb->dev);
+	if (idev) {
+		if (accept_source_route > idev->cnf.accept_source_route)
+			accept_source_route = idev->cnf.accept_source_route;		
 		in6_dev_put(idev);
-		kfree_skb(skb);
-		return -1;
 	}
-
-	if (accept_source_route > idev->cnf.accept_source_route)
-		accept_source_route = idev->cnf.accept_source_route;
-
-	in6_dev_put(idev);
 
 	if (!pskb_may_pull(skb, (skb->h.raw-skb->data)+8) ||
 	    !pskb_may_pull(skb, (skb->h.raw-skb->data)+((skb->h.raw[1]+1)<<3))) {
@@ -393,22 +384,6 @@ static int ipv6_rthdr_rcv(struct sk_buff **skbp)
 	}
 
 	hdr = (struct ipv6_rt_hdr *) skb->h.raw;
-
-	switch (hdr->type) {
-#ifdef CONFIG_IPV6_MIP6
-		break;
-#endif
-	case IPV6_SRCRT_TYPE_0:
-		if (accept_source_route > 0)
-			break;
-		kfree_skb(skb);
-		return -1;
-	default:
-		IP6_INC_STATS_BH(ip6_dst_idev(skb->dst),
-				 IPSTATS_MIB_INHDRERRORS);
-		icmpv6_param_prob(skb, ICMPV6_HDR_FIELD, (&hdr->type) - skb->nh.raw);
-		return -1;
-	}
 
 	if (ipv6_addr_is_multicast(&skb->nh.ipv6h->daddr) ||
 	    skb->pkt_type != PACKET_HOST) {
@@ -448,14 +423,6 @@ looped_back:
 	}
 
 	switch (hdr->type) {
-	case IPV6_SRCRT_TYPE_0:
-		if (hdr->hdrlen & 0x01) {
-			IP6_INC_STATS_BH(ip6_dst_idev(skb->dst),
-					 IPSTATS_MIB_INHDRERRORS);
-			icmpv6_param_prob(skb, ICMPV6_HDR_FIELD, (&hdr->hdrlen) - skb->nh.raw);
-			return -1;
-		}
-		break;
 #ifdef CONFIG_IPV6_MIP6
 	case IPV6_SRCRT_TYPE_2:
 		/* Silently discard invalid RTH type 2 */
@@ -467,6 +434,8 @@ looped_back:
 		}
 		break;
 #endif
+		default:
+			goto unknown_rh;
 	}
 
 	/*
@@ -568,6 +537,12 @@ looped_back:
 	skb_push(skb, skb->data - skb->nh.raw);
 	dst_input(skb);
 	return -1;
+	
+unknown_rh:
+	IP6_INC_STATS_BH(ip6_dst_idev(skb->dst), IPSTATS_MIB_INHDRERRORS);
+	icmpv6_param_prob(skb, ICMPV6_HDR_FIELD,
+										(&hdr->type) - skb->nh.raw);
+	return -1;
 }
 
 static struct inet6_protocol rthdr_protocol = {
@@ -581,71 +556,6 @@ void __init ipv6_rthdr_init(void)
 		printk(KERN_ERR "ipv6_rthdr_init: Could not register protocol\n");
 };
 
-/*
-   This function inverts received rthdr.
-   NOTE: specs allow to make it automatically only if
-   packet authenticated.
-
-   I will not discuss it here (though, I am really pissed off at
-   this stupid requirement making rthdr idea useless)
-
-   Actually, it creates severe problems  for us.
-   Embryonic requests has no associated sockets,
-   so that user have no control over it and
-   cannot not only to set reply options, but
-   even to know, that someone wants to connect
-   without success. :-(
-
-   For now we need to test the engine, so that I created
-   temporary (or permanent) backdoor.
-   If listening socket set IPV6_RTHDR to 2, then we invert header.
-						   --ANK (980729)
- */
-
-struct ipv6_txoptions *
-ipv6_invert_rthdr(struct sock *sk, struct ipv6_rt_hdr *hdr)
-{
-	/* Received rthdr:
-
-	   [ H1 -> H2 -> ... H_prev ]  daddr=ME
-
-	   Inverted result:
-	   [ H_prev -> ... -> H1 ] daddr =sender
-
-	   Note, that IP output engine will rewrite this rthdr
-	   by rotating it left by one addr.
-	 */
-
-	int n, i;
-	struct rt0_hdr *rthdr = (struct rt0_hdr*)hdr;
-	struct rt0_hdr *irthdr;
-	struct ipv6_txoptions *opt;
-	int hdrlen = ipv6_optlen(hdr);
-
-	if (hdr->segments_left ||
-	    hdr->type != IPV6_SRCRT_TYPE_0 ||
-	    hdr->hdrlen & 0x01)
-		return NULL;
-
-	n = hdr->hdrlen >> 1;
-	opt = sock_kmalloc(sk, sizeof(*opt) + hdrlen, GFP_ATOMIC);
-	if (opt == NULL)
-		return NULL;
-	memset(opt, 0, sizeof(*opt));
-	opt->tot_len = sizeof(*opt) + hdrlen;
-	opt->srcrt = (void*)(opt+1);
-	opt->opt_nflen = hdrlen;
-
-	memcpy(opt->srcrt, hdr, sizeof(*hdr));
-	irthdr = (struct rt0_hdr*)opt->srcrt;
-	irthdr->reserved = 0;
-	opt->srcrt->segments_left = n;
-	for (i=0; i<n; i++)
-		memcpy(irthdr->addr+i, rthdr->addr+(n-1-i), 16);
-	return opt;
-}
-
-EXPORT_SYMBOL_GPL(ipv6_invert_rthdr);
 
 /**********************************
   Hop-by-hop options.

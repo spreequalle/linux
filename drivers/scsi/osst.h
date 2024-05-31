@@ -1,5 +1,5 @@
 /*
- *	$Header: /cvsroot/osst/Driver/osst.h,v 1.16 2005/01/01 21:13:35 wriede Exp $
+ *	$Header: /home/cvsroot/RT288x_SDK/source/linux-2.6.21.x/drivers/scsi/osst.h,v 1.1.1.1 2007-05-25 06:50:04 bruce Exp $
  */
 
 #include <asm/byteorder.h>

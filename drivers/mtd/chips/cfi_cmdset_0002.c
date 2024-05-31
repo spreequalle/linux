@@ -13,11 +13,13 @@
  * XIP support hooks by Vitaly Wool (based on code for Intel flash
  * by Nicolas Pitre)
  *
+ * 25/09/2008 Christopher Moore: TopBottom fixup for many Macronix with CFI V1.0
+ *
  * Occasionally maintained by Thayne Harbaugh tharbaugh at lnxi dot com
  *
  * This code is GPL
  *
- * $Id: cfi_cmdset_0002.c,v 1.122 2005/11/07 11:14:22 gleixner Exp $
+ * $Id: cfi_cmdset_0002.c,v 1.10.2.1 2009-03-18 09:19:56 steven Exp $
  *
  */
 
@@ -46,6 +48,7 @@
 
 #define MANUFACTURER_AMD	0x0001
 #define MANUFACTURER_ATMEL	0x001F
+#define MANUFACTURER_MACRONIX	0x00C2
 #define MANUFACTURER_SST	0x00BF
 #define SST49LF004B	        0x0060
 #define SST49LF040B	        0x0050
@@ -147,12 +150,44 @@ static void fixup_amd_bootblock(struct mtd_info *mtd, void* param)
 
 	if (((major << 8) | minor) < 0x3131) {
 		/* CFI version 1.0 => don't trust bootloc */
+
+		DEBUG(MTD_DEBUG_LEVEL1,
+			"%s: JEDEC Vendor ID is 0x%02X Device ID is 0x%02X\n",
+			map->name, cfi->mfr, cfi->id);
+
+		/* AFAICS all 29LV400 with a bottom boot block have a device ID
+		 * of 0x22BA in 16-bit mode and 0xBA in 8-bit mode.
+		 * These were badly detected as they have the 0x80 bit set
+		 * so treat them as a special case.
+		 */
+		if (((cfi->id == 0xBA) || (cfi->id == 0x22BA)) &&
+
+			/* Macronix added CFI to their 2nd generation
+			 * MX29LV400C B/T but AFAICS no other 29LV400 (AMD,
+			 * Fujitsu, Spansion, EON, ESI and older Macronix)
+			 * has CFI.
+			 *
+			 * Therefore also check the manufacturer.
+			 * This reduces the risk of false detection due to
+			 * the 8-bit device ID.
+			 */
+			(cfi->mfr == MANUFACTURER_MACRONIX)) {
+			DEBUG(MTD_DEBUG_LEVEL1,
+				"%s: Macronix MX29LV400C with bottom boot block"
+				" detected\n", map->name);
+			extp->TopBottom = 2;	/* bottom boot */
+		} else
 		if (cfi->id & 0x80) {
 			printk(KERN_WARNING "%s: JEDEC Device ID is 0x%02X. Assuming broken CFI table.\n", map->name, cfi->id);
 			extp->TopBottom = 3;	/* top boot */
 		} else {
 			extp->TopBottom = 2;	/* bottom boot */
 		}
+
+		DEBUG(MTD_DEBUG_LEVEL1,
+			"%s: AMD CFI PRI V%c.%c has no boot block field;"
+			" deduced %s from Device ID\n", map->name, major, minor,
+			extp->TopBottom == 2 ? "bottom" : "top");
 	}
 }
 #endif
@@ -181,10 +216,22 @@ static void fixup_convert_atmel_pri(struct mtd_info *mtd, void *param)
 	if (atmel_pri.Features & 0x02)
 		extp->EraseSuspend = 2;
 
-	if (atmel_pri.BottomBoot)
-		extp->TopBottom = 2;
-	else
-		extp->TopBottom = 3;
+	/* Some chips got it backwards... */
+	if (cfi->id == AT49BV6416) {
+		if (atmel_pri.BottomBoot)
+			extp->TopBottom = 3;
+		else
+			extp->TopBottom = 2;
+	} else {
+		if (atmel_pri.BottomBoot)
+			extp->TopBottom = 2;
+		else
+			extp->TopBottom = 3;
+	}
+
+	/* burst write mode not supported */
+	cfi->cfiq->BufWriteTimeoutTyp = 0;
+	cfi->cfiq->BufWriteTimeoutMax = 0;
 }
 
 static void fixup_use_secsi(struct mtd_info *mtd, void *param)
@@ -216,9 +263,33 @@ static void fixup_use_atmel_lock(struct mtd_info *mtd, void *param)
 	mtd->flags |= MTD_STUPID_LOCK;
 }
 
+static void fixup_s29gl064n_sectors(struct mtd_info *mtd, void *param)
+{
+	struct map_info *map = mtd->priv;
+	struct cfi_private *cfi = map->fldrv_priv;
+
+	if ((cfi->cfiq->EraseRegionInfo[0] & 0xffff) == 0x003f) {
+		cfi->cfiq->EraseRegionInfo[0] |= 0x0040;
+		printk(KERN_WARNING "%s: Bad S29GL064N CFI data, adjust from 64 to 128 sectors\n", mtd->name);
+	}
+}
+
+static void fixup_s29gl032n_sectors(struct mtd_info *mtd, void *param)
+{
+	struct map_info *map = mtd->priv;
+	struct cfi_private *cfi = map->fldrv_priv;
+
+	if ((cfi->cfiq->EraseRegionInfo[1] & 0xffff) == 0x007e) {
+		cfi->cfiq->EraseRegionInfo[1] &= ~0x0040;
+		printk(KERN_WARNING "%s: Bad S29GL032N CFI data, adjust from 127 to 63 sectors\n", mtd->name);
+	}
+}
+
 static struct cfi_fixup cfi_fixup_table[] = {
+	{ CFI_MFR_ATMEL, CFI_ID_ANY, fixup_convert_atmel_pri, NULL },
 #ifdef AMD_BOOTLOC_BUG
 	{ CFI_MFR_AMD, CFI_ID_ANY, fixup_amd_bootblock, NULL },
+	{ MANUFACTURER_MACRONIX, CFI_ID_ANY, fixup_amd_bootblock, NULL },
 #endif
 	{ CFI_MFR_AMD, 0x0050, fixup_use_secsi, NULL, },
 	{ CFI_MFR_AMD, 0x0053, fixup_use_secsi, NULL, },
@@ -226,6 +297,10 @@ static struct cfi_fixup cfi_fixup_table[] = {
 	{ CFI_MFR_AMD, 0x0056, fixup_use_secsi, NULL, },
 	{ CFI_MFR_AMD, 0x005C, fixup_use_secsi, NULL, },
 	{ CFI_MFR_AMD, 0x005F, fixup_use_secsi, NULL, },
+	{ CFI_MFR_AMD, 0x0c01, fixup_s29gl064n_sectors, NULL, },
+	{ CFI_MFR_AMD, 0x1301, fixup_s29gl064n_sectors, NULL, },
+	{ CFI_MFR_AMD, 0x1a00, fixup_s29gl032n_sectors, NULL, },
+	{ CFI_MFR_AMD, 0x1a01, fixup_s29gl032n_sectors, NULL, },
 #if !FORCE_WORD_WRITE
 	{ CFI_MFR_ANY, CFI_ID_ANY, fixup_use_write_buffers, NULL, },
 #endif
@@ -249,6 +324,15 @@ static struct cfi_fixup fixup_table[] = {
 	{ CFI_MFR_ATMEL, AT49BV6416, fixup_use_atmel_lock, NULL },
 	{ 0, 0, NULL, NULL }
 };
+
+
+static void cfi_fixup_major_minor(struct cfi_private *cfi, 
+				  struct cfi_pri_amdstd *extp)
+{
+   if (cfi->mfr == CFI_MFR_SAMSUNG && cfi->id == 0x257e &&
+	    extp->MajorVersion == '0')
+	extp->MajorVersion = '1';
+}
 
 
 struct mtd_info *cfi_cmdset_0002(struct map_info *map, int primary)
@@ -291,6 +375,8 @@ struct mtd_info *cfi_cmdset_0002(struct map_info *map, int primary)
 			kfree(mtd);
 			return NULL;
 		}
+
+		cfi_fixup_major_minor(cfi, extp);
 
 		if (extp->MajorVersion != '1' ||
 		    (extp->MinorVersion < '0' || extp->MinorVersion > '4')) {
@@ -373,6 +459,7 @@ static struct mtd_info *cfi_amdstd_setup(struct mtd_info *mtd)
 {
 	struct map_info *map = mtd->priv;
 	struct cfi_private *cfi = map->fldrv_priv;
+	struct flchip *chip;
 	unsigned long devsize = (1<<cfi->cfiq->DevSize) * cfi->interleave;
 	unsigned long offset = 0;
 	int i,j;
@@ -399,6 +486,13 @@ static struct mtd_info *cfi_amdstd_setup(struct mtd_info *mtd)
 			mtd->erasesize = ersize;
 		}
 		for (j=0; j<cfi->numchips; j++) {
+			/* 
+			 * patch for Numonyx Flash
+			 * -> send reset command first by Steven
+			 */
+			chip=&cfi->chips[j];
+			map_write( map, CMD(0xF0), chip->start);
+
 			mtd->eraseregions[(j*cfi->cfiq->NumEraseRegions)+i].offset = (j*devsize)+offset;
 			mtd->eraseregions[(j*cfi->cfiq->NumEraseRegions)+i].erasesize = ersize;
 			mtd->eraseregions[(j*cfi->cfiq->NumEraseRegions)+i].numblocks = ernum;
@@ -1298,7 +1392,7 @@ static int __xipram do_write_buffer(struct map_info *map, struct flchip *chip,
 
 	INVALIDATE_CACHE_UDELAY(map, chip,
 				adr, map_bankwidth(map),
-				chip->word_write_time);
+				chip->buffer_write_time*5);
 
 	timeo = jiffies + uWriteTimeout;
 
@@ -1490,8 +1584,16 @@ static int __xipram do_erase_chip(struct map_info *map, struct flchip *chip)
 			chip->erase_suspended = 0;
 		}
 
-		if (chip_ready(map, adr))
-			break;
+		if (chip_ready(map, adr)) {
+
+		    /* We have to make sure sector erease is successful because
+		     * Spansion will report wrong status - FIXME */ 
+		    if(!chip_good(map, adr, map_word_ff(map))) {
+			continue;
+		    }
+
+		    break;
+		}
 
 		if (time_after(jiffies, timeo)) {
 			printk(KERN_WARNING "MTD %s(): software timeout\n",
@@ -1579,8 +1681,15 @@ static int __xipram do_erase_oneblock(struct map_info *map, struct flchip *chip,
 		}
 
 		if (chip_ready(map, adr)) {
-			xip_enable(map, chip, adr);
-			break;
+		   
+		    /* We have to make sure sector erease is successful because
+		     * Spansion will report wrong status - FIXME */ 
+		    if(!chip_good(map, adr, map_word_ff(map))) {
+			continue;
+		    }
+
+		    xip_enable(map, chip, adr);
+		    break;
 		}
 
 		if (time_after(jiffies, timeo)) {
@@ -1757,6 +1866,7 @@ static void cfi_amdstd_sync (struct mtd_info *mtd)
 
 		default:
 			/* Not an idle state */
+			set_current_state(TASK_UNINTERRUPTIBLE);
 			add_wait_queue(&chip->wq, &wait);
 
 			spin_unlock(chip->mutex);

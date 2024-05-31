@@ -26,7 +26,11 @@
  *      USA.
  *
  * Revision history:
- * $Log: rio.c,v $
+ * $Log: rio_linux.c,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:00  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  * Revision 1.1  1999/07/11 10:13:54  wolff
  * Initial revision
  *

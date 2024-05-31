@@ -2198,7 +2198,7 @@ asmlinkage long sys_getcpu(unsigned __user *cpup, unsigned __user *nodep,
 		 * need for a compat_getcpu). 32bit has enough
 		 * padding
 		 */
-		unsigned long t0, t1;
+		unsigned long t0=0, t1=0;
 		get_user(t0, &cache->blob[0]);
 		get_user(t1, &cache->blob[1]);
 		t0++;

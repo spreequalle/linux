@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br.c,v 1.47 2001/12/24 00:56:41 davem Exp $
+ *	$Id: br.c,v 1.1.1.1 2007-05-25 06:50:00 bruce Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -21,7 +21,36 @@
 #include <linux/llc.h>
 #include <net/llc.h>
 
+//add by Allen
+#ifdef DNS_HIJACK
+#include <linux/proc_fs.h>
+#endif
+//end by Allen
 #include "br_private.h"
+
+//add by Allen
+#ifdef DNS_HIJACK
+long blankstatus =0;
+
+static int proc_write_blankstatus(struct file *file, const char *buffer, unsigned long count, void *data){
+	char *temp;
+	temp = (char *)buffer;
+	blankstatus = simple_strtol(temp, 0, 10);
+	
+	return count;
+}
+
+void create_blankstatus_proc(){
+	static struct proc_dir_entry *blankstatus_proc;
+	
+	blankstatus_proc = create_proc_entry("blankstatus", 0, 0);
+	
+	if(blankstatus_proc){
+		blankstatus_proc->write_proc = (write_proc_t*)&proc_write_blankstatus;
+	}
+}
+#endif
+//end by Allen
 
 int (*br_should_route_hook) (struct sk_buff **pskb) = NULL;
 
@@ -53,6 +82,12 @@ static int __init br_init(void)
 
 	br_fdb_get_hook = br_fdb_get;
 	br_fdb_put_hook = br_fdb_put;
+
+	//add by Allen
+        #ifdef DNS_HIJACK
+	create_blankstatus_proc();
+        #endif
+        //end by Allen
 
 	return 0;
 

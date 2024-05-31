@@ -2699,6 +2699,7 @@ int dev_ioctl(unsigned int cmd, void __user *arg)
 			return ret;
 
 		case SIOCETHTOOL:
+#ifdef CONFIG_ETHTOOL
 			dev_load(ifr.ifr_name);
 			rtnl_lock();
 			ret = dev_ethtool(&ifr);
@@ -2711,6 +2712,9 @@ int dev_ioctl(unsigned int cmd, void __user *arg)
 					ret = -EFAULT;
 			}
 			return ret;
+#else
+			return -EINVAL;
+#endif
 
 		/*
 		 *	These ioctl calls:

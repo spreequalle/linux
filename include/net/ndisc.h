@@ -12,6 +12,15 @@
 #define NDISC_REDIRECT			137
 
 /*
+ * Router type: cross-layer information from link-layer to
+ * IPv6 layer reported by certain link types (e.g., RFC4214).
+ */
+#define NDISC_NODETYPE_UNSPEC		0	/* unspecified (default) */
+#define NDISC_NODETYPE_HOST		1	/* host or unauthorized router */
+#define NDISC_NODETYPE_NODEFAULT	2	/* non-default router */
+#define NDISC_NODETYPE_DEFAULT		3	/* default router */
+
+/*
  *	ndisc options
  */
 
@@ -24,6 +33,8 @@ enum {
 	ND_OPT_MTU = 5,			/* RFC2461 */
 	__ND_OPT_ARRAY_MAX,
 	ND_OPT_ROUTE_INFO = 24,		/* RFC4191 */
+	ND_OPT_RDNSS = 25,		/* RFC5006 / RFC6106 */	
+	ND_OPT_DNSSL = 31,		/* RFC6106 */	
 	__ND_OPT_MAX
 };
 

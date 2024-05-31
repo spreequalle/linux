@@ -29,6 +29,7 @@
 #include <linux/icmp.h>
 #include <linux/sysctl.h>
 #include <net/ipv6.h>
+#include <net/inet_frag.h>
 
 #include <linux/netfilter_ipv6.h>
 #include <net/netfilter/nf_conntrack.h>
@@ -201,12 +202,37 @@ static unsigned int ipv6_confirm(unsigned int hooknum,
 		return NF_ACCEPT;
 	}
 
+#if defined(CONFIG_RA_SW_NAT) || defined(CONFIG_RA_SW_NAT_MODULE)
+#include "../../nat/sw_nat/ra_nat.h"
+	if( (skb_headroom(*pskb) >=4)  && (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_NUM) ) {
+	    FOE_HASH_NUM(*pskb) |= FOE_ALG_FLAGS;
+					            }
+#elif  defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
+#include "../../nat/hw_nat/ra_nat.h"
+	if( (skb_headroom(*pskb) >=4)  &&
+		((FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_PCI) ||
+		 (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_WLAN) ||
+		 (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_GE))){
+	    FOE_ALG_RXIF(*pskb)=1;
+	}
+#endif
+
 	ret = help->helper->help(pskb, protoff, ct, ctinfo);
 	if (ret != NF_ACCEPT)
 		return ret;
 out:
 	/* We've seen it coming out the other side: confirm it */
 	return nf_conntrack_confirm(pskb);
+}
+
+static enum ip6_defrag_users nf_ct6_defrag_user(unsigned int hooknum,
+						struct sk_buff *skb)
+{
+	if (hooknum == NF_IP6_PRE_ROUTING)
+		return IP6_DEFRAG_CONNTRACK_IN;
+	else
+		return IP6_DEFRAG_CONNTRACK_OUT;
+
 }
 
 static unsigned int ipv6_defrag(unsigned int hooknum,
@@ -221,7 +247,7 @@ static unsigned int ipv6_defrag(unsigned int hooknum,
 	if ((*pskb)->nfct)
 		return NF_ACCEPT;
 
-	reasm = nf_ct_frag6_gather(*pskb);
+	reasm = nf_ct_frag6_gather(*pskb, nf_ct6_defrag_user(hooknum, *pskb));
 
 	/* queued */
 	if (reasm == NULL)
@@ -329,7 +355,7 @@ static ctl_table nf_ct_ipv6_sysctl_table[] = {
 	{
 		.ctl_name	= NET_NF_CONNTRACK_FRAG6_TIMEOUT,
 		.procname	= "nf_conntrack_frag6_timeout",
-		.data		= &nf_ct_frag6_timeout,
+		.data		= &nf_frags_ctl.timeout,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec_jiffies,
@@ -337,7 +363,7 @@ static ctl_table nf_ct_ipv6_sysctl_table[] = {
 	{
 		.ctl_name	= NET_NF_CONNTRACK_FRAG6_LOW_THRESH,
 		.procname	= "nf_conntrack_frag6_low_thresh",
-		.data		= &nf_ct_frag6_low_thresh,
+		.data		= &nf_frags_ctl.low_thresh,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,
@@ -345,7 +371,7 @@ static ctl_table nf_ct_ipv6_sysctl_table[] = {
 	{
 		.ctl_name	= NET_NF_CONNTRACK_FRAG6_HIGH_THRESH,
 		.procname	= "nf_conntrack_frag6_high_thresh",
-		.data		= &nf_ct_frag6_high_thresh,
+		.data		= &nf_frags_ctl.high_thresh,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,

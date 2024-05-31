@@ -5,6 +5,10 @@
 # Rewritten to use lists instead of if-statements.
 #
 
+#added by Steven Liu
+obj-$(CONFIG_RALINK_FLASH_API) += flash/
+#--
+
 obj-$(CONFIG_PCI)		+= pci/
 obj-$(CONFIG_PARISC)		+= parisc/
 obj-$(CONFIG_RAPIDIO)		+= rapidio/

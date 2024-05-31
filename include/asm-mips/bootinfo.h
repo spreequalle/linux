@@ -208,6 +208,13 @@
 #define  MACH_TITAN_EXCITE	2	/* Basler eXcite		*/
 
 /*
+ * Valid machtype for group Ralink
+ */
+#define MACH_GROUP_RT2880    23 	/* Ralink AP SoC */
+#define MACH_RALINK_ROUTER   0 		/* Ralink Wireless ROUTER*/
+
+
+/*
  * Valid machtype for group NEC EMMA2RH
  */
 #define MACH_GROUP_NEC_EMMA2RH 25	/* NEC EMMA2RH (was 23)		*/

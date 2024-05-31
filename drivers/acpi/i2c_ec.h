@@ -1,5 +1,5 @@
 /*
- * SMBus driver for ACPI Embedded Controller ($Revision: 1.2 $)
+ * SMBus driver for ACPI Embedded Controller ($Revision: 1.1.1.1 $)
  *
  * Copyright (c) 2002, 2005 Ducrot Bruno
  *

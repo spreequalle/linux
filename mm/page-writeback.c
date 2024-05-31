@@ -100,7 +100,9 @@ EXPORT_SYMBOL(laptop_mode);
 /* End of sysctl-exported parameters */
 
 
+#ifdef CONFIG_PDFLUSH
 static void background_writeout(unsigned long _min_pages);
+#endif
 
 /*
  * Work out the current dirty-memory clamping and background writeout
@@ -239,9 +241,11 @@ static void balance_dirty_pages(struct address_space *mapping)
 	 * In normal mode, we start background writeout at the lower
 	 * background_thresh, to keep the amount of dirty memory low.
 	 */
+#ifdef CONFIG_PDFLUSH
 	if ((laptop_mode && pages_written) ||
 	     (!laptop_mode && (nr_reclaimable > background_thresh)))
 		pdflush_operation(background_writeout, 0);
+#endif
 }
 
 void set_page_dirty_balance(struct page *page)
@@ -331,6 +335,7 @@ void throttle_vm_writeout(gfp_t gfp_mask)
  * writeback at least _min_pages, and keep writing until the amount of dirty
  * memory is less than the background threshold, or until we're all clean.
  */
+#ifdef CONFIG_PDFLUSH
 static void background_writeout(unsigned long _min_pages)
 {
 	long min_pages = _min_pages;
@@ -365,6 +370,7 @@ static void background_writeout(unsigned long _min_pages)
 		}
 	}
 }
+#endif
 
 /*
  * Start writeback of `nr_pages' pages.  If `nr_pages' is zero, write back
@@ -376,7 +382,11 @@ int wakeup_pdflush(long nr_pages)
 	if (nr_pages == 0)
 		nr_pages = global_page_state(NR_FILE_DIRTY) +
 				global_page_state(NR_UNSTABLE_NFS);
+#ifdef CONFIG_PDFLUSH
 	return pdflush_operation(background_writeout, nr_pages);
+#else
+	return 0;
+#endif
 }
 
 static void wb_timer_fn(unsigned long unused);
@@ -400,6 +410,7 @@ static DEFINE_TIMER(laptop_mode_wb_timer, laptop_timer_fn, 0, 0);
  * older_than_this takes precedence over nr_to_write.  So we'll only write back
  * all dirty pages if they are all attached to "old" mappings.
  */
+#ifdef CONFIG_PDFLUSH
 static void wb_kupdate(unsigned long arg)
 {
 	unsigned long oldest_jif;
@@ -441,6 +452,7 @@ static void wb_kupdate(unsigned long arg)
 	if (dirty_writeback_interval)
 		mod_timer(&wb_timer, next_jif);
 }
+#endif
 
 /*
  * sysctl handler for /proc/sys/vm/dirty_writeback_centisecs
@@ -460,18 +472,24 @@ int dirty_writeback_centisecs_handler(ctl_table *table, int write,
 
 static void wb_timer_fn(unsigned long unused)
 {
+#ifdef CONFIG_PDFLUSH
 	if (pdflush_operation(wb_kupdate, 0) < 0)
 		mod_timer(&wb_timer, jiffies + HZ); /* delay 1 second */
+#endif
 }
 
+#ifdef CONFIG_PDFLUSH
 static void laptop_flush(unsigned long unused)
 {
 	sys_sync();
 }
+#endif
 
 static void laptop_timer_fn(unsigned long unused)
 {
+#ifdef CONFIG_PDFLUSH
 	pdflush_operation(laptop_flush, 0);
+#endif
 }
 
 /*

@@ -7,7 +7,7 @@
  *
  *	Adapted from linux/net/ipv4/raw.c
  *
- *	$Id: raw.c,v 1.51 2002/02/01 22:01:04 davem Exp $
+ *	$Id: raw.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *	Fixes:
  *	Hideaki YOSHIFUJI	:	sin6_scope_id support
@@ -52,6 +52,7 @@
 #ifdef CONFIG_IPV6_MIP6
 #include <net/mip6.h>
 #endif
+#include <linux/mroute6.h>
 
 #include <net/rawv6.h>
 #include <net/xfrm.h>
@@ -1079,7 +1080,11 @@ static int rawv6_ioctl(struct sock *sk, int cmd, unsigned long arg)
 		}
 
 		default:
+#ifdef CONFIG_IPV6_MROUTE
+			return ip6mr_ioctl(sk, cmd, (void __user *)arg);
+#else
 			return -ENOIOCTLCMD;
+#endif
 	}
 }
 
@@ -1087,7 +1092,7 @@ static void rawv6_close(struct sock *sk, long timeout)
 {
 	if (inet_sk(sk)->num == IPPROTO_RAW)
 		ip6_ra_control(sk, -1, NULL);
-
+	ip6mr_sk_done(sk);
 	sk_common_release(sk);
 }
 

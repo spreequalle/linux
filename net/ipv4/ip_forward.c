@@ -5,7 +5,7 @@
  *
  *		The IP forwarding functionality.
  *
- * Version:	$Id: ip_forward.c,v 1.48 2000/12/13 18:31:48 davem Exp $
+ * Version:	$Id: ip_forward.c,v 1.4 2009-02-24 08:17:06 steven Exp $
  *
  * Authors:	see ip.c
  *
@@ -100,7 +100,12 @@ int ip_forward(struct sk_buff *skb)
 	if (rt->rt_flags&RTCF_DOREDIRECT && !opt->srr)
 		ip_rt_send_redirect(skb);
 
-	skb->priority = rt_tos2priority(iph->tos);
+	/* We should keep skb->priority value if iph->tos=0
+	 * for port-based QoS (by Steven)
+	 */
+	if(iph->tos != 0) {
+	    skb->priority = rt_tos2priority(iph->tos);
+	}
 
 	return NF_HOOK(PF_INET, NF_IP_FORWARD, skb, skb->dev, rt->u.dst.dev,
 		       ip_forward_finish);

@@ -30,7 +30,11 @@
  */
 
 /*
- * $Log: cumana_NCR5380.h,v $
+ * $Log: sun3_scsi.h,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:04  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  */
 
 #ifndef SUN3_NCR5380_H

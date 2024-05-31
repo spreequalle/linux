@@ -223,6 +223,7 @@ cpio_file=
 cpio_list=
 output="/dev/stdout"
 output_file=""
+use_lzma="n"
 
 arg="$1"
 case "$arg" in
@@ -259,6 +260,9 @@ while [ $# -gt 0 ]; do
 			usage
 			exit 0
 			;;
+		"-l")
+			use_lzma="y"
+			;;
 		*)
 			case "$arg" in
 				"-"*)
@@ -282,7 +286,12 @@ if [ ! -z ${output_file} ]; then
 		cpio_tfile=${cpio_file}
 	fi
 	rm ${cpio_list}
-	cat ${cpio_tfile} | gzip -f -9 - > ${output_file}
+	if [ "$use_lzma" == "y" ]; then
+		cross_compile_path=`echo ${CONFIG_CROSS_COMPILER_PATH} | sed -e 's/\"//g'`
+		${cross_compile_path}/lzma_alone e ${cpio_tfile} ${output_file} -d20
+	else
+		cat ${cpio_tfile} | gzip -f -9 - > ${output_file}
+	fi
 	[ -z ${cpio_file} ] && rm ${cpio_tfile}
 fi
 exit 0

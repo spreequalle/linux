@@ -5,7 +5,7 @@
  *	Authors:
  *	Pedro Roque		<roque@di.fc.ul.pt>
  *
- *	$Id: datagram.c,v 1.24 2002/02/01 22:01:04 davem Exp $
+ *	$Id: datagram.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU General Public License
@@ -123,10 +123,9 @@ ipv4_connected:
 				goto out;
 			}
 			sk->sk_bound_dev_if = usin->sin6_scope_id;
-			if (!sk->sk_bound_dev_if &&
-			    (addr_type & IPV6_ADDR_MULTICAST))
-				fl.oif = np->mcast_oif;
 		}
+		if (!sk->sk_bound_dev_if && (addr_type & IPV6_ADDR_MULTICAST))
+			sk->sk_bound_dev_if = np->mcast_oif;
 
 		/* Connect to link-local address requires an interface */
 		if (!sk->sk_bound_dev_if) {
@@ -209,7 +208,7 @@ void ipv6_icmp_error(struct sock *sk, struct sk_buff *skb, int err,
 		     __be16 port, u32 info, u8 *payload)
 {
 	struct ipv6_pinfo *np  = inet6_sk(sk);
-	struct icmp6hdr *icmph = (struct icmp6hdr *)skb->h.raw;
+	struct icmp6hdr *icmph = icmp6_hdr(skb);
 	struct sock_exterr_skb *serr;
 
 	if (!np->recverr)
@@ -648,11 +647,12 @@ int datagram_send_ctl(struct msghdr *msg, struct flowi *fl,
 			rthdr = (struct ipv6_rt_hdr *)CMSG_DATA(cmsg);
 
 			switch (rthdr->type) {
-			case IPV6_SRCRT_TYPE_0:
+//			case IPV6_SRCRT_TYPE_0:
 #ifdef CONFIG_IPV6_MIP6
 			case IPV6_SRCRT_TYPE_2:
-#endif
 				break;
+#endif
+				
 			default:
 				err = -EINVAL;
 				goto exit_f;
@@ -693,6 +693,10 @@ int datagram_send_ctl(struct msghdr *msg, struct flowi *fl,
 			}
 
 			*hlimit = *(int *)CMSG_DATA(cmsg);
+			if (*hlimit < -1 || *hlimit > 0xff) {
+				err = -EINVAL;
+				goto exit_f;
+			}		
 			break;
 
 		case IPV6_TCLASS:

@@ -854,8 +854,7 @@ accept_redirects - BOOLEAN
 accept_source_route - INTEGER
 	Accept source routing (routing extension header).
 
-	> 0: Accept routing header.
-	= 0: Accept only routing header type 2.
+	>= 0: Accept only routing header type 2.
 	< 0: Do not accept routing header.
 
 	Default: 0
@@ -964,6 +963,17 @@ max_addresses - INTEGER
 	be too easy way to crash kernel to allow to create too much of 
 	autoconfigured addresses.
 	Default: 16
+
+disable_ipv6 - BOOLEAN
+       Disable IPv6 operation.
+       Default: FALSE (enable IPv6 operation)
+
+accept_dad - INTEGER
+       Whether to accept DAD (Duplicate Address Detection).
+       0: Disable DAD
+       1: Enable DAD (default)
+       2: Enable DAD, and disable IPv6 operation if MAC-based duplicate
+          link-local address has been found.
 
 icmp/*:
 ratelimit - INTEGER

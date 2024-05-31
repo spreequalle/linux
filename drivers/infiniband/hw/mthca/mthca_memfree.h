@@ -31,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id$
+ * $Id: mthca_memfree.h,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
  */
 
 #ifndef MTHCA_MEMFREE_H

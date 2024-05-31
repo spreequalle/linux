@@ -1,4 +1,4 @@
-/* $Id: process.c,v 1.12 2004/12/27 11:18:32 starvik Exp $
+/* $Id: process.c,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $
  * 
  *  linux/arch/cris/kernel/process.c
  *

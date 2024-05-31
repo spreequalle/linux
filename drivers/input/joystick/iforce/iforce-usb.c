@@ -1,5 +1,5 @@
  /*
- * $Id: iforce-usb.c,v 1.16 2002/06/09 11:08:04 jdeneux Exp $
+ * $Id: iforce-usb.c,v 1.1.1.1 2007-05-25 06:50:05 bruce Exp $
  *
  *  Copyright (c) 2000-2002 Vojtech Pavlik <vojtech@ucw.cz>
  *  Copyright (c) 2001-2002 Johann Deneux <deneux@ifrance.com>

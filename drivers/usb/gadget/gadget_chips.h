@@ -9,6 +9,16 @@
  *
  * NOTE:  some of these controller drivers may not be available yet.
  */
+
+
+
+#if 1 //def DWC_OTG_DEVICE_ONLY
+#define gadget_is_dwc_otg(g)	!strcmp("dwc_otg_pcd", (g)->name)
+#else
+#define gadget_is_dwc_otg(g)	0
+#endif
+
+ 
 #ifdef CONFIG_USB_GADGET_NET2280
 #define	gadget_is_net2280(g)	!strcmp("net2280", (g)->name)
 #else
@@ -119,6 +129,12 @@
 #define gadget_is_mpc8272(g)	0
 #endif
 
+#ifdef CONFIG_USB_GADGET_SNPS_DWC_OTG
+#define	gadget_is_dwc_otg(g)	!strcmp("dwc_otg_pcd", (g)->name)
+#else
+#define	gadget_is_dwc_otg(g)	0
+#endif
+
 // CONFIG_USB_GADGET_SX2
 // CONFIG_USB_GADGET_AU1X00
 // ...
@@ -177,5 +193,12 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x17;
 	else if (gadget_is_husb2dev(gadget))
 		return 0x18;
+
+//by kaiker ,for RT3052 USB OTG device mode
+
+	else if (gadget_is_dwc_otg(gadget))
+		return 0x19;
+
+	
 	return -ENOENT;
 }

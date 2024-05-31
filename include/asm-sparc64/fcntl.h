@@ -1,4 +1,4 @@
-/* $Id: fcntl.h,v 1.12 2001/09/20 00:35:34 davem Exp $ */
+/* $Id: fcntl.h,v 1.1.1.1 2007-05-25 06:50:14 bruce Exp $ */
 #ifndef _SPARC64_FCNTL_H
 #define _SPARC64_FCNTL_H
 

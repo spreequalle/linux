@@ -616,6 +616,7 @@ static int cmdline_read_proc(char *page, char **start, off_t off,
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
+#ifdef CONFIG_FILE_LOCKING
 static int locks_read_proc(char *page, char **start, off_t off,
 				 int count, int *eof, void *data)
 {
@@ -625,6 +626,7 @@ static int locks_read_proc(char *page, char **start, off_t off,
 		*eof = 1;
 	return len;
 }
+#endif
 
 static int execdomains_read_proc(char *page, char **start, off_t off,
 				 int count, int *eof, void *data)
@@ -683,7 +685,9 @@ void __init proc_misc_init(void)
 #endif
 		{"filesystems",	filesystems_read_proc},
 		{"cmdline",	cmdline_read_proc},
+#ifdef CONFIG_FILE_LOCKING
 		{"locks",	locks_read_proc},
+#endif
 		{"execdomains",	execdomains_read_proc},
 		{NULL,}
 	};

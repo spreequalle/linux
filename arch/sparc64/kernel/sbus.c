@@ -1,4 +1,4 @@
-/* $Id: sbus.c,v 1.19 2002/01/23 11:27:32 davem Exp $
+/* $Id: sbus.c,v 1.1.1.1 2007-05-25 06:50:17 bruce Exp $
  * sbus.c: UltraSparc SBUS controller support.
  *
  * Copyright (C) 1999 David S. Miller (davem@redhat.com)

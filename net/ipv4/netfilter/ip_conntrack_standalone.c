@@ -418,6 +418,23 @@ static unsigned int ip_conntrack_help(unsigned int hooknum,
 	ct = ip_conntrack_get(*pskb, &ctinfo);
 	if (ct && ct->helper && ctinfo != IP_CT_RELATED + IP_CT_IS_REPLY) {
 		unsigned int ret;
+
+#if defined(CONFIG_RA_SW_NAT) || defined(CONFIG_RA_SW_NAT_MODULE)
+#include "../../nat/sw_nat/ra_nat.h"
+            if( (skb_headroom(*pskb) >=4)  && (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_NUM) ) {
+                FOE_HASH_NUM(*pskb) |= FOE_ALG_FLAGS;
+            }
+
+#elif  defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
+#include "../../nat/hw_nat/ra_nat.h"
+            if( (skb_headroom(*pskb) >=4)  &&
+                    ((FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_PCI) ||
+                     (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_WLAN) ||
+                     (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_GE))){
+                    FOE_ALG_RXIF(*pskb)=1;
+            }
+#endif
+
 		ret = ct->helper->help(pskb, ct, ctinfo);
 		if (ret != NF_ACCEPT)
 			return ret;

@@ -1722,7 +1722,13 @@ rx_submit (struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 	 * but on at least one, checksumming fails otherwise.  Note:
 	 * RNDIS headers involve variable numbers of LE32 values.
 	 */
-	skb_reserve(skb, NET_IP_ALIGN);
+
+	/*
+	   mask by kaiker ,for RT3052 USB OTG device mode
+	   Synopsys USB internal DMA address must set to 4 byte alignment
+	*/
+	
+	//skb_reserve(skb, NET_IP_ALIGN);
 
 	req->buf = skb->data;
 	req->length = size;
@@ -1955,6 +1961,8 @@ static int eth_start_xmit (struct sk_buff *skb, struct net_device *net)
 	struct usb_request	*req = NULL;
 	unsigned long		flags;
 
+	unsigned char *new_addr;
+
 	/* apply outgoing CDC or RNDIS filters */
 	if (!eth_is_promisc (dev)) {
 		u8		*dest = skb->data;
@@ -2001,6 +2009,18 @@ static int eth_start_xmit (struct sk_buff *skb, struct net_device *net)
 		rndis_add_hdr (skb);
 		length = skb->len;
 	}
+	/*
+	   New add by kaiker ,for RT3052 USB OTG device mode
+	   Synopsys USB internal DMA address must set to 4 byte alignment
+	*/
+	
+	#if 1
+	new_addr = skb->data - 2;
+	memcpy(new_addr,skb->data,skb->len);
+	skb->data = new_addr;
+    #endif	
+
+	
 	req->buf = skb->data;
 	req->context = skb;
 	req->complete = tx_complete;

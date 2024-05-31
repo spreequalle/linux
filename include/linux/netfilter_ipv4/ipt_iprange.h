@@ -8,7 +8,11 @@
 
 struct ipt_iprange {
 	/* Inclusive: network order. */
-	__be32 min_ip, max_ip;
+#ifdef SUPPORT_CAMEO_SDK
+	u_int32_t min_ip, max_ip;
+#else  // SUPPORT_CAMEO_SDK
+        __be32 min_ip, max_ip;
+#endif // SUPPORT_CAMEO_SDK
 };
 
 struct ipt_iprange_info

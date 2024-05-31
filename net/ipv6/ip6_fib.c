@@ -5,7 +5,7 @@
  *	Authors:
  *	Pedro Roque		<roque@di.fc.ul.pt>
  *
- *	$Id: ip6_fib.c,v 1.25 2001/10/31 21:55:55 davem Exp $
+ *	$Id: ip6_fib.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU General Public License
@@ -1466,7 +1466,7 @@ void fib6_run_gc(unsigned long dummy)
 	}
 	gc_args.more = 0;
 
-	ndisc_dst_gc(&gc_args.more);
+	icmp6_dst_gc(&gc_args.more);
 	fib6_clean_all(fib6_age, 0, NULL);
 
 	if (gc_args.more)

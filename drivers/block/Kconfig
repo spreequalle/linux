@@ -361,6 +361,7 @@ config BLK_DEV_UB
 
 config BLK_DEV_RAM
 	tristate "RAM disk support"
+	depends on RT2880_ROOTFS_IN_RAM
 	---help---
 	  Saying Y here will allow you to use a portion of your RAM memory as
 	  a block device, so that you can make file systems on it, read and

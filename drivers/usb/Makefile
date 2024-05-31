@@ -18,12 +18,6 @@ obj-$(CONFIG_USB_U132_HCD)	+= host/
 obj-$(CONFIG_ETRAX_USB_HOST)	+= host/
 obj-$(CONFIG_USB_OHCI_AT91)	+= host/
 
-obj-$(CONFIG_USB_ACM)		+= class/
-obj-$(CONFIG_USB_PRINTER)	+= class/
-
-obj-$(CONFIG_USB_STORAGE)	+= storage/
-obj-$(CONFIG_USB)		+= storage/
-
 obj-$(CONFIG_USB_ACECAD)	+= input/
 obj-$(CONFIG_USB_AIPTEK)	+= input/
 obj-$(CONFIG_USB_ATI_REMOTE)	+= input/
@@ -45,8 +39,6 @@ obj-$(CONFIG_USB_ZD1201)	+= net/
 
 obj-$(CONFIG_USB_MDC800)	+= image/
 obj-$(CONFIG_USB_MICROTEK)	+= image/
-
-obj-$(CONFIG_USB_SERIAL)	+= serial/
 
 obj-$(CONFIG_USB_ADUTUX)	+= misc/
 obj-$(CONFIG_USB_APPLEDISPLAY)	+= misc/

@@ -1,7 +1,7 @@
 /*
  *		INETPEER - A storage for permanent information about peers
  *
- *  Version:	$Id: inetpeer.h,v 1.2 2002/01/12 07:54:56 davem Exp $
+ *  Version:	$Id: inetpeer.h,v 1.2 2008-08-15 07:51:49 winfred Exp $
  *
  *  Authors:	Andrey V. Savochkin <saw@msu.ru>
  */
@@ -31,6 +31,7 @@ struct inet_peer
 	unsigned long		tcp_ts_stamp;
 };
 
+#ifdef CONFIG_INETPEER
 void			inet_initpeers(void) __init;
 
 /* can be called with or without local BH being disabled */
@@ -51,5 +52,13 @@ static inline __u16	inet_getid(struct inet_peer *p, int more)
 	spin_unlock_bh(&inet_peer_idlock);
 	return id;
 }
+#else
+
+#define inet_getpeer(a, b) (0)
+#define inet_putpeer(b)
+static void inline inet_initpeers(void) { }
+#define inet_getid(a, b) (0)
+
+#endif
 
 #endif /* _NET_INETPEER_H */

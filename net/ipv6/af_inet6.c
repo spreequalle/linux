@@ -7,7 +7,7 @@
  *
  *	Adapted from linux/net/ipv4/af_inet.c
  *
- *	$Id: af_inet6.c,v 1.66 2002/02/01 22:01:04 davem Exp $
+ *	$Id: af_inet6.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  * 	Fixes:
  *	piggy, Karl Knutson	:	Socket protocol table
@@ -65,6 +65,9 @@
 
 #include <asm/uaccess.h>
 #include <asm/system.h>
+#ifdef CONFIG_IPV6_MROUTE
+#include <linux/mroute6.h>
+#endif
 
 MODULE_AUTHOR("Cast of dozens");
 MODULE_DESCRIPTION("IPv6 protocol stack for Linux");
@@ -827,6 +830,9 @@ static int __init inet6_init(void)
 	err = icmpv6_init(&inet6_family_ops);
 	if (err)
 		goto icmp_fail;
+#ifdef CONFIG_IPV6_MROUTE
+	ip6_mr_init();
+#endif		
 	err = ndisc_init(&inet6_family_ops);
 	if (err)
 		goto ndisc_fail;

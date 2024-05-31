@@ -12,7 +12,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
- * $Id: xip.h,v 1.5 2005/11/07 11:14:55 gleixner Exp $
+ * $Id: xip.h,v 1.1.1.1 2007-05-25 06:50:12 bruce Exp $
  */
 
 #ifndef __LINUX_MTD_XIP_H__

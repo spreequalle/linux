@@ -24,6 +24,7 @@
 #include <linux/interrupt.h>
 #include <linux/circ_buf.h>
 #include <linux/wait.h>
+#include <linux/serial.h>
 
 struct serial_state {
 	int	magic;

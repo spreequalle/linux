@@ -982,16 +982,25 @@ void usb_disable_endpoint(struct usb_device *dev, unsigned int epaddr)
 
 	if (!dev)
 		return;
+ /*
+  * We change the order for the buggy DWC_OTG HCD driver.
+  * --YY@Ralink 2008/06/18
+  */
+    if (usb_endpoint_out(epaddr)) {
+        ep = dev->ep_out[epnum];
+//      dev->ep_out[epnum] = NULL;
+    } else {
+        ep = dev->ep_in[epnum];
+//      dev->ep_in[epnum] = NULL;
+    }
+    if (ep && dev->bus)
+        usb_hcd_endpoint_disable(dev, ep);
 
-	if (usb_endpoint_out(epaddr)) {
-		ep = dev->ep_out[epnum];
-		dev->ep_out[epnum] = NULL;
-	} else {
-		ep = dev->ep_in[epnum];
-		dev->ep_in[epnum] = NULL;
-	}
-	if (ep && dev->bus)
-		usb_hcd_endpoint_disable(dev, ep);
+    if (usb_endpoint_out(epaddr)) {
+        dev->ep_out[epnum] = NULL;
+    } else {
+        dev->ep_in[epnum] = NULL;
+    }
 }
 
 /**

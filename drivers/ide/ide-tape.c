@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1995 - 1999 Gadi Oxman <gadio@netvision.net.il>
  *
- * $Header$
+ * $Header: /home/cvsroot/RT288x_SDK/source/linux-2.6.21.x/drivers/ide/ide-tape.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  *
  * This driver was constructed as a student project in the software laboratory
  * of the faculty of electrical engineering in the Technion - Israel's

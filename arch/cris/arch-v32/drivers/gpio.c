@@ -1,4 +1,4 @@
-/* $Id: gpio.c,v 1.16 2005/06/19 17:06:49 starvik Exp $
+/* $Id: gpio.c,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $
  *
  * ETRAX CRISv32 general port I/O device
  *
@@ -10,6 +10,10 @@
  *                               port to ETRAX FS.
  *
  * $Log: gpio.c,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:20  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  * Revision 1.16  2005/06/19 17:06:49  starvik
  * Merge of Linux 2.6.12.
  *

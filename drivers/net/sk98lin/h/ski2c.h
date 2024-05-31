@@ -2,8 +2,8 @@
  *
  * Name:	ski2c.h
  * Project:	Gigabit Ethernet Adapters, TWSI-Module
- * Version:	$Revision: 1.35 $
- * Date:	$Date: 2003/10/20 09:06:30 $
+ * Version:	$Revision: 1.1.1.1 $
+ * Date:	$Date: 2007-05-25 06:50:02 $
  * Purpose:	Defines to access Voltage and Temperature Sensor
  *
  ******************************************************************************/

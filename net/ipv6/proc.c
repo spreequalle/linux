@@ -7,7 +7,7 @@
  *		PROC file system.  This is very similar to the IPv4 version,
  *		except it reports the sockets in the INET6 address family.
  *
- * Version:	$Id: proc.c,v 1.17 2002/02/01 22:01:04 davem Exp $
+ * Version:	$Id: proc.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  * Authors:	David S. Miller (davem@caip.rutgers.edu)
  * 		YOSHIFUJI Hideaki <yoshfuji@linux-ipv6.org>
@@ -53,7 +53,7 @@ static int sockstat6_seq_show(struct seq_file *seq, void *v)
 	seq_printf(seq, "RAW6: inuse %d\n",
 		       fold_prot_inuse(&rawv6_prot));
 	seq_printf(seq, "FRAG6: inuse %d memory %d\n",
-		       ip6_frag_nqueues, atomic_read(&ip6_frag_mem));
+		       ip6_frag_nqueues(), ip6_frag_mem());
 	return 0;
 }
 

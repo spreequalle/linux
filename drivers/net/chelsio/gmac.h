@@ -1,8 +1,8 @@
 /*****************************************************************************
  *                                                                           *
  * File: gmac.h                                                              *
- * $Revision: 1.6 $                                                          *
- * $Date: 2005/06/21 18:29:47 $                                              *
+ * $Revision: 1.1.1.1 $                                                          *
+ * $Date: 2007-05-25 06:50:02 $                                              *
  * Description:                                                              *
  *  Generic MAC functionality.                                               *
  *  part of the Chelsio 10Gb Ethernet Driver.                                *

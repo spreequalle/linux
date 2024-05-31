@@ -1,7 +1,10 @@
 #
 # USB peripheral controller drivers
 #
-obj-$(CONFIG_USB_DUMMY_HCD)	+= dummy_hcd.o
+
+# mask by kaiker ,for RT3052 USB OTG device mode
+#obj-$(CONFIG_USB_DUMMY_HCD)	+= dummy_hcd.o
+
 obj-$(CONFIG_USB_NET2280)	+= net2280.o
 obj-$(CONFIG_USB_PXA2XX)	+= pxa2xx_udc.o
 obj-$(CONFIG_USB_GOKU)		+= goku_udc.o
@@ -19,6 +22,7 @@ g_midi-objs			:= gmidi.o usbstring.o config.o epautoconf.o
 gadgetfs-objs			:= inode.o
 g_file_storage-objs		:= file_storage.o usbstring.o config.o \
 					epautoconf.o
+g_ram_storage-objs		:= ram_storage.o usbstring.o config.o epautoconf.o
 
 ifeq ($(CONFIG_USB_ETH_RNDIS),y)
 	g_ether-objs		+= rndis.o

@@ -1,4 +1,4 @@
-/* $Id: capifs.h,v 1.1.2.2 2004/01/16 21:09:26 keil Exp $
+/* $Id: capifs.h,v 1.1.1.1 2007-05-25 06:50:09 bruce Exp $
  * 
  * Copyright 2000 by Carsten Paeth <calle@calle.de>
  *

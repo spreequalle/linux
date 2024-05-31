@@ -1,4 +1,4 @@
-/* $Id: traps.c,v 1.11 2005/01/24 16:03:19 orjanf Exp $
+/* $Id: traps.c,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $
  *
  *  linux/arch/cris/traps.c
  *

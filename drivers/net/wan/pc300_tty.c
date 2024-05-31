@@ -11,6 +11,10 @@
  *  2 of the License, or (at your option) any later version.
  *   
  *  $Log: pc300_tty.c,v $
+ *  Revision 1.1.1.1  2007-05-25 06:50:02  bruce
+ *  linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ *  initial version. 
+ *
  *  Revision 3.7  2002/03/07 14:17:09  henrique
  *  License data fixed
  *

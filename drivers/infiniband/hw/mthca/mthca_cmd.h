@@ -31,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id: mthca_cmd.h 1349 2004-12-16 21:09:43Z roland $
+ * $Id: mthca_cmd.h,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
  */
 
 #ifndef MTHCA_CMD_H

@@ -1,4 +1,4 @@
-/* $Id: cryptocop.c,v 1.13 2005/04/21 17:27:55 henriken Exp $
+/* $Id: cryptocop.c,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $
  *
  * Stream co-processor driver for the ETRAX FS
  *

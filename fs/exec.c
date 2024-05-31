@@ -124,6 +124,7 @@ static inline void put_binfmt(struct linux_binfmt * fmt)
  */
 asmlinkage long sys_uselib(const char __user * library)
 {
+#if defined(CONFIG_BINFMT_AOUT) || defined(CONFIG_BINFMT_AOUT_MODULE) || defined(CONFIG_BINFMT_ELF_AOUT)
 	struct file * file;
 	struct nameidata nd;
 	int error;
@@ -171,6 +172,9 @@ exit:
 	release_open_intent(&nd);
 	path_release(&nd);
 	goto out;
+#else
+	return -ENOSYS;
+#endif
 }
 
 /*

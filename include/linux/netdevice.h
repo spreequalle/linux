@@ -971,17 +971,27 @@ extern struct net_device *alloc_netdev(int sizeof_priv, const char *name,
 extern int		register_netdev(struct net_device *dev);
 extern void		unregister_netdev(struct net_device *dev);
 /* Functions used for multicast support */
+#ifdef CONFIG_NET_DEV_MULTICAST
 extern void		dev_mc_upload(struct net_device *dev);
 extern int 		dev_mc_delete(struct net_device *dev, void *addr, int alen, int all);
 extern int		dev_mc_add(struct net_device *dev, void *addr, int alen, int newonly);
 extern void		dev_mc_discard(struct net_device *dev);
+extern void		dev_mcast_init(void);
+#else
+#define		dev_mc_upload(a)
+static inline int dev_mc_delete(struct net_device *dev,
+		void *addr, int alen, int all) { return 0; }
+static inline int dev_mc_add(struct net_device *dev,
+		void *addr, int alen, int newonly) { return 0; }
+#define		dev_mc_discard(a)
+#define		dev_mcast_init()
+#endif
 extern void		dev_set_promiscuity(struct net_device *dev, int inc);
 extern void		dev_set_allmulti(struct net_device *dev, int inc);
 extern void		netdev_state_change(struct net_device *dev);
 extern void		netdev_features_change(struct net_device *dev);
 /* Load a device via the kmod */
 extern void		dev_load(const char *name);
-extern void		dev_mcast_init(void);
 extern int		netdev_max_backlog;
 extern int		weight_p;
 extern int		netdev_set_master(struct net_device *dev, struct net_device *master);

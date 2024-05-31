@@ -3,7 +3,7 @@
  *
  *  Copyright (C) 2004 Richard Purdie
  *
- *  $Id: sharpsl.c,v 1.7 2005/11/07 11:14:31 gleixner Exp $
+ *  $Id: sharpsl.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  *
  *  Based on Sharp's NAND driver sharp_sl.c
  *

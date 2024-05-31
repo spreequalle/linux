@@ -44,7 +44,9 @@ asmlinkage long sys_sync(void)
 
 void emergency_sync(void)
 {
+#ifdef CONFIG_PDFLUSH
 	pdflush_operation(do_sync, 0);
+#endif
 }
 
 /*

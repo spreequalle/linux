@@ -1,4 +1,4 @@
-/* $Date: 2005/10/22 00:42:59 $ $RCSfile: mac.c,v $ $Revision: 1.32 $ */
+/* $Date: 2007-05-25 06:50:02 $ $RCSfile: mac.c,v $ $Revision: 1.1.1.1 $ */
 #include "gmac.h"
 #include "regs.h"
 #include "fpga_defs.h"

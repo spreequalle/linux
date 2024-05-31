@@ -3,7 +3,7 @@
 
 #include <linux/interrupt.h>
 
-/* $Id: i82092aa.h,v 1.1.1.1 2001/09/19 14:53:15 dwmw2 Exp $ */
+/* $Id: i82092aa.h,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $ */
 
 /* Debuging defines */
 #ifdef NOTRACE

@@ -457,6 +457,7 @@ struct usb_gadget_ops {
 	int	(*pullup) (struct usb_gadget *, int is_on);
 	int	(*ioctl)(struct usb_gadget *,
 				unsigned code, unsigned long param);
+	int     (*lpm_support) (struct usb_gadget *);
 };
 
 /**

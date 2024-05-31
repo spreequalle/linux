@@ -4,7 +4,7 @@
 /* (C) 1999 Machine Vision Holdings, Inc.			*/
 /* (C) 1999-2003 David Woodhouse <dwmw2@infradead.org>		*/
 
-/* $Id: docprobe.c,v 1.46 2005/11/07 11:14:25 gleixner Exp $	*/
+/* $Id: docprobe.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $	*/
 
 
 
@@ -83,10 +83,10 @@ static unsigned long __initdata doc_locations[] = {
 	0xe4000000,
 #elif defined(CONFIG_MOMENCO_OCELOT)
 	0x2f000000,
-        0xff000000,
+	0xff000000,
 #elif defined(CONFIG_MOMENCO_OCELOT_G) || defined (CONFIG_MOMENCO_OCELOT_C)
-        0xff000000,
-##else
+	0xff000000,
+#else
 #warning Unknown architecture for DiskOnChip. No default probe locations defined
 #endif
 	0xffffffff };

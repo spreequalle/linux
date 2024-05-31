@@ -1,4 +1,4 @@
-/* $Id: parport_share.c,v 1.15 1998/01/11 12:06:17 philip Exp $
+/* $Id: share.c,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
  * Parallel-port resource manager code.
  * 
  * Authors: David Campbell <campbell@tirian.che.curtin.edu.au>

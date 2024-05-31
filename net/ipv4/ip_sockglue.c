@@ -5,7 +5,7 @@
  *
  *		The IP to API glue.
  *
- * Version:	$Id: ip_sockglue.c,v 1.62 2002/02/01 22:01:04 davem Exp $
+ * Version:	$Id: ip_sockglue.c,v 1.2 2008-08-15 07:56:25 winfred Exp $
  *
  * Authors:	see ip.c
  *
@@ -637,6 +637,7 @@ static int do_ip_setsockopt(struct sock *sk, int level,
 				err = ip_mc_leave_group(sk, &mreq);
 			break;
 		}
+#ifdef CONFIG_IGMP
 		case IP_MSFILTER:
 		{
 			extern int sysctl_igmp_max_msf;
@@ -674,6 +675,7 @@ static int do_ip_setsockopt(struct sock *sk, int level,
 			kfree(msf);
 			break;
 		}
+#endif
 		case IP_BLOCK_SOURCE:
 		case IP_UNBLOCK_SOURCE:
 		case IP_ADD_SOURCE_MEMBERSHIP:
@@ -791,6 +793,7 @@ static int do_ip_setsockopt(struct sock *sk, int level,
 				greqs.gsr_interface);
 			break;
 		}
+#ifdef CONFIG_IGMP
 		case MCAST_MSFILTER:
 		{
 			extern int sysctl_igmp_max_msf;
@@ -857,6 +860,7 @@ mc_msf_out:
 			kfree(gsf);
 			break;
 		}
+#endif
 		case IP_ROUTER_ALERT:
 			err = ip_ra_control(sk, val ? 1 : 0, NULL);
 			break;

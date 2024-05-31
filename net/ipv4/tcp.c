@@ -5,7 +5,7 @@
  *
  *		Implementation of the Transmission Control Protocol(TCP).
  *
- * Version:	$Id: tcp.c,v 1.216 2002/02/01 22:01:04 davem Exp $
+ * Version:	$Id: tcp.c,v 1.1.1.1 2007-05-25 06:50:00 bruce Exp $
  *
  * Authors:	Ross Biro
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>

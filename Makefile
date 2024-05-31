@@ -158,10 +158,7 @@ export srctree objtree VPATH TOPDIR
 # then ARCH is assigned, getting whatever value it gets normally, and 
 # SUBARCH is subsequently ignored.
 
-SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
-				  -e s/arm.*/arm/ -e s/sa110/arm/ \
-				  -e s/s390x/s390/ -e s/parisc64/parisc/ \
-				  -e s/ppc.*/powerpc/ -e s/mips.*/mips/ )
+SUBARCH := mips
 
 # Cross compiling and selecting different set of gcc/bin-utils
 # ---------------------------------------------------------------------------
@@ -496,6 +493,7 @@ else
 CFLAGS		+= -fomit-frame-pointer
 endif
 
+CFLAGS		+= -gdwarf-2
 ifdef CONFIG_DEBUG_INFO
 CFLAGS		+= -g
 endif
@@ -507,11 +505,48 @@ CFLAGS          += $(call cc-option, -fno-stack-protector)
 NOSTDINC_FLAGS += -nostdinc -isystem $(shell $(CC) -print-file-name=include)
 CHECKFLAGS     += $(NOSTDINC_FLAGS)
 
+CFLAGS += $(call cc-option,-membedded-data,)
+CFLAGS += $(call cc-option,-muninit-const-in-rodata,)
+
+CFLAGS += $(call cc-option,-funit-at-a-time,)
+
 # warn about C99 declaration after statement
 CFLAGS += $(call cc-option,-Wdeclaration-after-statement,)
 
 # disable pointer signed / unsigned warnings in gcc 4.0
 CFLAGS += $(call cc-option,-Wno-pointer-sign,)
+
+ifeq ($(CONFIG_SUPPORT_CAMEO_SDK),y)
+CFLAGS += -DSUPPORT_CAMEO_SDK
+endif
+
+ifeq ($(CONFIG_RALINK_GPIO_3G),y)
+CFLAGS += -DSUPPORT_GPIO_3G_POWER
+endif
+
+ifdef CAMEO_DAUGHTERBOARD
+CFLAGS += -DCAMEO_DAUGHTERBOARD
+endif
+
+ifeq ($(CONFIG_SUPPORT_LANG_PART),y)
+CFLAGS += -DSUPPORT_LANG_PART
+endif
+
+ifeq ($(CONFIG_SUPPORT_CONTROL_GPIO9),y)
+CFLAGS += -DSUPPORT_CONTROL_GPIO9
+endif
+
+ifeq ($(CONFIG_SUPPORT_CHECKSUM_PART),y)
+CFLAGS += -DSUPPORT_CHECKSUM_PART
+endif
+
+ifeq ($(CONFIG_SUPPORT_POT_PART),y)
+CFLAGS += -DSUPPORT_POT_PART
+endif
+
+ifeq ($(CONFIG_DNS_HIJACK),y)
+CFLAGS += -DDNS_HIJACK
+endif
 
 # Default kernel image to build when no specific target is given.
 # KBUILD_IMAGE may be overruled on the command line or
@@ -904,7 +939,6 @@ include/linux/utsrelease.h: include/config/kernel.release FORCE
 
 PHONY += depend dep
 depend dep:
-	@echo '*** Warning: make $@ is unnecessary now.'
 
 # ---------------------------------------------------------------------------
 # Kernel headers
@@ -970,15 +1004,18 @@ _modinst_:
 		echo "See http://www.codemonkey.org.uk/docs/post-halloween-2.6.txt";\
 		sleep 1; \
 	fi
-	@rm -rf $(MODLIB)/kernel
+#	@rm -rf $(MODLIB)/kernel
 	@rm -f $(MODLIB)/source
-	@mkdir -p $(MODLIB)/kernel
+#	@mkdir -p $(MODLIB)/kernel
 	@ln -s $(srctree) $(MODLIB)/source
 	@if [ ! $(objtree) -ef  $(MODLIB)/build ]; then \
 		rm -f $(MODLIB)/build ; \
 		ln -s $(objtree) $(MODLIB)/build ; \
 	fi
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.modinst
+	ls $(FS_PATH)/lib/modules
+
+
 
 # If System.map exists, run depmod.  This deliberately does not have a
 # dependency on System.map since that would run the dependency tree on
@@ -988,11 +1025,11 @@ _modinst_:
 ifeq "$(strip $(INSTALL_MOD_PATH))" ""
 depmod_opts	:=
 else
-depmod_opts	:= -b $(INSTALL_MOD_PATH) -r
+depmod_opts	:= -b $(MODLIB) 
 endif
 PHONY += _modinst_post
 _modinst_post: _modinst_
-	if [ -r System.map -a -x $(DEPMOD) ]; then $(DEPMOD) -ae -F System.map $(depmod_opts) $(KERNELRELEASE); fi
+	if [ -r System.map -a -x $(DEPMOD) ]; then $(DEPMOD) -F System.map $(depmod_opts); fi
 
 else # CONFIG_MODULES
 
@@ -1019,7 +1056,8 @@ endif # CONFIG_MODULES
 # Directories & files removed with 'make clean'
 CLEAN_DIRS  += $(MODVERDIR)
 CLEAN_FILES +=	vmlinux System.map \
-                .tmp_kallsyms* .tmp_version .tmp_vmlinux* .tmp_System.map
+                .tmp_kallsyms* .tmp_version .tmp_vmlinux* .tmp_System.map \
+		scripts/kconfig/mconf scripts/kconfig/conf
 
 # Directories & files removed with 'make mrproper'
 MRPROPER_DIRS  += include/config include2 usr/include

@@ -1,5 +1,5 @@
 /* ssp.h
-     $Id$
+     $Id: ssp.h,v 1.1.1.1 2007-05-25 06:50:13 bruce Exp $
 
    written by Marc Singer
    6 Dec 2004

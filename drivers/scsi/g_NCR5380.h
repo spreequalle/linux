@@ -26,7 +26,11 @@
  */
 
 /*
- * $Log: generic_NCR5380.h,v $
+ * $Log: g_NCR5380.h,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:05  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  */
 
 #ifndef GENERIC_NCR5380_H

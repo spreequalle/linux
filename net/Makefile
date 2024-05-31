@@ -52,3 +52,9 @@ obj-$(CONFIG_IUCV)		+= iucv/
 ifeq ($(CONFIG_NET),y)
 obj-$(CONFIG_SYSCTL)		+= sysctl_net.o
 endif
+
+ifneq ($(CONFIG_RA_NAT_NONE),y)
+obj-y                           += nat/foe_hook/
+endif
+
+#obj-$(CONFIG_RA_HW_NAT)         += nat/hw_nat/

@@ -1,0 +1,60 @@
+menu "Ralink Module"
+
+###########
+# Debuging
+###########
+source "drivers/net/rt_rdm/Kconfig"
+
+#############
+# Wire
+#############
+source "drivers/net/raeth/Kconfig"
+
+#############
+# Wireless
+#############
+
+config  RT2860V2_2850
+        bool "Dual Band"
+        depends on RALINK_RT2880
+
+choice
+        prompt "RF Type"
+        depends on RALINK_RT3052
+        default RALINK_RT3052_2T2R
+
+        config  RALINK_RT3052_2T2R
+        bool "RT3052-2T2R"
+endchoice
+
+choice
+		prompt "WIFI Driver Version"
+		config RT2860V2_2300_FinalN
+		bool "Support Ralink WIFI driver RT2860v2 2.3.0.0 Final N"	
+endchoice
+
+#config INIC_USB
+#bool
+#default y if RT305x_INIC_USB
+
+#config INIC_MII
+#bool
+#default y if RT2880v2_INIC_MII || RT305x_INIC_MII
+
+#config INIC_PCI
+#bool
+#default y if RT2880v2_INIC_PCI
+
+#choice
+#prompt "Ralink NAT Type"
+	
+#config  RA_NAT_NONE
+#bool "None"
+#config  RA_NAT_HW
+#bool "Hardware"
+#endchoice
+
+#source "net/nat/hw_nat/Kconfig"
+
+endmenu
+

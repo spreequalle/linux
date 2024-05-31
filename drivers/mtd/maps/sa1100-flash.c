@@ -3,7 +3,7 @@
  *
  * (C) 2000 Nicolas Pitre <nico@cam.org>
  *
- * $Id: sa1100-flash.c,v 1.51 2005/11/07 11:14:28 gleixner Exp $
+ * $Id: sa1100-flash.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  */
 #include <linux/module.h>
 #include <linux/types.h>

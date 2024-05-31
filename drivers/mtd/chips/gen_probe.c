@@ -2,7 +2,7 @@
  * Routines common to all CFI-type probes.
  * (C) 2001-2003 Red Hat, Inc.
  * GPL'd
- * $Id: gen_probe.c,v 1.24 2005/11/07 11:14:23 gleixner Exp $
+ * $Id: gen_probe.c,v 1.2 2007-06-05 07:15:54 steven Exp $
  */
 
 #include <linux/kernel.h>
@@ -199,6 +199,7 @@ typedef struct mtd_info *cfi_cmdset_fn_t(struct map_info *, int);
 extern cfi_cmdset_fn_t cfi_cmdset_0001;
 extern cfi_cmdset_fn_t cfi_cmdset_0002;
 extern cfi_cmdset_fn_t cfi_cmdset_0020;
+extern cfi_cmdset_fn_t cfi_cmdset_0701;
 
 static inline struct mtd_info *cfi_cmdset_unknown(struct map_info *map,
 						  int primary)
@@ -255,6 +256,10 @@ static struct mtd_info *check_cmd_set(struct map_info *map, int primary)
 #ifdef CONFIG_MTD_CFI_STAA
         case 0x0020:
 		return cfi_cmdset_0020(map, primary);
+#endif
+#ifdef CONFIG_MTD_CFI_SSTSTD
+	case 0x0701:
+		return cfi_cmdset_0701(map, primary);
 #endif
 	default:
 		return cfi_cmdset_unknown(map, primary);

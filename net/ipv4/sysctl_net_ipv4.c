@@ -1,7 +1,7 @@
 /*
  * sysctl_net_ipv4.c: sysctl interface to net IPV4 subsystem.
  *
- * $Id: sysctl_net_ipv4.c,v 1.50 2001/10/20 00:00:11 davem Exp $
+ * $Id: sysctl_net_ipv4.c,v 1.2 2008-08-15 07:52:30 winfred Exp $
  *
  * Begun April 1, 1996, Mike Shaver.
  * Added /proc/sys/net/ipv4 directory entry (empty =) ). [MS]
@@ -482,6 +482,8 @@ ctl_table ipv4_table[] = {
 	},
 
 #endif
+#ifdef CONFIG_INETPEER
+#ifdef CONFIG_IGMP
 	{
 		.ctl_name	= NET_IPV4_IGMP_MAX_MSF,
 		.procname	= "igmp_max_msf",
@@ -490,6 +492,7 @@ ctl_table ipv4_table[] = {
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec
 	},
+#endif
 	{
 		.ctl_name	= NET_IPV4_INET_PEER_THRESHOLD,
 		.procname	= "inet_peer_threshold",
@@ -534,6 +537,7 @@ ctl_table ipv4_table[] = {
 		.proc_handler	= &proc_dointvec_jiffies,
 		.strategy	= &sysctl_jiffies
 	},
+#endif
 	{
 		.ctl_name	= NET_TCP_ORPHAN_RETRIES,
 		.procname	= "tcp_orphan_retries",
@@ -802,6 +806,14 @@ ctl_table ipv4_table[] = {
 		.mode		= 0644,
 		.proc_handler   = &proc_allowed_congestion_control,
 		.strategy	= &strategy_allowed_congestion_control,
+	},
+	{
+		.ctl_name	= NET_TCP_SPI_ENABLE,
+		.procname	= "spi_enable",
+		.data		= &sysctl_spi_enable,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec
 	},
 	{ .ctl_name = 0 }
 };

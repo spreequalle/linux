@@ -51,7 +51,7 @@
 
 
 static char *rcsid =
-  "$Id: donauboe.c V2.18 ven jan 10 03:14:16 2003$";
+  "$Id: donauboe.c,v 1.1.1.1 2007-05-25 06:50:02 bruce Exp $";
 
 /* See below for a description of the logic in this driver */
 

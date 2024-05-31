@@ -1,5 +1,5 @@
 /* lcd-panel.h
-     $Id$
+     $Id: lcd-panel.h,v 1.1.1.1 2007-05-25 06:50:19 bruce Exp $
 
    written by Marc Singer
    18 Jul 2005

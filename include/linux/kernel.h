@@ -94,8 +94,23 @@ extern int cond_resched(void);
 
 extern struct atomic_notifier_head panic_notifier_list;
 extern long (*panic_blink)(long time);
+
+#ifndef CONFIG_PANIC
+NORET_TYPE static inline void panic(const char * fmt, ...)
+	__attribute__ ((NORET_AND format (printf, 1, 2)));
+NORET_TYPE static inline void panic(const char * fmt, ...) {}
+#else
+
+#ifdef CONFIG_FULL_PANIC
 NORET_TYPE void panic(const char * fmt, ...)
 	__attribute__ ((NORET_AND format (printf, 1, 2)));
+#else
+#define panic(fmt, ...) tiny_panic(0, ## __VA_ARGS__)
+NORET_TYPE void tiny_panic(int a, ...) ATTRIB_NORET;
+#endif
+
+#endif
+
 extern void oops_enter(void);
 extern void oops_exit(void);
 extern int oops_may_print(void);
@@ -139,7 +154,7 @@ extern struct pid *session_of_pgrp(struct pid *pgrp);
 
 extern void dump_thread(struct pt_regs *regs, struct user *dump);
 
-#ifdef CONFIG_PRINTK
+#if defined(CONFIG_PRINTK) || (defined(CONFIG_PRINTK_FUNC) && defined(DO_PRINTK))
 asmlinkage int vprintk(const char *fmt, va_list args)
 	__attribute__ ((format (printf, 1, 0)));
 asmlinkage int printk(const char * fmt, ...)

@@ -151,6 +151,21 @@ static unsigned int ipv4_conntrack_help(unsigned int hooknum,
 	if (!help || !help->helper)
 		return NF_ACCEPT;
 
+#if defined(CONFIG_RA_SW_NAT) || defined(CONFIG_RA_SW_NAT_MODULE)
+#include "../../nat/sw_nat/ra_nat.h"
+            if( (skb_headroom(*pskb) >=4)  && (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_NUM) ) {
+                FOE_HASH_NUM(*pskb) |= FOE_ALG_FLAGS;
+            }
+#elif  defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
+#include "../../nat/hw_nat/ra_nat.h"
+            if( (skb_headroom(*pskb) >=4)  &&
+                    ((FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_PCI) ||
+                     (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_WLAN) ||
+                     (FOE_MAGIC_TAG(*pskb) == FOE_MAGIC_GE))){
+                    FOE_ALG_RXIF(*pskb)=1;
+            }
+#endif
+
 	return help->helper->help(pskb,
 			       (*pskb)->nh.raw - (*pskb)->data
 					       + (*pskb)->nh.iph->ihl*4,

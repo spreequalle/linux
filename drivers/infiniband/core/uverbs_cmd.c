@@ -32,7 +32,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id: uverbs_cmd.c 2708 2005-06-24 17:27:21Z roland $
+ * $Id: uverbs_cmd.c,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
  */
 
 #include <linux/file.h>

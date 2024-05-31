@@ -1067,6 +1067,7 @@ unsigned long try_to_free_pages(struct zone **zones, gfp_t gfp_mask)
 		 * that's undesirable in laptop mode, where we *want* lumpy
 		 * writeout.  So in laptop mode, write out the whole world.
 		 */
+	   
 		if (total_scanned > sc.swap_cluster_max +
 					sc.swap_cluster_max / 2) {
 			wakeup_pdflush(laptop_mode ? 0 : total_scanned);

@@ -221,7 +221,7 @@ int usb_submit_urb(struct urb *urb, gfp_t mem_flags)
 {
 	int			pipe, temp, max;
 	struct usb_device	*dev;
-	int			is_out;
+	int			is_out, is_in;
 
 	if (!urb || urb->hcpriv || !urb->complete)
 		return -EINVAL;
@@ -242,6 +242,7 @@ int usb_submit_urb(struct urb *urb, gfp_t mem_flags)
 	pipe = urb->pipe;
 	temp = usb_pipetype(pipe);
 	is_out = usb_pipeout(pipe);
+	is_in = usb_pipein(pipe);
 
 	if (!usb_pipecontrol(pipe) && dev->state < USB_STATE_CONFIGURED)
 		return -ENODEV;
@@ -305,6 +306,9 @@ int usb_submit_urb(struct urb *urb, gfp_t mem_flags)
 	case PIPE_BULK:
 		if (is_out)
 			allowed |= URB_ZERO_PACKET;
+		if (is_in)
+			allowed |= URB_LOW_PRI_PORT;
+
 		/* FALLTHROUGH */
 	case PIPE_CONTROL:
 		allowed |= URB_NO_FSBR;	/* only affects UHCI */

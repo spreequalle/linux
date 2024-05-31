@@ -1,4 +1,4 @@
-/* $Id: checksumcopy.S,v 1.1 2001/12/17 13:59:27 bjornw Exp $
+/* $Id: checksumcopy.S,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $
  * A fast checksum+copy routine using movem
  * Copyright (c) 1998, 2001 Axis Communications AB
  *

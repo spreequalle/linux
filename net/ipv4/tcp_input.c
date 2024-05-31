@@ -5,7 +5,7 @@
  *
  *		Implementation of the Transmission Control Protocol(TCP).
  *
- * Version:	$Id: tcp_input.c,v 1.243 2002/02/01 22:01:04 davem Exp $
+ * Version:	$Id: tcp_input.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  * Authors:	Ross Biro
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
@@ -90,6 +90,8 @@ int sysctl_tcp_nometrics_save __read_mostly;
 
 int sysctl_tcp_moderate_rcvbuf __read_mostly = 1;
 int sysctl_tcp_abc __read_mostly;
+
+int sysctl_spi_enable __read_mostly;
 
 #define FLAG_DATA		0x01 /* Incoming frame contained data.		*/
 #define FLAG_WIN_UPDATE		0x02 /* Incoming ACK was a window update.	*/

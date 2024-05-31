@@ -7,6 +7,8 @@ menu "Video Capture Adapters"
 
 comment "Video Capture Adapters"
 
+source "drivers/media/video/uvc/Kconfig"
+
 config VIDEO_ADV_DEBUG
 	bool "Enable advanced debug functionality"
 	depends on VIDEO_DEV
@@ -260,6 +262,7 @@ config VIDEO_VPX3220
 comment "Video and audio decoders"
 
 source "drivers/media/video/cx25840/Kconfig"
+
 
 comment "MPEG video encoders"
 

@@ -887,6 +887,7 @@ extern void sock_init_data(struct socket *sock, struct sock *sk);
  *
  */
 
+#ifdef CONFIG_NET_SK_FILTER
 static inline int sk_filter(struct sock *sk, struct sk_buff *skb)
 {
 	int err;
@@ -941,6 +942,13 @@ static inline void sk_filter_charge(struct sock *sk, struct sk_filter *fp)
 	atomic_inc(&fp->refcnt);
 	atomic_add(sk_filter_len(fp), &sk->sk_omem_alloc);
 }
+#else
+
+#define sk_filter(a, b) (0)
+#define sk_filter_release(a, fp)
+#define sk_filter_charge(a, b)
+
+#endif
 
 /*
  * Socket reference counting postulates.

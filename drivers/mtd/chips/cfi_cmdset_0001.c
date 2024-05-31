@@ -4,7 +4,7 @@
  *
  * (C) 2000 Red Hat. GPL'd
  *
- * $Id: cfi_cmdset_0001.c,v 1.186 2005/11/23 22:07:52 nico Exp $
+ * $Id: cfi_cmdset_0001.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  *
  *
  * 10/10/2000	Nicolas Pitre <nico@cam.org>

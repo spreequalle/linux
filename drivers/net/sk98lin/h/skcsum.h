@@ -2,8 +2,8 @@
  *
  * Name:	skcsum.h
  * Project:	GEnesis - SysKonnect SK-NET Gigabit Ethernet (SK-98xx)
- * Version:	$Revision: 1.10 $
- * Date:	$Date: 2003/08/20 13:59:57 $
+ * Version:	$Revision: 1.1.1.1 $
+ * Date:	$Date: 2007-05-25 06:50:02 $
  * Purpose:	Store/verify Internet checksum in send/receive packets.
  *
  ******************************************************************************/

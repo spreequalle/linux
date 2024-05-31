@@ -1,0 +1,49 @@
+
+choice
+	prompt "Choose Model"
+	depends on DLINK
+	default DHP_W306AV
+
+config DHP_W306AV
+	bool "DHP-W306AV"
+	depends on DLINK
+endchoice
+
+config SUPPORT_DCC_HIJACK
+bool "Support DCC hijack function"
+depends on DLINK
+default n
+	help
+		This value is to support to hijack DCC discovery packet
+
+config SUPPORT_DLINK_LED_SPEC
+bool "Support D-Link LED specification"
+depends on DLINK
+default y
+	help
+		This value is to support D-Link LED specification
+		
+config SUPPORT_DUAL_COLOR_POWER_LED
+bool "Support the power led in dual color"
+depends on SUPPORT_DLINK_LED_SPEC
+default y
+	help
+		This value is to support D-Link LED specification
+
+config DCC_MODEL_NAME
+string 'the Model Name which is used in the response packet of DCC discovery'
+depends on SUPPORT_DCC_HIJACK
+	help
+		This value is the Model Name which is used in the response packet of DCC discovery
+
+config SUPPORT_PLC_MODULE
+bool 'Support PLC module'
+depends on SUPPORT_DCC_HIJACK
+	help
+		This value is to identify the model supports PLC module or not
+		
+config SUPPORT_NETWORK_KEY_HEX63
+bool 'Support D-Link WPS requirement, the network key only supports 8 ~ 63 characters'
+depends on DLINK
+	help
+		This value is to support D-Link WPS requirement, the network key only supports 8 ~ 63 characters

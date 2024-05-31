@@ -17,6 +17,7 @@
 
 #define IPV6_MAX_ADDRESSES		16
 
+#include <linux/in.h>
 #include <linux/in6.h>
 
 struct prefix_info {
@@ -64,6 +65,10 @@ extern int			ipv6_chk_addr(struct in6_addr *addr,
 #ifdef CONFIG_IPV6_MIP6
 extern int			ipv6_chk_home_addr(struct in6_addr *addr);
 #endif
+
+extern int			ipv6_chk_prefix(struct in6_addr *addr,
+						struct net_device *dev);
+
 extern struct inet6_ifaddr *	ipv6_get_ifaddr(struct in6_addr *addr,
 						struct net_device *dev,
 						int strict);
@@ -73,7 +78,9 @@ extern int			ipv6_get_saddr(struct dst_entry *dst,
 extern int			ipv6_dev_get_saddr(struct net_device *dev, 
 					       struct in6_addr *daddr,
 					       struct in6_addr *saddr);
-extern int			ipv6_get_lladdr(struct net_device *dev, struct in6_addr *);
+extern int			ipv6_get_lladdr(struct net_device *dev, 
+									struct in6_addr *addr,
+									unsigned char banned_flags);
 extern int			ipv6_rcv_saddr_equal(const struct sock *sk, 
 						      const struct sock *sk2);
 extern void			addrconf_join_solict(struct net_device *dev,
@@ -204,7 +211,7 @@ static inline void addrconf_addr_solict_mult(const struct in6_addr *addr,
 }
 
 
-static inline void ipv6_addr_all_nodes(struct in6_addr *addr)
+/*static inline void ipv6_addr_all_nodes(struct in6_addr *addr)
 {
 	ipv6_addr_set(addr,
 		      __constant_htonl(0xFF020000), 0, 0,
@@ -216,7 +223,7 @@ static inline void ipv6_addr_all_routers(struct in6_addr *addr)
 	ipv6_addr_set(addr,
 		      __constant_htonl(0xFF020000), 0, 0,
 		      __constant_htonl(0x2));
-}
+}*/
 
 static inline int ipv6_addr_is_multicast(const struct in6_addr *addr)
 {
@@ -237,6 +244,24 @@ static inline int ipv6_addr_is_ll_all_routers(const struct in6_addr *addr)
 		addr->s6_addr32[1] == 0 &&
 		addr->s6_addr32[2] == 0 &&
 		addr->s6_addr32[3] == htonl(0x00000002));
+}
+
+static inline int ipv6_isatap_eui64(u8 *eui, __be32 addr)
+{
+	eui[0] = (ZERONET(addr) || PRIVATE_10(addr) || LOOPBACK(addr) ||
+		  LINKLOCAL_169(addr) || PRIVATE_172(addr) || TEST_192(addr) ||
+		  ANYCAST_6TO4(addr) || PRIVATE_192(addr) || TEST_198(addr) ||
+		  MULTICAST(addr) || BADCLASS(addr)) ? 0x00 : 0x02;
+	eui[1] = 0;
+	eui[2] = 0x5E;
+	eui[3] = 0xFE;
+	memcpy (eui+4, &addr, 4);
+	return 0;
+}
+
+static inline int ipv6_addr_is_isatap(const struct in6_addr *addr)
+{
+	return ((addr->s6_addr32[2] | htonl(0x02000000)) == htonl(0x02005EFE));
 }
 
 #ifdef CONFIG_PROC_FS

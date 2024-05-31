@@ -9,7 +9,7 @@
  * Derived from drivers/mtd/nand/autcpu12.c
  *   Copyright (c) 2001 Thomas Gleixner (gleixner@autronix.de)
  *
- * $Id: ts7250.c,v 1.4 2004/12/30 22:02:07 joff Exp $
+ * $Id: ts7250.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as

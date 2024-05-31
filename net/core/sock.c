@@ -7,7 +7,7 @@
  *		handler for protocols to use and generic option handler.
  *
  *
- * Version:	$Id: sock.c,v 1.117 2002/02/01 22:01:03 davem Exp $
+ * Version:	$Id: sock.c,v 1.2 2008-08-15 07:53:58 winfred Exp $
  *
  * Authors:	Ross Biro
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
@@ -342,7 +342,9 @@ int sock_setsockopt(struct socket *sock, int level, int optname,
 		    char __user *optval, int optlen)
 {
 	struct sock *sk=sock->sk;
+#ifdef CONFIG_NET_SK_FILTER
 	struct sk_filter *filter;
+#endif
 	int val;
 	int valbool;
 	struct linger ling;
@@ -591,7 +593,7 @@ set_rcvbuf:
 		}
 #endif
 
-
+#ifdef CONFIG_NET_SK_FILTER
 		case SO_ATTACH_FILTER:
 			ret = -EINVAL;
 			if (optlen == sizeof(struct sock_fprog)) {
@@ -624,6 +626,7 @@ set_rcvbuf:
 			else
 				clear_bit(SOCK_PASSSEC, &sock->flags);
 			break;
+#endif
 
 		/* We implement the SO_SNDLOWAT etc to
 		   not be settable (1003.1g 5.3) */

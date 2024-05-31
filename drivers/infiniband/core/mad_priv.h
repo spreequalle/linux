@@ -31,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id: mad_priv.h 5596 2006-03-03 01:00:07Z sean.hefty $
+ * $Id: mad_priv.h,v 1.1.1.1 2007-05-25 06:50:04 bruce Exp $
  */
 
 #ifndef __IB_MAD_PRIV_H__

@@ -20,12 +20,12 @@
 #include <linux/mm.h>
 #include <linux/errno.h>
 #include <linux/ptrace.h>
-#include <linux/audit.h>
 #include <linux/smp.h>
 #include <linux/smp_lock.h>
 #include <linux/user.h>
 #include <linux/security.h>
-#include <linux/signal.h>
+#include <linux/audit.h>
+#include <linux/seccomp.h>
 
 #include <asm/byteorder.h>
 #include <asm/cpu.h>
@@ -483,12 +483,16 @@ static inline int audit_arch(void)
  */
 asmlinkage void do_syscall_trace(struct pt_regs *regs, int entryexit)
 {
+	/* do the secure computing check first */
+	secure_computing(regs->orig_eax);
+
 	if (unlikely(current->audit_context) && entryexit)
 		audit_syscall_exit(AUDITSC_RESULT(regs->regs[2]),
 		                   regs->regs[2]);
 
 	if (!(current->ptrace & PT_PTRACED))
 		goto out;
+
 	if (!test_thread_flag(TIF_SYSCALL_TRACE))
 		goto out;
 
@@ -506,9 +510,14 @@ asmlinkage void do_syscall_trace(struct pt_regs *regs, int entryexit)
 		send_sig(current->exit_code, current, 1);
 		current->exit_code = 0;
 	}
- out:
+
+out:
+	/* There is no ->orig_eax and that's quite intensional for now making
+	   this work will require some work in various other place before it's
+	   more than a placebo.  */
+
 	if (unlikely(current->audit_context) && !entryexit)
-		audit_syscall_entry(audit_arch(), regs->regs[2],
-				    regs->regs[4], regs->regs[5],
-				    regs->regs[6], regs->regs[7]);
+		audit_syscall_entry(audit_arch(), regs->orig_eax,
+		                    regs->regs[4], regs->regs[5],
+		                    regs->regs[6], regs->regs[7]);
 }

@@ -690,6 +690,7 @@ static int tcp_in_window(struct ip_ct_tcp *state,
 		before(sack, receiver->td_end + 1),
 		after(ack, receiver->td_end - MAXACKWINDOW(sender)));
 
+#if defined (CONFIG_RA_NAT_NONE)
 	if (before(seq, sender->td_maxend + 1) &&
 	    after(end, sender->td_end - receiver->td_maxwin - 1) &&
 	    before(sack, receiver->td_end + 1) &&
@@ -756,6 +757,9 @@ static int tcp_in_window(struct ip_ct_tcp *state,
 			: "SEQ is under the lower bound (already ACKed data retransmitted)"
 			: "SEQ is over the upper bound (over the window of the receiver)");
 	}
+#else
+	res = 1;
+#endif
 
 	DEBUGP("tcp_in_window: res=%i sender end=%u maxend=%u maxwin=%u "
 	       "receiver end=%u maxend=%u maxwin=%u\n",
@@ -849,12 +853,19 @@ static int tcp_error(struct sk_buff *skb,
 				"ip_ct_tcp: short packet ");
 		return -NF_ACCEPT;
 	}
-
+	/* 
+			roger added 20091029
+			old kernel code, 
+			new version please see mipsel-linux-2.6.21\net\netfilter\nf_conntrack_proto_tcp.c 
+	*/
+	if(sysctl_spi_enable){
 	/* Not whole TCP header or malformed packet */
 	if (th->doff*4 < sizeof(struct tcphdr) || tcplen < th->doff*4) {
 		if (LOG_INVALID(IPPROTO_TCP))
 			nf_log_packet(PF_INET, 0, skb, NULL, NULL, NULL,
 				"ip_ct_tcp: truncated/malformed packet ");
+			printk(KERN_NOTICE "Blocked incoming TCP packet from %u.%u.%u.%u:%hu to %u.%u.%u.%u:%hu with unexpected sequence\n", NIPQUAD(iph->saddr), ntohs(th->source),
+				NIPQUAD(iph->daddr), ntohs(th->dest));	
 		return -NF_ACCEPT;
 	}
 
@@ -870,7 +881,7 @@ static int tcp_error(struct sk_buff *skb,
 				  "ip_ct_tcp: bad TCP checksum ");
 		return -NF_ACCEPT;
 	}
-
+ 	}
 	/* Check TCP flags. */
 	tcpflags = (((u_int8_t *)th)[13] & ~(TH_ECE|TH_CWR));
 	if (!tcp_valid_flags[tcpflags]) {
@@ -913,6 +924,35 @@ static int tcp_packet(struct ip_conntrack *conntrack,
 		 * b) SYN/ACK in REPLY
 		 * c) ACK in reply direction after initial SYN in original.
 		 */
+
+		/* 
+			roger added 20091029
+			old kernel code, 
+			new version please see mipsel-linux-2.6.21\net\netfilter\nf_conntrack_proto_tcp.c 
+		*/
+		/*	jimmy added 20080616, when SPI enable, block 
+			invlaid syn+ack with unexpected sequence 
+		*/
+		if(sysctl_spi_enable){
+			if((index == TCP_SYNACK_SET)  &&  
+				(conntrack->proto.tcp.last_index != TCP_SYN_SET) &&
+				//(conntrack->proto.tcp.last_dir != dir) && // Control: 21 <-> random ,Data: random <-> random
+				(ntohl(th->ack_seq) != conntrack->proto.tcp.last_end)
+				)
+			{
+				if (LOG_INVALID(IPPROTO_TCP)){
+					nf_log_packet(PF_INET, 0, skb, NULL, NULL, NULL,
+						"ip_ct_tcp: Invalid SynAck packet ");
+				}
+				
+				printk(KERN_NOTICE "Blocked incoming TCP SynAck packet from %u.%u.%u.%u:%hu to %u.%u.%u.%u:%hu with unexpected sequence\n", NIPQUAD(iph->saddr), ntohs(th->source),
+										NIPQUAD(iph->daddr), ntohs(th->dest));
+
+				write_unlock_bh(&tcp_lock);
+	    		return -NF_DROP;
+			}
+		}
+	/* ------------------------------------------------------------- */
 		if (index == TCP_SYNACK_SET
 		    && conntrack->proto.tcp.last_index == TCP_SYN_SET
 		    && conntrack->proto.tcp.last_dir != dir
@@ -1000,12 +1040,19 @@ static int tcp_packet(struct ip_conntrack *conntrack,
 		/* Keep compilers happy. */
 		break;
 	}
-
+	/* 
+			roger added 20091029
+			old kernel code, 
+			new version please see mipsel-linux-2.6.21\net\netfilter\nf_conntrack_proto_tcp.c 
+	*/
+	if (sysctl_spi_enable){
 	if (!tcp_in_window(&conntrack->proto.tcp, dir, index,
 			   skb, iph, th)) {
 		write_unlock_bh(&tcp_lock);
 		return -NF_ACCEPT;
 	}
+	}	
+	
     in_window:
 	/* From now on we have got in-window packets */
 	conntrack->proto.tcp.last_index = index;
@@ -1162,3 +1209,4 @@ struct ip_conntrack_protocol ip_conntrack_protocol_tcp =
 	.nfattr_to_tuple	= ip_ct_port_nfattr_to_tuple,
 #endif
 };
+EXPORT_SYMBOL(sysctl_spi_enable);

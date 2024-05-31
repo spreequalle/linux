@@ -43,12 +43,19 @@
 #include <linux/elf.h>
 
 static int load_irix_binary(struct linux_binprm * bprm, struct pt_regs * regs);
+#ifdef CONFIG_BINFMT_ELF_AOUT
 static int load_irix_library(struct file *);
+#endif
 static int irix_core_dump(long signr, struct pt_regs * regs,
                           struct file *file);
 
 static struct linux_binfmt irix_format = {
-	NULL, THIS_MODULE, load_irix_binary, load_irix_library,
+	NULL, THIS_MODULE, load_irix_binary,
+#ifdef CONFIG_BINFMT_ELF_AOUT
+	load_irix_library,
+#else
+	NULL,
+#endif
 	irix_core_dump, PAGE_SIZE
 };
 
@@ -820,6 +827,7 @@ out_free_ph:
 	goto out;
 }
 
+#ifdef CONFIG_BINFMT_ELF_AOUT
 /* This is really simpleminded and specialized - we are loading an
  * a.out library that is given an ELF header.
  */
@@ -898,6 +906,7 @@ static int load_irix_library(struct file *file)
 	kfree(elf_phdata);
 	return 0;
 }
+#endif
 
 /* Called through irix_syssgi() to map an elf image given an FD,
  * a phdr ptr USER_PHDRP in userspace, and a count CNT telling how many

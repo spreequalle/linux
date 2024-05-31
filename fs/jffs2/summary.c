@@ -9,7 +9,7 @@
  *
  * For licensing information, see the file 'LICENCE' in this directory.
  *
- * $Id: summary.c,v 1.4 2005/09/26 11:37:21 havasi Exp $
+ * $Id: summary.c,v 1.1.1.1 2007-05-25 06:50:15 bruce Exp $
  *
  */
 

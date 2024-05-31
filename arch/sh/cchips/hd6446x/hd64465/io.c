@@ -1,5 +1,5 @@
 /*
- * $Id: io.c,v 1.4 2003/08/03 03:05:10 lethal Exp $
+ * $Id: io.c,v 1.1.1.1 2007-05-25 06:50:20 bruce Exp $
  * by Greg Banks <gbanks@pocketpenguins.com>
  * (c) 2000 PocketPenguins Inc
  *

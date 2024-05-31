@@ -7,7 +7,7 @@
  *
  *	Based on linux/net/ipv4/ip_sockglue.c
  *
- *	$Id: ipv6_sockglue.c,v 1.41 2002/02/01 22:01:04 davem Exp $
+ *	$Id: ipv6_sockglue.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU General Public License
@@ -33,6 +33,7 @@
 #include <linux/sockios.h>
 #include <linux/net.h>
 #include <linux/in6.h>
+#include <linux/mroute6.h>
 #include <linux/netdevice.h>
 #include <linux/if_arp.h>
 #include <linux/init.h>
@@ -178,7 +179,7 @@ int ip6_ra_control(struct sock *sk, int sel, void (*destructor)(struct sock *))
 
 	/* RA packet may be delivered ONLY to IPPROTO_RAW socket */
 	if (sk->sk_type != SOCK_RAW || inet_sk(sk)->num != IPPROTO_RAW)
-		return -EINVAL;
+		return -ENOPROTOOPT;
 
 	new_ra = (sel>=0) ? kmalloc(sizeof(*new_ra), GFP_KERNEL) : NULL;
 
@@ -228,6 +229,9 @@ static int do_ipv6_setsockopt(struct sock *sk, int level, int optname,
 		return -EFAULT;
 
 	valbool = (val!=0);
+
+	if (ip6_mroute_opt(optname))
+		return ip6_mroute_setsockopt(sk, optname, optval, optlen);
 
 	lock_sock(sk);
 
@@ -336,16 +340,12 @@ static int do_ipv6_setsockopt(struct sock *sk, int level, int optname,
 		break;
 
 	case IPV6_RECVRTHDR:
-		if (val < 0 || val > 2)
-			goto e_inval;
-		np->rxopt.bits.srcrt = val;
+		np->rxopt.bits.srcrt = valbool;
 		retv = 0;
 		break;
 
 	case IPV6_2292RTHDR:
-		if (val < 0 || val > 2)
-			goto e_inval;
-		np->rxopt.bits.osrcrt = val;
+		np->rxopt.bits.osrcrt = valbool;
 		retv = 0;
 		break;
 
@@ -416,11 +416,11 @@ static int do_ipv6_setsockopt(struct sock *sk, int level, int optname,
 		if (optname == IPV6_RTHDR && opt && opt->srcrt) {
 			struct ipv6_rt_hdr *rthdr = opt->srcrt;
 			switch (rthdr->type) {
-			case IPV6_SRCRT_TYPE_0:
 #ifdef CONFIG_IPV6_MIP6
 			case IPV6_SRCRT_TYPE_2:
-#endif
 				break;
+#endif
+				
 			default:
 				goto sticky_done;
 			}
@@ -529,7 +529,7 @@ done:
 
 	case IPV6_MULTICAST_HOPS:
 		if (sk->sk_type == SOCK_STREAM)
-			goto e_inval;
+			 break;
 		if (val > 255 || val < -1)
 			goto e_inval;
 		np->mcast_hops = val;
@@ -537,19 +537,23 @@ done:
 		break;
 
 	case IPV6_MULTICAST_LOOP:
+		if (val != valbool)
+			goto e_inval;
 		np->mc_loop = valbool;
 		retv = 0;
 		break;
 
 	case IPV6_MULTICAST_IF:
 		if (sk->sk_type == SOCK_STREAM)
-			goto e_inval;
-		if (sk->sk_bound_dev_if && sk->sk_bound_dev_if != val)
-			goto e_inval;
-
-		if (__dev_get_by_index(val) == NULL) {
-			retv = -ENODEV;
 			break;
+		if (val) {
+			if (sk->sk_bound_dev_if && sk->sk_bound_dev_if != val)
+				goto e_inval;
+
+			if (__dev_get_by_index(val) == NULL) {
+				retv = -ENODEV;
+				break;
+			}					
 		}
 		np->mcast_oif = val;
 		retv = 0;
@@ -694,7 +698,7 @@ done:
 		retv = ip6_ra_control(sk, val, NULL);
 		break;
 	case IPV6_MTU_DISCOVER:
-		if (val<0 || val>2)
+		if (val<0 || val>3)
 			goto e_inval;
 		np->pmtudisc = val;
 		retv = 0;
@@ -796,18 +800,37 @@ EXPORT_SYMBOL(compat_ipv6_setsockopt);
 #endif
 
 static int ipv6_getsockopt_sticky(struct sock *sk, struct ipv6_txoptions *opt,
-				  char __user *optval, int len)
+				  int optname, char __user *optval, int len)
 {
 	struct ipv6_opt_hdr *hdr;
 
-	if (!opt || !opt->hopopt)
+	if (!opt)
 		return 0;
-	hdr = opt->hopopt;
+
+	switch(optname) {
+	case IPV6_HOPOPTS:
+		hdr = opt->hopopt;
+		break;
+	case IPV6_RTHDRDSTOPTS:
+		hdr = opt->dst0opt;
+		break;
+	case IPV6_RTHDR:
+		hdr = (struct ipv6_opt_hdr *)opt->srcrt;
+		break;
+	case IPV6_DSTOPTS:
+		hdr = opt->dst1opt;
+		break;
+	default:
+		return -EINVAL;	/* should not happen */
+	}
+
+	if (!hdr)
+		return 0;
 
 	len = min_t(unsigned int, len, ipv6_optlen(hdr));
-	if (copy_to_user(optval, hdr, ipv6_optlen(hdr)))
+	if (copy_to_user(optval, hdr, len))
 		return -EFAULT;
-	return len;
+	return ipv6_optlen(hdr);
 }
 
 static int do_ipv6_getsockopt(struct sock *sk, int level, int optname,
@@ -817,6 +840,9 @@ static int do_ipv6_getsockopt(struct sock *sk, int level, int optname,
 	int len;
 	int val;
 
+	if (ip6_mroute_opt(optname))
+		return ip6_mroute_getsockopt(sk, optname, optval, optlen);
+
 	if (get_user(len, optlen))
 		return -EFAULT;
 	switch (optname) {
@@ -824,7 +850,7 @@ static int do_ipv6_getsockopt(struct sock *sk, int level, int optname,
 		if (sk->sk_protocol != IPPROTO_UDP &&
 		    sk->sk_protocol != IPPROTO_UDPLITE &&
 		    sk->sk_protocol != IPPROTO_TCP)
-			return -EINVAL;
+			return -ENOPROTOOPT;
 		if (sk->sk_state != TCP_ESTABLISHED)
 			return -ENOTCONN;
 		val = sk->sk_family;
@@ -838,6 +864,8 @@ static int do_ipv6_getsockopt(struct sock *sk, int level, int optname,
 			return -EINVAL;
 		if (copy_from_user(&gsf, optval, GROUP_FILTER_SIZE(0)))
 			return -EFAULT;
+		if (gsf.gf_group.ss_family != AF_INET6)
+			return -EADDRNOTAVAIL;
 		lock_sock(sk);
 		err = ip6_mc_msfget(sk, &gsf,
 			(struct group_filter __user *)optval, optlen);
@@ -945,7 +973,7 @@ static int do_ipv6_getsockopt(struct sock *sk, int level, int optname,
 
 		lock_sock(sk);
 		len = ipv6_getsockopt_sticky(sk, np->opt,
-					     optval, len);
+					     optname, optval, len);
 		release_sock(sk);
 		return put_user(len, optlen);
 	}

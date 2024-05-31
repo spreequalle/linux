@@ -1,4 +1,4 @@
-/* $Id: entity.h,v 1.4 2004/03/21 17:26:01 armin Exp $ */
+/* $Id: entity.h,v 1.1.1.1 2007-05-25 06:50:10 bruce Exp $ */
 
 #ifndef __DIVAS_USER_MODE_IDI_ENTITY__
 #define __DIVAS_USER_MODE_IDI_ENTITY__

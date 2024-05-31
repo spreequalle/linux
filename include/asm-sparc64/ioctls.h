@@ -1,4 +1,4 @@
-/* $Id: ioctls.h,v 1.7 1998/02/23 02:49:41 davem Exp $ */
+/* $Id: ioctls.h,v 1.1.1.1 2007-05-25 06:50:14 bruce Exp $ */
 #ifndef _ASM_SPARC64_IOCTLS_H
 #define _ASM_SPARC64_IOCTLS_H
 

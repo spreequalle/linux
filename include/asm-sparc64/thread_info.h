@@ -1,4 +1,4 @@
-/* $Id: thread_info.h,v 1.1 2002/02/10 00:00:58 davem Exp $
+/* $Id: thread_info.h,v 1.1.1.1 2007-05-25 06:50:14 bruce Exp $
  * thread_info.h: sparc64 low-level thread information
  *
  * Copyright (C) 2002  David S. Miller (davem@redhat.com)

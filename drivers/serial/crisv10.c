@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.25 2004/09/29 10:33:49 starvik Exp $
+/* $Id: crisv10.c,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
  *
  * Serial port driver for the ETRAX 100LX chip
  *
@@ -6,7 +6,11 @@
  *
  *    Many, many authors. Based once upon a time on serial.c for 16x50.
  *
- * $Log: serial.c,v $
+ * $Log: crisv10.c,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:03  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  * Revision 1.25  2004/09/29 10:33:49  starvik
  * Resolved a dealock when printing debug from kernel.
  *
@@ -423,7 +427,7 @@
  *
  */
 
-static char *serial_version = "$Revision: 1.25 $";
+static char *serial_version = "$Revision: 1.1.1.1 $";
 
 #include <linux/types.h>
 #include <linux/errno.h>

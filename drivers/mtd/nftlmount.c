@@ -4,7 +4,7 @@
  * Author: Fabrice Bellard (fabrice.bellard@netgem.com)
  * Copyright (C) 2000 Netgem S.A.
  *
- * $Id: nftlmount.c,v 1.41 2005/11/07 11:14:21 gleixner Exp $
+ * $Id: nftlmount.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@
 
 #define SECTORSIZE 512
 
-char nftlmountrev[]="$Revision: 1.41 $";
+char nftlmountrev[]="$Revision: 1.1.1.1 $";
 
 extern int nftl_read_oob(struct mtd_info *mtd, loff_t offs, size_t len,
 			 size_t *retlen, uint8_t *buf);

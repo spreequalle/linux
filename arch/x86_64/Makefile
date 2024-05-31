@@ -19,7 +19,7 @@
 # 20010105  Andi Kleen, add IA32 compiler.
 #           ....and later removed it again....
 #
-# $Id: Makefile,v 1.31 2002/03/22 15:56:07 ak Exp $
+# $Id: Makefile,v 1.1.1.1 2007-05-25 06:50:17 bruce Exp $
 
 LDFLAGS		:= -m elf_x86_64
 OBJCOPYFLAGS	:= -O binary -R .note -R .comment -S

@@ -1,7 +1,7 @@
 #
 # Makefile for the kernel serial device drivers.
 #
-#  $Id: Makefile,v 1.8 2002/07/21 21:32:30 rmk Exp $
+#  $Id: Makefile,v 1.1.1.1 2007-05-25 06:50:03 bruce Exp $
 #
 
 obj-$(CONFIG_SERIAL_CORE) += serial_core.o

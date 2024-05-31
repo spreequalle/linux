@@ -1,4 +1,4 @@
-/* $Id: he.c,v 1.18 2003/05/06 22:57:15 chas Exp $ */
+/* $Id: he.c,v 1.1.1.1 2007-05-25 06:50:05 bruce Exp $ */
 
 /*
 
@@ -101,7 +101,7 @@
 
 /* version definition */
 
-static char *version = "$Id: he.c,v 1.18 2003/05/06 22:57:15 chas Exp $";
+static char *version = "$Id: he.c,v 1.1.1.1 2007-05-25 06:50:05 bruce Exp $";
 
 /* declarations */
 

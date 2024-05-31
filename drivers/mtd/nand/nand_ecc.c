@@ -9,7 +9,7 @@
  *
  * Copyright (C) 2006 Thomas Gleixner <tglx@linutronix.de>
  *
- * $Id: nand_ecc.c,v 1.15 2005/11/07 11:14:30 gleixner Exp $
+ * $Id: nand_ecc.c,v 1.1.1.1 2007-05-25 06:50:07 bruce Exp $
  *
  * This file is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

@@ -5,7 +5,7 @@
  *	Authors:
  *	Pedro Roque		<roque@di.fc.ul.pt>
  *
- *	$Id: mcast.c,v 1.40 2002/02/08 03:57:19 davem Exp $
+ *	$Id: mcast.c,v 1.1.1.1 2007-05-25 06:49:59 bruce Exp $
  *
  *	Based on linux/ipv4/igmp.c and linux/ipv4/ip_sockglue.c
  *
@@ -988,7 +988,7 @@ int ipv6_is_mld(struct sk_buff *skb, int nexthdr)
 	if (!pskb_may_pull(skb, sizeof(struct icmp6hdr)))
 		return 0;
 
-	pic = (struct icmp6hdr *)skb->h.raw;
+	pic = icmp6_hdr(skb);
 
 	switch (pic->icmp6_type) {
 	case ICMPV6_MGM_QUERY:
@@ -1179,7 +1179,7 @@ int igmp6_event_query(struct sk_buff *skb)
 	if (idev == NULL)
 		return 0;
 
-	hdr = (struct icmp6hdr *) skb->h.raw;
+	hdr = icmp6_hdr(skb);
 	group = (struct in6_addr *) (hdr + 1);
 	group_type = ipv6_addr_type(group);
 
@@ -1300,7 +1300,7 @@ int igmp6_event_report(struct sk_buff *skb)
 	if (!pskb_may_pull(skb, sizeof(struct in6_addr)))
 		return -EINVAL;
 
-	hdr = (struct icmp6hdr*) skb->h.raw;
+	hdr = icmp6_hdr(skb);
 
 	/* Drop reports with not link local source */
 	addr_type = ipv6_addr_type(&skb->nh.ipv6h->saddr);
@@ -1411,7 +1411,7 @@ static struct sk_buff *mld_newpack(struct net_device *dev, int size)
 
 	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 
-	if (ipv6_get_lladdr(dev, &addr_buf)) {
+	if (ipv6_get_lladdr(dev, &addr_buf, IFA_F_TENTATIVE)) {
 		/* <draft-ietf-magma-mld-source-05.txt>:
 		 * use unspecified address as the source address
 		 * when a valid link-local address is not available.
@@ -1423,38 +1423,15 @@ static struct sk_buff *mld_newpack(struct net_device *dev, int size)
 
 	memcpy(skb_put(skb, sizeof(ra)), ra, sizeof(ra));
 
-	pmr =(struct mld2_report *)skb_put(skb, sizeof(*pmr));
-	skb->h.raw = (unsigned char *)pmr;
+	skb_set_transport_header(skb, skb->tail - skb->data);
+	skb_put(skb, sizeof(*pmr));
+	pmr = (struct mld2_report *)skb_transport_header(skb);
 	pmr->type = ICMPV6_MLD2_REPORT;
 	pmr->resv1 = 0;
 	pmr->csum = 0;
 	pmr->resv2 = 0;
 	pmr->ngrec = 0;
 	return skb;
-}
-
-static inline int mld_dev_queue_xmit2(struct sk_buff *skb)
-{
-	struct net_device *dev = skb->dev;
-
-	if (dev->hard_header) {
-		unsigned char ha[MAX_ADDR_LEN];
-		int err;
-
-		ndisc_mc_map(&skb->nh.ipv6h->daddr, ha, dev, 1);
-		err = dev->hard_header(skb, dev, ETH_P_IPV6, ha, NULL, skb->len);
-		if (err < 0) {
-			kfree_skb(skb);
-			return err;
-		}
-	}
-	return dev_queue_xmit(skb);
-}
-
-static inline int mld_dev_queue_xmit(struct sk_buff *skb)
-{
-	return NF_HOOK(PF_INET6, NF_IP6_POST_ROUTING, skb, NULL, skb->dev,
-		       mld_dev_queue_xmit2);
 }
 
 static void mld_sendpack(struct sk_buff *skb)
@@ -1464,6 +1441,7 @@ static void mld_sendpack(struct sk_buff *skb)
 	int payload_len, mldlen;
 	struct inet6_dev *idev = in6_dev_get(skb->dev);
 	int err;
+	struct flowi fl;
 
 	IP6_INC_STATS(idev, IPSTATS_MIB_OUTREQUESTS);
 	payload_len = skb->tail - (unsigned char *)skb->nh.ipv6h -
@@ -1473,8 +1451,25 @@ static void mld_sendpack(struct sk_buff *skb)
 
 	pmr->csum = csum_ipv6_magic(&pip6->saddr, &pip6->daddr, mldlen,
 		IPPROTO_ICMPV6, csum_partial(skb->h.raw, mldlen, 0));
+
+	skb->dst = icmp6_dst_alloc(skb->dev, NULL, &ipv6_hdr(skb)->daddr);
+
+	if (!skb->dst) {
+		err = -ENOMEM;
+		goto err_out;
+	}
+
+	icmpv6_flow_init(igmp6_socket->sk, &fl, ICMPV6_MLD2_REPORT,
+			 &ipv6_hdr(skb)->saddr, &ipv6_hdr(skb)->daddr,
+			 skb->dev->ifindex);
+
+	err = xfrm_lookup(&skb->dst, &fl, NULL, 0);
+	if (err)
+		goto err_out;
+
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, skb->dev,
-		mld_dev_queue_xmit);
+		dst_output);
+out:
 	if (!err) {
 		ICMP6_INC_STATS(idev,ICMP6_MIB_OUTMSGS);
 		IP6_INC_STATS(idev, IPSTATS_MIB_OUTMCASTPKTS);
@@ -1483,6 +1478,12 @@ static void mld_sendpack(struct sk_buff *skb)
 
 	if (likely(idev != NULL))
 		in6_dev_put(idev);
+	return;
+
+err_out:
+	kfree_skb(skb);
+	goto out;
+
 }
 
 static int grec_size(struct ifmcaddr6 *pmc, int type, int gdel, int sdel)
@@ -1756,24 +1757,24 @@ static void igmp6_send(struct in6_addr *addr, struct net_device *dev, int type)
 	struct inet6_dev *idev;
 	struct sk_buff *skb;
 	struct icmp6hdr *hdr;
-	struct in6_addr *snd_addr;
+	const struct in6_addr *snd_addr;
 	struct in6_addr *addrp;
 	struct in6_addr addr_buf;
-	struct in6_addr all_routers;
 	int err, len, payload_len, full_len;
 	u8 ra[8] = { IPPROTO_ICMPV6, 0,
 		     IPV6_TLV_ROUTERALERT, 2, 0, 0,
 		     IPV6_TLV_PADN, 0 };
+	struct flowi fl;
 
 	rcu_read_lock();
 	IP6_INC_STATS(__in6_dev_get(dev),
 		      IPSTATS_MIB_OUTREQUESTS);
 	rcu_read_unlock();
 	snd_addr = addr;
-	if (type == ICMPV6_MGM_REDUCTION) {
-		snd_addr = &all_routers;
-		ipv6_addr_all_routers(&all_routers);
-	}
+	if (type == ICMPV6_MGM_REDUCTION)
+		snd_addr = &in6addr_linklocal_allrouters;
+	else
+		snd_addr = addr; 
 
 	len = sizeof(struct icmp6hdr) + sizeof(struct in6_addr);
 	payload_len = len + sizeof(ra);
@@ -1791,7 +1792,7 @@ static void igmp6_send(struct in6_addr *addr, struct net_device *dev, int type)
 
 	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 
-	if (ipv6_get_lladdr(dev, &addr_buf)) {
+	if (ipv6_get_lladdr(dev, &addr_buf, IFA_F_TENTATIVE)) {
 		/* <draft-ietf-magma-mld-source-05.txt>:
 		 * use unspecified address as the source address
 		 * when a valid link-local address is not available.
@@ -1816,8 +1817,23 @@ static void igmp6_send(struct in6_addr *addr, struct net_device *dev, int type)
 
 	idev = in6_dev_get(skb->dev);
 
+	skb->dst = icmp6_dst_alloc(skb->dev, NULL, &ipv6_hdr(skb)->daddr);
+	if (!skb->dst) {
+		err = -ENOMEM;
+		goto err_out;
+	}
+
+	icmpv6_flow_init(igmp6_socket->sk, &fl, type,
+			 &ipv6_hdr(skb)->saddr, &ipv6_hdr(skb)->daddr,
+			 skb->dev->ifindex);
+
+	err = xfrm_lookup(&skb->dst, &fl, NULL, 0);
+	if (err)
+		goto err_out;
+
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, skb->dev,
-		mld_dev_queue_xmit);
+		      dst_output);
+out:
 	if (!err) {
 		if (type == ICMPV6_MGM_REDUCTION)
 			ICMP6_INC_STATS(idev, ICMP6_MIB_OUTGROUPMEMBREDUCTIONS);
@@ -1831,6 +1847,10 @@ static void igmp6_send(struct in6_addr *addr, struct net_device *dev, int type)
 	if (likely(idev != NULL))
 		in6_dev_put(idev);
 	return;
+
+err_out:
+	kfree_skb(skb);
+	goto out;
 }
 
 static int ip6_mc_del1_src(struct ifmcaddr6 *pmc, int sfmode,
@@ -2284,24 +2304,20 @@ void ipv6_mc_init_dev(struct inet6_dev *idev)
 void ipv6_mc_destroy_dev(struct inet6_dev *idev)
 {
 	struct ifmcaddr6 *i;
-	struct in6_addr maddr;
 
 	/* Deactivate timers */
 	ipv6_mc_down(idev);
 
 	/* Delete all-nodes address. */
-	ipv6_addr_all_nodes(&maddr);
 
 	/* We cannot call ipv6_dev_mc_dec() directly, our caller in
 	 * addrconf.c has NULL'd out dev->ip6_ptr so in6_dev_get() will
 	 * fail.
 	 */
-	__ipv6_dev_mc_dec(idev, &maddr);
+	__ipv6_dev_mc_dec(idev, &in6addr_linklocal_allnodes);
 
-	if (idev->cnf.forwarding) {
-		ipv6_addr_all_routers(&maddr);
-		__ipv6_dev_mc_dec(idev, &maddr);
-	}
+	if (idev->cnf.forwarding)
+		__ipv6_dev_mc_dec(idev, &in6addr_linklocal_allrouters); 
 
 	write_lock_bh(&idev->lock);
 	while ((i = idev->mc_list) != NULL) {

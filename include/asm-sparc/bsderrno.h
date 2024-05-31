@@ -1,4 +1,4 @@
-/* $Id: bsderrno.h,v 1.3 1996/04/25 06:12:47 davem Exp $
+/* $Id: bsderrno.h,v 1.1.1.1 2007-05-25 06:50:13 bruce Exp $
  * bsderrno.h: Error numbers for NetBSD binary compatibility
  *
  * Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

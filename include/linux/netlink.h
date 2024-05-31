@@ -25,7 +25,9 @@
 #define NETLINK_SCSITRANSPORT	18	/* SCSI Transports */
 #define NETLINK_ECRYPTFS	19
 
-#define MAX_LINKS 32		
+#define NETLINK_CSR             38
+
+#define MAX_LINKS 64 /* update for csr_test, by bobtseng 2006.5.15. */
 
 struct sockaddr_nl
 {

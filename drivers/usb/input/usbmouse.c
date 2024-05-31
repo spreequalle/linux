@@ -1,5 +1,5 @@
 /*
- * $Id: usbmouse.c,v 1.15 2001/12/27 10:37:41 vojtech Exp $
+ * $Id: usbmouse.c,v 1.1.1.1 2007-05-25 06:50:06 bruce Exp $
  *
  *  Copyright (c) 1999-2001 Vojtech Pavlik
  *

@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id$
+ * $Id: srp.h,v 1.1.1.1 2007-05-25 06:50:12 bruce Exp $
  */
 
 #ifndef SCSI_SRP_H

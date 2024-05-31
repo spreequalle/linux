@@ -2,8 +2,8 @@
  *
  * Name:	skerror.h
  * Project:	Gigabit Ethernet Adapters, Common Modules
- * Version:	$Revision: 1.7 $
- * Date:	$Date: 2003/05/13 17:25:13 $
+ * Version:	$Revision: 1.1.1.1 $
+ * Date:	$Date: 2007-05-25 06:50:02 $
  * Purpose:	SK specific Error log support
  *
  ******************************************************************************/

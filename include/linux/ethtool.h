@@ -260,6 +260,7 @@ struct ethtool_perm_addr {
 
 struct net_device;
 
+#ifdef CONFIG_ETHTOOL
 /* Some generic methods drivers may use in their ethtool_ops */
 u32 ethtool_op_get_link(struct net_device *dev);
 u32 ethtool_op_get_tx_csum(struct net_device *dev);
@@ -273,6 +274,23 @@ int ethtool_op_get_perm_addr(struct net_device *dev,
 			     struct ethtool_perm_addr *addr, u8 *data);
 u32 ethtool_op_get_ufo(struct net_device *dev);
 int ethtool_op_set_ufo(struct net_device *dev, u32 data);
+#else
+static inline u32 ethtool_noop1(struct net_device *dev) { return 0; }
+static inline int ethtool_noop2(struct net_device *dev, u32 data) { return 0; }
+static inline int ethtool_noop3(struct net_device *dev,
+		struct ethtool_perm_addr *addr, u32 data) { return 0; }
+#define ethtool_op_get_link ethtool_noop1
+#define ethtool_op_get_tx_csum ethtool_noop1
+#define ethtool_op_set_tx_csum ethtool_noop2
+#define ethtool_op_set_tx_hw_csum ethtool_noop2
+#define ethtool_op_get_sg ethtool_noop1
+#define ethtool_op_set_sg ethtool_noop2
+#define ethtool_op_get_tso ethtool_noop1
+#define ethtool_op_set_tso ethtool_noop2
+#define ethtool_op_get_perm_addr ethtool_noop3
+#define ethtool_op_get_ufo ethtool_noop1
+#define ethtool_op_set_ufo ethtool_noop2
+#endif
 
 /**
  * &ethtool_ops - Alter and report network device settings

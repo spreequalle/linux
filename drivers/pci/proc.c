@@ -1,5 +1,5 @@
 /*
- *	$Id: proc.c,v 1.13 1998/05/12 07:36:07 mj Exp $
+ *	$Id: proc.c,v 1.1.1.1 2007-05-25 06:50:09 bruce Exp $
  *
  *	Procfs interface for the PCI bus.
  *

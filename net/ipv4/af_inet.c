@@ -5,7 +5,7 @@
  *
  *		PF_INET protocol family socket handler.
  *
- * Version:	$Id: af_inet.c,v 1.137 2002/02/01 22:01:03 davem Exp $
+ * Version:	$Id: af_inet.c,v 1.2 2008-08-15 08:35:08 winfred Exp $
  *
  * Authors:	Ross Biro
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
@@ -117,8 +117,6 @@
 #endif
 
 DEFINE_SNMP_STAT(struct linux_mib, net_statistics) __read_mostly;
-
-extern void ip_mc_drop_socket(struct sock *sk);
 
 /* The inetsw table contains everything that inet_create needs to
  * build a new socket.

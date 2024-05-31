@@ -141,12 +141,18 @@ static inline unsigned int sk_filter_len(struct sk_filter *fp)
 #define SKF_LL_OFF    (-0x200000)
 
 #ifdef __KERNEL__
+#ifdef CONFIG_NET_SK_FILTER
 struct sk_buff;
 struct sock;
 
 extern unsigned int sk_run_filter(struct sk_buff *skb, struct sock_filter *filter, int flen);
 extern int sk_attach_filter(struct sock_fprog *fprog, struct sock *sk);
 extern int sk_chk_filter(struct sock_filter *filter, int flen);
+#else
+#define sk_run_filter(a, b, c) (0)
+#define sk_attach_filter(a, b) (-EINVAL)
+#define sk_chk_filter(a, b) (-EINVAL)
+#endif /* NET_SK_FILTER */
 #endif /* __KERNEL__ */
 
 #endif /* __LINUX_FILTER_H__ */

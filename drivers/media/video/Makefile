@@ -111,5 +111,6 @@ obj-$(CONFIG_USB_VICAM)         += usbvideo/
 obj-$(CONFIG_USB_QUICKCAM_MESSENGER)	+= usbvideo/
 
 obj-$(CONFIG_VIDEO_VIVI) += vivi.o
+obj-$(CONFIG_USB_VIDEO_CLASS)       += uvc/
 
 EXTRA_CFLAGS += -Idrivers/media/dvb/dvb-core

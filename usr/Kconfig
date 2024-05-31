@@ -4,7 +4,7 @@
 
 config INITRAMFS_SOURCE
 	string "Initramfs source file(s)"
-	default ""
+	default "../romfs"
 	help
 	  This can be either a single cpio archive with a .cpio suffix or a
 	  space-separated list of directories and files for building the

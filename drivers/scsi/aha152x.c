@@ -13,9 +13,13 @@
  * General Public License for more details.
  *
  *
- * $Id: aha152x.c,v 2.7 2004/01/24 11:42:59 fischer Exp $
+ * $Id: aha152x.c,v 1.1.1.1 2007-05-25 06:50:04 bruce Exp $
  *
  * $Log: aha152x.c,v $
+ * Revision 1.1.1.1  2007-05-25 06:50:04  bruce
+ * linux-2.6.21 support RT2880. UART, PCI, ETHERNET, IRQ.... workable
+ * initial version. 
+ *
  * Revision 2.7  2004/01/24 11:42:59  fischer
  * - gather code that is not used by PCMCIA at the end
  * - move request_region for !PCMCIA case to detection

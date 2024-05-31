@@ -27,8 +27,8 @@ struct in6_ifreq {
 	int		ifr6_ifindex; 
 };
 
-#define IPV6_SRCRT_STRICT	0x01	/* this hop must be a neighbor	*/
-#define IPV6_SRCRT_TYPE_0	0	/* IPv6 type 0 Routing Header	*/
+#define IPV6_SRCRT_STRICT	0x01	/* Deprecated; will be removed	*/
+#define IPV6_SRCRT_TYPE_0	0	/* Deprecated; will be removed	*/
 #define IPV6_SRCRT_TYPE_2	2	/* IPv6 type 2 Routing Header	*/
 
 /*
@@ -178,6 +178,14 @@ struct ipv6_devconf {
 #endif
 	__s32		proxy_ndp;
 	__s32		accept_source_route;
+#ifdef CONFIG_IPV6_OPTIMISTIC_DAD
+	__s32		optimistic_dad;
+#endif
+#ifdef CONFIG_IPV6_MROUTE
+	__s32		mc_forwarding;
+#endif
+	__s32		disable_ipv6;
+	__s32		accept_dad;
 	void		*sysctl;
 };
 
@@ -206,8 +214,11 @@ enum {
 	DEVCONF_RTR_PROBE_INTERVAL,
 	DEVCONF_ACCEPT_RA_RT_INFO_MAX_PLEN,
 	DEVCONF_PROXY_NDP,
-	__DEVCONF_OPTIMISTIC_DAD,
 	DEVCONF_ACCEPT_SOURCE_ROUTE,
+	DEVCONF_MC_FORWARDING,
+	DEVCONF_OPTIMISTIC_DAD,
+	DEVCONF_DISABLE_IPV6,
+	DEVCONF_ACCEPT_DAD,
 	DEVCONF_MAX
 };
 
@@ -218,6 +229,11 @@ enum {
 
 #include <net/if_inet6.h>       /* struct ipv6_mc_socklist */
 #include <net/inet_sock.h>
+
+static inline struct ipv6hdr *ipv6_hdr(const struct sk_buff *skb)
+{
+	return skb->nh.ipv6h;
+}
 
 /* 
    This structure contains results of exthdrs parsing
@@ -239,6 +255,7 @@ struct inet6_skb_parm {
 #endif
 
 #define IP6SKB_XFRM_TRANSFORMED	1
+#define IP6SKB_FORWARDED       2
 };
 
 #define IP6CB(skb)	((struct inet6_skb_parm*)((skb)->cb))
@@ -286,8 +303,8 @@ struct ipv6_pinfo {
 	/* pktoption flags */
 	union {
 		struct {
-			__u16	srcrt:2,
-				osrcrt:2,
+			__u16	srcrt:1,
+				osrcrt:1,
 			        rxinfo:1,
 			        rxoinfo:1,
 				rxhlim:1,

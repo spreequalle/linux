@@ -1,4 +1,4 @@
-/* $Id: um_xdi.h,v 1.1.2.2 2002/10/02 14:38:38 armin Exp $ */
+/* $Id: um_xdi.h,v 1.1.1.1 2007-05-25 06:50:10 bruce Exp $ */
 
 #ifndef __DIVA_USER_MODE_XDI_H__
 #define __DIVA_USER_MODE_XDI_H__

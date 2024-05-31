@@ -312,6 +312,14 @@ config IP_NF_MATCH_ADDRTYPE
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
 
+config IP_NF_MATCH_URLFILTER
+	tristate "Url Filter match support"
+	depends on IP_NF_IPTABLES && SUPPORT_CAMEO_SDK
+	help
+	  This option allows you to block specific URL address.
+
+	  To compile it as a module, choose M here.  If unsure, say N.
+
 # `filter', generic and specific targets
 config IP_NF_FILTER
 	tristate "Packet filtering"
@@ -436,6 +444,30 @@ config IP_NF_TARGET_SAME
 
 	  To compile it as a module, choose M here.  If unsure, say N.
 
+config IP_NF_TARGET_PORTTRIGGER
+	tristate "Port Trigger target support"
+	depends on (NF_NAT || IP_NF_NAT) && SUPPORT_CAMEO_SDK
+	help
+	  Port Trigger is port forwarding with an on/off switch for the ports that have been forward.
+
+	  To compile it as a module, choose M here.  If unsure, say N.
+	  
+config IP_NF_TARGET_TRIGGER
+	tristate "two upnp(miniupnp and libupnp) coexist support"
+	depends on IP_NF_IPTABLES && SUPPORT_CAMEO_SDK
+	help
+	  TRIGGER support for two upnp exist at the same time.
+
+	  To compile it as a module, choose M here.  If unsure, say N.
+
+config IP_NF_TARGET_NATTYPE
+        tristate "NATTYPE target support"
+        depends on IP_NF_IPTABLES && SUPPORT_CAMEO_SDK
+        help
+	  		This option allows you to use NAT Endpoing Filtering.
+
+	  		To compile it as a module, choose M here.  If unsure, say N.
+
 config IP_NF_NAT_SNMP_BASIC
 	tristate "Basic SNMP-ALG support (EXPERIMENTAL)"
 	depends on EXPERIMENTAL && IP_NF_NAT
@@ -497,6 +529,11 @@ config NF_NAT_IRC
 	tristate
 	depends on IP_NF_IPTABLES && NF_CONNTRACK && NF_NAT
 	default NF_NAT && NF_CONNTRACK_IRC
+
+config NF_NAT_RTSP
+	tristate
+	depends on IP_NF_IPTABLES && NF_CONNTRACK && NF_NAT
+	default NF_NAT && NF_CONNTRACK_RTSP
 
 config IP_NF_NAT_TFTP
 	tristate
@@ -656,6 +693,64 @@ config IP_NF_ARP_MANGLE
 	help
 	  Allows altering the ARP packet payload: source and destination
 	  hardware and network addresses.
+
+config IP_NF_NAT_QUAKE3
+	tristate
+	depends on IP_NF_CONNTRACK!=n && IP_NF_NAT !=n
+	default IP_NF_NAT if IP_NF_QUAKE3=y
+	default m if IP_NF_QUAKE3=m
+
+config IP_NF_QUAKE3
+	tristate "Quake3 protocol support"
+	depends on IP_NF_CONNTRACK
+	help
+	  Quake III Arena  connection tracking helper. This module allows for a
+	  stricter firewall rulebase if one only allows traffic to a master
+	  server. Connections to Quake III server IP addresses and ports returned
+	  by the master server will be tracked automatically.
+	
+	  If you want to compile it as a module, say M here and read
+	  <file:Documentation/modules.txt>.  If unsure, say `Y'.
+
+config IP_NF_NAT_RTSP
+	tristate
+	depends on IP_NF_CONNTRACK!=n && IP_NF_NAT!=n
+	default IP_NF_NAT if IP_NF_RTSP=y
+	default m if IP_NF_RTSP=m
+
+config IP_NF_RTSP
+	tristate  'RTSP protocol support'
+	depends on IP_NF_CONNTRACK
+	help
+	  Support the RTSP protocol.  This allows UDP transports to be setup
+	  properly, including RTP and RDT.
+	
+	  If you want to compile it as a module, say 'M' here and read
+	  Documentation/modules.txt.  If unsure, say 'Y'.
+
+config IP_NF_MATCH_TIME
+	tristate  'TIME match support'
+	depends on IP_NF_IPTABLES
+	help
+	  This option adds a `time' match, which allows you
+	  to match based on the packet arrival time/date
+	  (arrival time/date at the machine which netfilter is running on) or
+	  departure time/date (for locally generated packets).
+	
+	  If you say Y here, try iptables -m time --help for more information.
+	 
+	  If you want to compile it as a module, say M here and read
+	  Documentation/modules.txt.  If unsure, say `N'.
+
+config IP_NF_MATCH_MPORT
+	tristate  'Multiple port with ranges match support'
+	depends on IP_NF_IPTABLES
+	help
+	  This is an enhanced multiport match which supports port
+	  ranges as well as single ports.
+	
+	  If you want to compile it as a module, say M here and read
+	  Documentation/modules.txt.  If unsure, say `N'.
 
 endmenu
 

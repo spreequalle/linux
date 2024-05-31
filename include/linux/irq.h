@@ -304,10 +304,12 @@ static inline void generic_handle_irq(unsigned int irq)
 #ifdef CONFIG_GENERIC_HARDIRQS_NO__DO_IRQ
 	desc->handle_irq(irq, desc);
 #else
-	if (likely(desc->handle_irq))
+	if (likely(desc->handle_irq)){
 		desc->handle_irq(irq, desc);
-	else
+	}
+	else{
 		__do_IRQ(irq);
+	}
 #endif
 }
 

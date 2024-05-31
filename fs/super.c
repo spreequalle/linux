@@ -618,6 +618,7 @@ int do_remount_sb(struct super_block *sb, int flags, void *data, int force)
 	return 0;
 }
 
+#ifdef CONFIG_PDFLUSH
 static void do_emergency_remount(unsigned long foo)
 {
 	struct super_block *sb;
@@ -643,10 +644,13 @@ static void do_emergency_remount(unsigned long foo)
 	spin_unlock(&sb_lock);
 	printk("Emergency Remount complete\n");
 }
+#endif
 
 void emergency_remount(void)
 {
+#ifdef CONFIG_PDFLUSH
 	pdflush_operation(do_emergency_remount, 0);
+#endif
 }
 
 /*
