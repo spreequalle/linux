@@ -44,6 +44,8 @@ properties:
       - allwinner,sun8i-r40-pinctrl
       - allwinner,sun8i-v3-pinctrl
       - allwinner,sun8i-v3s-pinctrl
+      - allwinner,sun8i-v831-pinctrl
+      - allwinner,sun8i-v833-pinctrl
       - allwinner,sun9i-a80-pinctrl
       - allwinner,sun9i-a80-r-pinctrl
       - allwinner,sun50i-a64-pinctrl
@@ -202,6 +204,8 @@ allOf:
           enum:
             - allwinner,sun8i-a23-pinctrl
             - allwinner,sun8i-a83t-pinctrl
+            - allwinner,sun8i-v831-pinctrl
+            - allwinner,sun8i-v833-pinctrl
             - allwinner,sun50i-a64-pinctrl
             - allwinner,sun50i-h5-pinctrl
             - allwinner,suniv-f1c100s-pinctrl
